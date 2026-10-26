@@ -26,19 +26,19 @@ export function InvitePage() {
   const next = `/invite/${token}`;
 
   return (
-    <main className="grid min-h-screen place-items-center px-4">
+    <main className="grid min-h-screen place-items-center bg-canvas px-4">
       <section className="panel w-full max-w-lg p-6">
-        {invite.isPending ? <p>Loading invite…</p> : null}
-        {invite.isError ? <p className="text-rose">{errorMessage(invite.error)}</p> : null}
+        {invite.isPending ? <p className="text-sm text-muted">Loading invite…</p> : null}
+        {invite.isError ? <p className="text-sm text-danger">{errorMessage(invite.error)}</p> : null}
         {invite.data ? (
           <>
-            <p className="font-mono text-xs uppercase tracking-[0.18em] text-acid">Workspace invite</p>
-            <h1 className="mt-3 font-display text-4xl font-bold">{invite.data.workspaceName}</h1>
-            <p className="mt-3 text-mist-300">
+            <p className="text-xs font-medium uppercase tracking-wide text-faint">Workspace invite</p>
+            <h1 className="mt-2 text-2xl font-semibold tracking-tight">{invite.data.workspaceName}</h1>
+            <p className="mt-2 text-sm text-muted">
               {invite.data.email} is invited as {invite.data.role}.
             </p>
-            {invite.data.expired ? <p className="mt-4 text-rose">This invite has expired. Ask an admin for a new link.</p> : null}
-            {invite.data.accepted ? <p className="mt-4 text-mist-300">This invite was already used.</p> : null}
+            {invite.data.expired ? <p className="mt-4 text-sm text-danger">This invite has expired. Ask an admin for a new link.</p> : null}
+            {invite.data.accepted ? <p className="mt-4 text-sm text-muted">This invite was already used.</p> : null}
             {!invite.data.expired && !invite.data.accepted ? (
               user ? (
                 <button className="btn-primary mt-6" type="button" onClick={() => accept.mutate()} disabled={accept.isPending}>
@@ -56,7 +56,7 @@ export function InvitePage() {
               )
             ) : null}
             {accept.isError ? (
-              <p className="mt-4 text-sm text-rose" role="alert">
+              <p className="mt-4 text-sm text-danger" role="alert">
                 {errorMessage(accept.error)}
               </p>
             ) : null}

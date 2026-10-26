@@ -2,7 +2,7 @@ import { createHash, randomBytes } from 'crypto';
 import mongoose from 'mongoose';
 import { ApiError } from './errors';
 
-const AVATAR_COLORS = ['#e7f56a', '#5ee0b5', '#8eb6ff', '#f0b429', '#ff6b81', '#d4bfff', '#ff9f68', '#5ccfe6'];
+const AVATAR_COLORS = ['#1d4f91', '#0e7c66', '#b54708', '#b42318', '#6941c6', '#0e7090', '#344054', '#9a3412'];
 
 export function colorFromString(value: string) {
   let hash = 0;

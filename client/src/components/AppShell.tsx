@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useDeferredValue, useEffect, useState } from 'react';
+import { useDeferredValue, useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useNavigate, useParams } from 'react-router-dom';
 import { api, errorMessage } from '../lib/api';
 import { timeAgo } from '../lib/format';
@@ -7,13 +7,13 @@ import { disconnectSocket } from '../lib/socket';
 import { useAuthStore } from '../stores/authStore';
 import { useUiStore } from '../stores/uiStore';
 import { useRealtime } from '../hooks/useRealtime';
-import { Avatar, Logo, Modal } from './ui';
+import { Avatar, Icon, Logo, Modal, type IconName } from './ui';
 
-const links = [
-  { label: 'Overview', suffix: '' },
-  { label: 'Projects', suffix: '/projects' },
-  { label: 'Members', suffix: '/members' },
-  { label: 'Activity', suffix: '/activity' },
+const links: { label: string; suffix: string; icon: IconName }[] = [
+  { label: 'Overview', suffix: '', icon: 'overview' },
+  { label: 'Projects', suffix: '/projects', icon: 'projects' },
+  { label: 'Members', suffix: '/members', icon: 'members' },
+  { label: 'Activity', suffix: '/activity', icon: 'activity' },
 ];
 
 export function AppShell() {
@@ -31,10 +31,12 @@ export function AppShell() {
   const notifications = useQuery({ queryKey: ['notifications'], queryFn: api.notifications });
   const activeId = paramId ?? remembered ?? workspaces.data?.[0]?.id;
   useRealtime(activeId);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [name, setName] = useState(user?.name ?? '');
+  const notesRef = useRef<HTMLDivElement>(null);
+  const accountRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (paramId) rememberWorkspace(paramId);
@@ -43,6 +45,17 @@ export function AppShell() {
   useEffect(() => {
     setName(user?.name ?? '');
   }, [user?.name]);
+
+  useEffect(() => {
+    if (!notesOpen && !accountOpen) return;
+    const onPointer = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (notesOpen && notesRef.current && !notesRef.current.contains(target)) setNotesOpen(false);
+      if (accountOpen && accountRef.current && !accountRef.current.contains(target)) setAccountOpen(false);
+    };
+    document.addEventListener('mousedown', onPointer);
+    return () => document.removeEventListener('mousedown', onPointer);
+  }, [notesOpen, accountOpen]);
 
   const logout = useMutation({
     mutationFn: api.logout,
@@ -59,7 +72,7 @@ export function AppShell() {
     onSuccess: (next) => {
       setUser(next);
       queryClient.setQueryData(['me'], next);
-      setAccountOpen(false);
+      setProfileOpen(false);
       pushToast('Profile updated');
     },
     onError: (error) => pushToast(errorMessage(error)),
@@ -70,43 +83,40 @@ export function AppShell() {
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['notifications'] }),
   });
 
+  const unread = notifications.data?.unread ?? 0;
+
   return (
-    <div className="min-h-screen lg:grid lg:grid-cols-[260px_1fr]">
-      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-acid focus:px-3 focus:py-2 focus:text-ink-950">
+    <div className="min-h-screen bg-canvas lg:grid lg:grid-cols-[232px_1fr]">
+      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-brand focus:px-3 focus:py-2 focus:text-white">
         Skip to content
       </a>
-      {navOpen ? <button className="fixed inset-0 z-30 bg-black/50 lg:hidden" aria-label="Close menu" onClick={() => setNavOpen(false)} /> : null}
-      <aside className={`fixed inset-y-0 left-0 z-40 flex w-[260px] flex-col border-r border-white/10 bg-ink-950 p-4 transition lg:static ${navOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-        <Logo />
-        <label className="mt-6 block">
-          <span className="label">Workspace</span>
-          <select
-            className="field"
-            value={activeId ?? ''}
-            onChange={(event) => {
-              rememberWorkspace(event.target.value);
-              setNavOpen(false);
-              navigate(`/w/${event.target.value}`);
-            }}
-          >
-            {(workspaces.data ?? []).map((workspace) => (
-              <option key={workspace.id} value={workspace.id}>
-                {workspace.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button
-          className="btn-ghost mt-3 w-full"
-          type="button"
-          onClick={() => {
-            setNavOpen(false);
-            navigate('/app?new=1');
-          }}
-        >
-          New workspace
-        </button>
-        <nav className="mt-6 flex flex-1 flex-col gap-1" aria-label="Workspace">
+      {navOpen ? <button className="fixed inset-0 z-30 bg-slate-900/40 lg:hidden" aria-label="Close menu" onClick={() => setNavOpen(false)} /> : null}
+      <aside className={`fixed inset-y-0 left-0 z-40 flex w-[232px] flex-col bg-sidebar text-slate-300 transition lg:static ${navOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+        <div className="flex h-14 items-center border-b border-white/10 px-4">
+          <Logo tone="inverse" />
+        </div>
+        <div className="px-3 pt-3">
+          <label className="block">
+            <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-slate-400">Workspace</span>
+            <select
+              className="field-dark"
+              value={activeId ?? ''}
+              aria-label="Workspace"
+              onChange={(event) => {
+                rememberWorkspace(event.target.value);
+                setNavOpen(false);
+                navigate(`/w/${event.target.value}`);
+              }}
+            >
+              {(workspaces.data ?? []).map((workspace) => (
+                <option key={workspace.id} value={workspace.id}>
+                  {workspace.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <nav className="mt-4 flex flex-1 flex-col gap-0.5 px-2" aria-label="Workspace">
           {links.map((link) => (
             <NavLink
               key={link.label}
@@ -114,9 +124,10 @@ export function AppShell() {
               end={link.suffix === ''}
               onClick={() => setNavOpen(false)}
               className={({ isActive }) =>
-                `rounded-xl px-3 py-2 text-sm font-medium ${isActive ? 'bg-acid text-ink-950' : 'text-mist-300 hover:bg-white/5 hover:text-mist-50'}`
+                `flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm ${isActive ? 'bg-white/10 font-medium text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white'}`
               }
             >
+              <Icon name={link.icon} />
               {link.label}
             </NavLink>
           ))}
@@ -124,71 +135,133 @@ export function AppShell() {
             to="/notifications"
             onClick={() => setNavOpen(false)}
             className={({ isActive }) =>
-              `rounded-xl px-3 py-2 text-sm font-medium ${isActive ? 'bg-acid text-ink-950' : 'text-mist-300 hover:bg-white/5 hover:text-mist-50'}`
+              `flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm ${isActive ? 'bg-white/10 font-medium text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white'}`
             }
           >
+            <Icon name="bell" />
             Notifications
+            {unread ? <span className="ml-auto rounded bg-brand px-1.5 text-[11px] font-medium text-white">{unread}</span> : null}
           </NavLink>
         </nav>
-        <button className="mt-4 flex items-center gap-3 rounded-2xl px-2 py-2 text-left hover:bg-white/5" type="button" onClick={() => setAccountOpen(true)}>
-          {user ? <Avatar name={user.name} color={user.avatarColor} /> : null}
-          <span className="min-w-0">
-            <span className="block truncate text-sm font-semibold">{user?.name}</span>
-            <span className="block truncate text-xs text-mist-500">{user?.email}</span>
-          </span>
-        </button>
+        <div className="border-t border-white/10 p-2">
+          <button
+            className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left hover:bg-white/5"
+            type="button"
+            onClick={() => {
+              setNavOpen(false);
+              navigate('/app?new=1');
+            }}
+          >
+            <span className="text-sm text-slate-300">New workspace</span>
+          </button>
+          <button className="mt-1 flex w-full items-center gap-2 rounded-md px-2 py-2 text-left hover:bg-white/5" type="button" onClick={() => setProfileOpen(true)}>
+            {user ? <Avatar name={user.name} color={user.avatarColor} size="sm" /> : null}
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-medium text-white">{user?.name}</span>
+              <span className="block truncate text-xs text-slate-400">{user?.email}</span>
+            </span>
+          </button>
+        </div>
       </aside>
       <div className="min-w-0">
-        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-white/10 bg-ink-950/80 px-4 py-3 backdrop-blur">
-          <button className="btn-ghost lg:hidden" type="button" onClick={() => setNavOpen(true)}>
-            Menu
+        <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-line bg-white px-4">
+          <button className="btn-ghost px-2 lg:hidden" type="button" aria-label="Open menu" onClick={() => setNavOpen(true)}>
+            <Icon name="menu" />
           </button>
           {activeId ? <SearchBox workspaceId={activeId} /> : <div className="flex-1" />}
-          <div className="relative">
-            <button className="btn-ghost" type="button" onClick={() => setNotesOpen((open) => !open)} aria-expanded={notesOpen}>
-              Inbox
-              {notifications.data?.unread ? (
-                <span className="rounded-full bg-acid px-1.5 text-xs text-ink-950">{notifications.data.unread}</span>
+          <div className="relative" ref={notesRef}>
+            <button
+              className="btn-ghost relative px-2"
+              type="button"
+              aria-label={unread ? `Inbox, ${unread} unread` : 'Inbox'}
+              aria-expanded={notesOpen}
+              onClick={() => {
+                setAccountOpen(false);
+                setNotesOpen((open) => !open);
+              }}
+            >
+              <Icon name="bell" />
+              {unread ? (
+                <span className="absolute -right-1 -top-1 rounded-full bg-brand px-1.5 text-[10px] font-semibold leading-4 text-white">{unread}</span>
               ) : null}
             </button>
             {notesOpen ? (
-              <div className="panel absolute right-0 mt-2 w-80 p-2">
+              <div className="absolute right-0 z-30 mt-2 w-80 rounded-lg border border-line bg-white p-1 shadow-pop">
+                <p className="px-3 py-2 text-xs font-medium uppercase tracking-wide text-faint">Inbox</p>
                 {(notifications.data?.notifications ?? []).slice(0, 6).map((item) => (
                   <button
                     key={item.id}
                     type="button"
-                    className="block w-full rounded-xl px-3 py-2 text-left text-sm hover:bg-white/5"
+                    className="block w-full rounded-md px-3 py-2 text-left hover:bg-slate-50"
                     onClick={() => {
                       if (!item.read) markRead.mutate(item.id);
                       setNotesOpen(false);
                       if (item.link) navigate(item.link);
                     }}
                   >
-                    <span className={item.read ? 'text-mist-400' : 'text-mist-50'}>{item.message}</span>
-                    <span className="mt-1 block text-xs text-mist-500">{timeAgo(item.createdAt)}</span>
+                    <span className={`block text-sm ${item.read ? 'text-muted' : 'font-medium text-ink'}`}>{item.message}</span>
+                    <span className="mt-0.5 block text-xs text-faint">{timeAgo(item.createdAt)}</span>
                   </button>
                 ))}
-                {!notifications.data?.notifications.length ? <p className="px-3 py-4 text-sm text-mist-500">You are caught up.</p> : null}
-                <button className="btn-quiet w-full" type="button" onClick={() => { setNotesOpen(false); navigate('/notifications'); }}>
+                {!notifications.data?.notifications.length ? <p className="px-3 py-4 text-sm text-muted">You are caught up.</p> : null}
+                <button
+                  className="btn-quiet w-full"
+                  type="button"
+                  onClick={() => {
+                    setNotesOpen(false);
+                    navigate('/notifications');
+                  }}
+                >
                   View all
                 </button>
               </div>
             ) : null}
           </div>
-          <button className="btn-quiet" type="button" onClick={() => setMenuOpen((open) => !open)}>
-            Account
-          </button>
-          {menuOpen ? (
-            <button className="btn-danger" type="button" onClick={() => logout.mutate()}>
-              Log out
+          <div className="relative" ref={accountRef}>
+            <button
+              className="flex items-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+              type="button"
+              aria-label="Account menu"
+              aria-expanded={accountOpen}
+              onClick={() => {
+                setNotesOpen(false);
+                setAccountOpen((open) => !open);
+              }}
+            >
+              {user ? <Avatar name={user.name} color={user.avatarColor} size="sm" /> : null}
             </button>
-          ) : null}
+            {accountOpen ? (
+              <div className="absolute right-0 z-30 mt-2 w-56 rounded-lg border border-line bg-white p-1 shadow-pop">
+                <div className="px-3 py-2">
+                  <p className="truncate text-sm font-medium">{user?.name}</p>
+                  <p className="truncate text-xs text-muted">{user?.email}</p>
+                </div>
+                <button
+                  className="block w-full rounded-md px-3 py-1.5 text-left text-sm hover:bg-slate-50"
+                  type="button"
+                  onClick={() => {
+                    setAccountOpen(false);
+                    setProfileOpen(true);
+                  }}
+                >
+                  Account settings
+                </button>
+                <button
+                  className="block w-full rounded-md px-3 py-1.5 text-left text-sm text-danger hover:bg-red-50"
+                  type="button"
+                  onClick={() => logout.mutate()}
+                >
+                  Log out
+                </button>
+              </div>
+            ) : null}
+          </div>
         </header>
-        <main id="main" className="px-4 py-6 sm:px-6 lg:px-8">
+        <main id="main" className="px-4 py-6 sm:px-6">
           <Outlet />
         </main>
       </div>
-      <Modal open={accountOpen} title="Your account" onClose={() => setAccountOpen(false)}>
+      <Modal open={profileOpen} title="Account settings" onClose={() => setProfileOpen(false)}>
         <form
           className="space-y-4"
           onSubmit={(event) => {
@@ -200,7 +273,7 @@ export function AppShell() {
             <span className="label">Name</span>
             <input className="field" value={name} onChange={(event) => setName(event.target.value)} minLength={2} required />
           </label>
-          <p className="text-sm text-mist-400">{user?.email}</p>
+          <p className="text-sm text-muted">{user?.email}</p>
           <button className="btn-primary" type="submit" disabled={rename.isPending}>
             Save
           </button>
@@ -224,30 +297,31 @@ function SearchBox({ workspaceId }: { workspaceId: string }) {
       <label className="sr-only" htmlFor="workspace-search">
         Search issues
       </label>
+      <Icon name="search" className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-faint" />
       <input
         id="workspace-search"
-        className="field"
+        className="field max-w-md pl-8"
         placeholder="Search issues"
         value={q}
         onChange={(event) => setQ(event.target.value)}
       />
       {deferred.length >= 2 ? (
-        <div className="panel absolute z-30 mt-2 w-full p-2">
+        <div className="absolute z-30 mt-1 w-full max-w-md rounded-lg border border-line bg-white p-1 shadow-pop">
           {(results.data ?? []).map((issue) => (
             <button
               key={issue.id}
               type="button"
-              className="block w-full rounded-xl px-3 py-2 text-left hover:bg-white/5"
+              className="block w-full rounded-md px-3 py-2 text-left hover:bg-slate-50"
               onClick={() => {
                 setQ('');
                 navigate(`/w/${workspaceId}/issues/${issue.id}`);
               }}
             >
-              <span className="font-mono text-xs text-mist-400">{issue.key}</span>
+              <span className="font-mono text-xs text-muted">{issue.key}</span>
               <span className="mt-0.5 block text-sm">{issue.title}</span>
             </button>
           ))}
-          {results.isFetched && !results.data?.length ? <p className="px-3 py-3 text-sm text-mist-500">No matching issues.</p> : null}
+          {results.isFetched && !results.data?.length ? <p className="px-3 py-3 text-sm text-muted">No matching issues.</p> : null}
         </div>
       ) : null}
     </div>

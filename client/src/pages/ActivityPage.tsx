@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Avatar, useDocumentTitle } from '../components/ui';
+import { Avatar, PageHeader, useDocumentTitle } from '../components/ui';
 import { api, errorMessage } from '../lib/api';
 import { timeAgo } from '../lib/format';
 
@@ -15,16 +15,15 @@ export function ActivityPage() {
   useDocumentTitle('Activity');
   return (
     <div className="mx-auto max-w-3xl space-y-4">
-      <h1 className="font-display text-4xl font-bold">Activity</h1>
-      <p className="text-mist-400">A running history of issues, comments, and membership changes in this workspace.</p>
-      {activity.isError ? <p className="text-rose">{errorMessage(activity.error)}</p> : null}
-      <ul className="space-y-2">
+      <PageHeader title="Activity" description="A running history of issues, comments, and membership changes in this workspace." />
+      {activity.isError ? <p className="text-sm text-danger">{errorMessage(activity.error)}</p> : null}
+      <ul className="panel divide-y divide-line">
         {(activity.data?.activities ?? []).map((item) => (
-          <li key={item.id} className="panel flex gap-3 px-4 py-3">
+          <li key={item.id} className="flex gap-3 px-4 py-3">
             <Avatar name={item.actor.name} color={item.actor.avatarColor} size="sm" />
             <div>
               <p className="text-sm">{item.message}</p>
-              <p className="mt-1 text-xs text-mist-500">{timeAgo(item.createdAt)}</p>
+              <p className="mt-1 text-xs text-faint">{timeAgo(item.createdAt)}</p>
             </div>
           </li>
         ))}
@@ -49,21 +48,21 @@ export function NotificationsPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="font-display text-4xl font-bold">Notifications</h1>
+        <h1 className="page-title">Notifications</h1>
         <button className="btn-ghost" type="button" onClick={() => api.markAllRead().then(() => notifications.refetch())}>
           Mark all read
         </button>
       </div>
-      <ul className="space-y-2">
+      <ul className="panel divide-y divide-line">
         {(notifications.data?.notifications ?? []).map((item) => (
-          <li key={item.id} className={`panel px-4 py-3 ${item.read ? 'opacity-70' : ''}`}>
-            <a href={item.link || '/notifications'} className="text-sm hover:text-acid" onClick={() => { if (!item.read) void api.markRead(item.id); }}>
+          <li key={item.id} className={`px-4 py-3 ${item.read ? 'opacity-70' : ''}`}>
+            <a href={item.link || '/notifications'} className="text-sm hover:text-brand" onClick={() => { if (!item.read) void api.markRead(item.id); }}>
               {item.message}
             </a>
-            <p className="mt-1 text-xs text-mist-500">{timeAgo(item.createdAt)}</p>
+            <p className="mt-1 text-xs text-faint">{timeAgo(item.createdAt)}</p>
           </li>
         ))}
-        {notifications.data && !notifications.data.notifications.length ? <li className="text-sm text-mist-500">No notifications yet.</li> : null}
+        {notifications.data && !notifications.data.notifications.length ? <li className="text-sm text-muted">No notifications yet.</li> : null}
       </ul>
     </div>
   );

@@ -4,7 +4,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { IssueBoard } from '../components/IssueBoard';
 import { IssueForm } from '../components/IssueForm';
 import { StatGrid } from '../components/AnalyticsPanels';
-import { Avatar, EmptyState, Modal, PriorityMark, StatusBadge, useDocumentTitle } from '../components/ui';
+import { Avatar, EmptyState, Modal, PageHeader, PriorityMark, StatusBadge, useDocumentTitle } from '../components/ui';
 import { api, errorMessage } from '../lib/api';
 import { dueLabel } from '../lib/format';
 import { PRIORITIES, PRIORITY_LABEL, STATUSES, STATUS_LABEL, type IssueStatus } from '../lib/types';
@@ -94,34 +94,41 @@ export function ProjectPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <Link className="text-sm text-mist-400 hover:text-acid" to={`/w/${workspaceId}/projects`}>
-            Projects
-          </Link>
-          <h1 className="mt-1 font-display text-4xl font-bold">
-            <span className="mr-2 font-mono text-2xl text-acid">{project.data?.key}</span>
-            {project.data?.name ?? 'Project'}
-          </h1>
-          <p className="mt-2 text-mist-400">{project.data?.description}</p>
-        </div>
-        <div className="flex gap-2">
-          {canManage ? (
-            <button
-              className="btn-danger"
-              type="button"
-              onClick={() => {
-                if (window.confirm(`Delete ${project.data?.key ?? 'this project'} and its issues?`)) remove.mutate();
-              }}
-            >
-              Delete project
+      <PageHeader
+        meta={
+          <span className="inline-flex items-center gap-1.5">
+            <Link className="hover:text-brand" to={`/w/${workspaceId}/projects`}>
+              Projects
+            </Link>
+            {project.data?.key ? (
+              <>
+                <span aria-hidden="true">/</span>
+                <span className="font-mono text-xs text-ink">{project.data.key}</span>
+              </>
+            ) : null}
+          </span>
+        }
+        title={project.data?.name ?? 'Project'}
+        description={project.data?.description}
+        actions={
+          <>
+            {canManage ? (
+              <button
+                className="btn-danger"
+                type="button"
+                onClick={() => {
+                  if (window.confirm(`Delete ${project.data?.key ?? 'this project'} and its issues?`)) remove.mutate();
+                }}
+              >
+                Delete project
+              </button>
+            ) : null}
+            <button className="btn-primary" type="button" onClick={() => setCreating(true)}>
+              New issue
             </button>
-          ) : null}
-          <button className="btn-primary" type="button" onClick={() => setCreating(true)}>
-            New issue
-          </button>
-        </div>
-      </div>
+          </>
+        }
+      />
       {analytics.data ? <StatGrid analytics={analytics.data} /> : null}
       <div className="flex flex-wrap items-center gap-2">
         <select className="field w-auto" value={status} aria-label="Filter by status" onChange={(event) => updateFilter('status', event.target.value)}>
@@ -148,17 +155,17 @@ export function ProjectPage() {
             </option>
           ))}
         </select>
-        <label className="inline-flex items-center gap-2 text-sm text-mist-300">
+        <label className="inline-flex items-center gap-2 text-sm text-muted">
           <input type="checkbox" checked={overdue === 'true'} onChange={(event) => updateFilter('overdue', event.target.checked ? 'true' : '')} />
           Overdue
         </label>
         <input className="field w-48" placeholder="Filter title" value={q} aria-label="Filter by title" onChange={(event) => updateFilter('q', event.target.value)} />
-        <div className="ml-auto flex rounded-full border border-white/10 p-1">
+        <div className="ml-auto inline-flex rounded-md border border-line bg-white p-0.5">
           {(['board', 'list'] as const).map((item) => (
             <button
               key={item}
               type="button"
-              className={`rounded-full px-3 py-1 text-sm capitalize ${view === item ? 'bg-acid text-ink-950' : 'text-mist-300'}`}
+              className={`rounded px-3 py-1 text-sm capitalize ${view === item ? 'bg-slate-100 font-medium text-ink' : 'text-muted'}`}
               onClick={() => updateFilter('view', item === 'board' ? '' : 'list')}
             >
               {item}
@@ -166,8 +173,8 @@ export function ProjectPage() {
           ))}
         </div>
       </div>
-      {issues.isPending ? <p>Loading issues…</p> : null}
-      {issues.isError ? <p className="text-rose">{errorMessage(issues.error)}</p> : null}
+      {issues.isPending ? <p className="text-sm text-muted">Loading issues…</p> : null}
+      {issues.isError ? <p className="text-sm text-danger">{errorMessage(issues.error)}</p> : null}
       {issues.data && !issues.data.issues.length ? (
         <EmptyState title="Nothing in this view" body="Create an issue or clear the filters to see the rest of the project." action={<button className="btn-primary" type="button" onClick={() => setCreating(true)}>New issue</button>} />
       ) : null}
@@ -177,7 +184,7 @@ export function ProjectPage() {
       {issues.data && issues.data.issues.length && view === 'list' ? (
         <div className="panel overflow-x-auto">
           <table className="w-full min-w-[720px] text-left text-sm">
-            <thead className="text-mist-400">
+            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-faint">
               <tr>
                 <th className="px-4 py-3 font-medium">Issue</th>
                 <th className="px-4 py-3 font-medium">Status</th>
@@ -188,12 +195,12 @@ export function ProjectPage() {
             </thead>
             <tbody>
               {issues.data.issues.map((issue) => (
-                <tr key={issue.id} className="border-t border-white/5">
+                <tr key={issue.id} className="border-t border-line hover:bg-slate-50">
                   <td className="px-4 py-3">
-                    <Link to={`/w/${workspaceId}/issues/${issue.id}`} className="font-mono text-xs text-mist-400">
+                    <Link to={`/w/${workspaceId}/issues/${issue.id}`} className="font-mono text-xs text-muted">
                       {issue.key}
                     </Link>
-                    <Link to={`/w/${workspaceId}/issues/${issue.id}`} className="mt-1 block font-medium hover:text-acid">
+                    <Link to={`/w/${workspaceId}/issues/${issue.id}`} className="mt-0.5 block font-medium hover:text-brand">
                       {issue.title}
                     </Link>
                   </td>
@@ -210,7 +217,7 @@ export function ProjectPage() {
                       ))}
                     </div>
                   </td>
-                  <td className={`px-4 py-3 ${issue.overdue ? 'text-rose' : 'text-mist-400'}`}>{dueLabel(issue.dueDate, issue.overdue) ?? '—'}</td>
+                  <td className={`px-4 py-3 ${issue.overdue ? 'text-danger' : 'text-muted'}`}>{dueLabel(issue.dueDate, issue.overdue) ?? '—'}</td>
                 </tr>
               ))}
             </tbody>
@@ -218,7 +225,7 @@ export function ProjectPage() {
         </div>
       ) : null}
       {issues.data && issues.data.total > issues.data.issues.length ? (
-        <p className="text-sm text-mist-500">
+        <p className="text-sm text-muted">
           Showing {issues.data.issues.length} of {issues.data.total}. Narrow the filters to see a smaller set.
         </p>
       ) : null}
