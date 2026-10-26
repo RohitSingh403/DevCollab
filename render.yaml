@@ -1,0 +1,24 @@
+# Single-origin deploy: Express serves the API, Socket.IO, and the built React app.
+# Set MONGODB_URI to a MongoDB Atlas connection string and CLIENT_ORIGIN to this service's public https URL.
+services:
+  - type: web
+    name: devcollab
+    runtime: node
+    plan: starter
+    region: oregon
+    buildCommand: npm --prefix client ci && npm --prefix client run build && npm --prefix server ci && npm --prefix server run build
+    startCommand: npm --prefix server start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: MONGODB_URI
+        sync: false
+      - key: CLIENT_ORIGIN
+        sync: false
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: COOKIE_SAMESITE
+        value: lax
