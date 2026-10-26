@@ -1,0 +1,20 @@
+{
+  "name": "devcollab",
+  "private": true,
+  "version": "1.0.0",
+  "description": "DevCollab — a multi-user workspace for projects, issues, and team activity.",
+  "scripts": {
+    "dev": "concurrently -k -n server,client -c cyan,magenta \"npm --prefix server run dev\" \"npm --prefix client run dev\"",
+    "test": "npm --prefix server test && npm --prefix client test",
+    "build": "npm --prefix client run build && npm --prefix server run build",
+    "seed": "npm --prefix server run seed",
+    "start": "npm --prefix server run start",
+    "typecheck": "npm --prefix server run typecheck && npm --prefix client run typecheck"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

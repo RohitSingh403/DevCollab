@@ -1,0 +1,33 @@
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - devcollab_mongo:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      MONGODB_URI: mongodb://mongo:27017/devcollab
+      JWT_SECRET: dev-docker-secret-change-me-please
+      CLIENT_ORIGIN: http://localhost:4000
+      COOKIE_SECURE: "false"
+      COOKIE_SAMESITE: lax
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+volumes:
+  devcollab_mongo:
