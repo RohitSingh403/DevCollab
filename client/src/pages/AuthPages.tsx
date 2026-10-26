@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
@@ -21,53 +22,103 @@ const registerSchema = loginSchema.extend({
     .regex(/[0-9]/, 'Include a number'),
 });
 
-function StoryPanel() {
+function SiteHeader() {
   return (
-    <section className="relative hidden overflow-hidden border-r border-white/10 px-10 py-10 lg:flex lg:flex-col">
-      <Logo />
-      <p className="mt-16 font-mono text-xs uppercase tracking-[0.22em] text-acid">For software teams</p>
-      <h1 className="mt-4 max-w-xl font-display text-5xl font-extrabold leading-[0.95]">
-        Issues, roles, and the conversation around the work.
-      </h1>
-      <p className="mt-5 max-w-md text-mist-300">
-        DevCollab is the shared side of building software: workspaces, projects, assignments, and a live trail of what changed.
-      </p>
-      <div className="mt-10 grid max-w-lg grid-cols-3 gap-3" aria-hidden="true">
-        {['Backlog', 'In progress', 'Done'].map((column, index) => (
-          <div key={column} className="rounded-2xl border border-white/10 bg-ink-900/70 p-3">
-            <p className="text-xs text-mist-400">{column}</p>
-            <div className={`mt-3 h-16 rounded-xl ${index === 1 ? 'bg-acid/20' : 'bg-white/5'}`} />
-            <div className="mt-2 h-10 rounded-xl bg-white/5" />
-          </div>
-        ))}
+    <header className="border-b border-line bg-white">
+      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
+        <Link to="/" aria-label="DevCollab home">
+          <Logo />
+        </Link>
+        <div className="flex items-center gap-2">
+          <Link className="btn-quiet" to="/login">
+            Sign in
+          </Link>
+          <Link className="btn-primary" to="/register">
+            Get started
+          </Link>
+        </div>
       </div>
-    </section>
+    </header>
   );
 }
+
+function AuthFrame({ title, subtitle, children }: { title: string; subtitle: ReactNode; children: ReactNode }) {
+  return (
+    <div className="min-h-screen bg-canvas">
+      <SiteHeader />
+      <main className="mx-auto flex max-w-md flex-col px-4 py-12">
+        <h1 className="text-2xl font-semibold tracking-tight text-ink">{title}</h1>
+        <p className="mt-1 text-sm text-muted">{subtitle}</p>
+        <div className="mt-6 rounded-lg border border-line bg-white p-5 shadow-sm">{children}</div>
+      </main>
+    </div>
+  );
+}
+
+const previewIssues = [
+  ['API-12', 'Signed cookie sessions', 'In progress', 'High'],
+  ['API-9', 'Role checks on project routes', 'In review', 'Urgent'],
+  ['WEB-4', 'Board columns for every status', 'Todo', 'Medium'],
+];
 
 export function LandingPage() {
   useDocumentTitle('Work together');
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
-      <StoryPanel />
-      <section className="flex flex-col justify-center px-6 py-12 sm:px-12">
-        <div className="lg:hidden">
-          <Logo />
-        </div>
-        <p className="mt-10 font-mono text-xs uppercase tracking-[0.22em] text-acid lg:mt-0">DevCollab</p>
-        <h1 className="mt-3 font-display text-4xl font-extrabold leading-tight sm:text-5xl">A workshop for the team shipping the product.</h1>
-        <p className="mt-4 max-w-md text-mist-300">
-          Create a workspace, invite the people doing the work, and keep issues, comments, and activity in one place.
-        </p>
-        <div className="mt-8 flex flex-wrap gap-3">
-          <Link className="btn-primary" to="/register">
-            Create account
-          </Link>
-          <Link className="btn-ghost" to="/login">
-            Sign in
-          </Link>
-        </div>
-      </section>
+    <div className="min-h-screen bg-canvas">
+      <SiteHeader />
+      <main>
+        <section className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:py-20">
+          <div>
+            <p className="text-sm font-medium text-brand">For software teams</p>
+            <h1 className="mt-2 max-w-xl text-4xl font-semibold tracking-tight text-ink">
+              The workspace where issues, roles, and discussion stay together.
+            </h1>
+            <p className="mt-4 max-w-lg text-base leading-7 text-muted">
+              Create a workspace, invite the people doing the work, and keep projects, assignments, comments, and activity in one place.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-2">
+              <Link className="btn-primary" to="/register">
+                Create account
+              </Link>
+              <Link className="btn-ghost" to="/login">
+                Sign in
+              </Link>
+            </div>
+          </div>
+          <div className="overflow-hidden rounded-lg border border-line bg-white shadow-sm" aria-hidden="true">
+            <div className="flex items-center justify-between border-b border-line px-4 py-3">
+              <p className="text-sm font-medium">API Platform</p>
+              <span className="text-xs text-muted">5 open</span>
+            </div>
+            <table className="w-full text-left text-sm">
+              <tbody>
+                {previewIssues.map(([key, title, status, priority]) => (
+                  <tr key={key} className="border-b border-line last:border-0">
+                    <td className="px-4 py-3 font-mono text-xs text-muted">{key}</td>
+                    <td className="px-2 py-3">{title}</td>
+                    <td className="px-4 py-3 text-xs text-muted">{status}</td>
+                    <td className="px-4 py-3 text-xs text-muted">{priority}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+        <section className="border-t border-line bg-white">
+          <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:px-6 md:grid-cols-3">
+            {[
+              ['Workspaces and roles', 'Owners, admins, and members. Invites for people who already have an account, and a one-time link for everyone else.'],
+              ['Issues with a paper trail', 'Status, priority, labels, assignees, due dates, comments, and a history of what changed.'],
+              ['A live view of the team', 'Updates and notifications arrive as the work moves. Analytics come from the issues themselves.'],
+            ].map(([title, body]) => (
+              <div key={title}>
+                <h2 className="text-sm font-semibold text-ink">{title}</h2>
+                <p className="mt-2 text-sm leading-6 text-muted">{body}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      </main>
     </div>
   );
 }
@@ -95,63 +146,61 @@ export function LoginPage() {
   });
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
-      <StoryPanel />
-      <section className="flex items-center justify-center px-6 py-12">
-        <form
-          className="w-full max-w-md"
-          noValidate
-          onSubmit={(event) => {
-            event.preventDefault();
-            const parsed = loginSchema.safeParse({ email, password });
-            if (!parsed.success) {
-              setError(parsed.error.issues[0]?.message ?? 'Check the form');
-              return;
-            }
-            setError('');
-            login.mutate();
-          }}
-        >
-          <div className="mb-8 lg:hidden">
-            <Logo />
-          </div>
-          <h2 className="font-display text-4xl font-bold">Sign in</h2>
-          <p className="mt-2 text-sm text-mist-400">
-            New here? <Link className="text-acid" to="/register">Create an account</Link>
+    <AuthFrame
+      title="Sign in"
+      subtitle={
+        <>
+          New here?{' '}
+          <Link className="font-medium text-brand hover:underline" to="/register">
+            Create an account
+          </Link>
+        </>
+      }
+    >
+      <form
+        className="space-y-4"
+        noValidate
+        onSubmit={(event) => {
+          event.preventDefault();
+          const parsed = loginSchema.safeParse({ email, password });
+          if (!parsed.success) {
+            setError(parsed.error.issues[0]?.message ?? 'Check the form');
+            return;
+          }
+          setError('');
+          login.mutate();
+        }}
+      >
+        <label className="block">
+          <span className="label">Email</span>
+          <input className="field" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
+        </label>
+        <label className="block">
+          <span className="label">Password</span>
+          <input className="field" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required />
+        </label>
+        {error ? (
+          <p className="text-sm text-danger" role="alert">
+            {error}
           </p>
-          <div className="mt-8 space-y-4">
-            <label className="block">
-              <span className="label">Email</span>
-              <input className="field" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
-            </label>
-            <label className="block">
-              <span className="label">Password</span>
-              <input className="field" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required />
-            </label>
-          </div>
-          {error ? (
-            <p className="mt-4 text-sm text-rose" role="alert">
-              {error}
-            </p>
-          ) : null}
-          <button className="btn-primary mt-6 w-full" type="submit" disabled={login.isPending}>
-            {login.isPending ? 'Signing in…' : 'Sign in'}
+        ) : null}
+        <button className="btn-primary w-full" type="submit" disabled={login.isPending}>
+          {login.isPending ? 'Signing in…' : 'Sign in'}
+        </button>
+        {import.meta.env.DEV ? (
+          <button
+            className="btn-quiet w-full"
+            type="button"
+            onClick={() => {
+              setEmail('maya@devcollab.dev');
+              setPassword('Password123!');
+            }}
+          >
+            Use demo account
           </button>
-          {import.meta.env.DEV ? (
-            <button
-              className="btn-quiet mt-3 w-full"
-              type="button"
-              onClick={() => {
-                setEmail('maya@devcollab.dev');
-                setPassword('Password123!');
-              }}
-            >
-              Use demo account
-            </button>
-          ) : null}
-        </form>
-      </section>
-    </div>
+        ) : null}
+      </form>
+    </AuthFrame>
   );
 }
 
@@ -178,51 +227,53 @@ export function RegisterPage() {
   });
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
-      <StoryPanel />
-      <section className="flex items-center justify-center px-6 py-12">
-        <form
-          className="w-full max-w-md"
-          noValidate
-          onSubmit={(event) => {
-            event.preventDefault();
-            const parsed = registerSchema.safeParse({ name, email, password });
-            if (!parsed.success) {
-              setError(parsed.error.issues[0]?.message ?? 'Check the form');
-              return;
-            }
-            setError('');
-            register.mutate();
-          }}
-        >
-          <h2 className="font-display text-4xl font-bold">Create account</h2>
-          <p className="mt-2 text-sm text-mist-400">
-            Already collaborating? <Link className="text-acid" to={`/login?next=${encodeURIComponent(next)}`}>Sign in</Link>
+    <AuthFrame
+      title="Create account"
+      subtitle={
+        <>
+          Already have an account?{' '}
+          <Link className="font-medium text-brand hover:underline" to={`/login?next=${encodeURIComponent(next)}`}>
+            Sign in
+          </Link>
+        </>
+      }
+    >
+      <form
+        className="space-y-4"
+        noValidate
+        onSubmit={(event) => {
+          event.preventDefault();
+          const parsed = registerSchema.safeParse({ name, email, password });
+          if (!parsed.success) {
+            setError(parsed.error.issues[0]?.message ?? 'Check the form');
+            return;
+          }
+          setError('');
+          register.mutate();
+        }}
+      >
+        <label className="block">
+          <span className="label">Name</span>
+          <input className="field" autoComplete="name" value={name} onChange={(event) => setName(event.target.value)} required />
+        </label>
+        <label className="block">
+          <span className="label">Email</span>
+          <input className="field" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
+        </label>
+        <label className="block">
+          <span className="label">Password</span>
+          <input className="field" type="password" autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} required />
+        </label>
+        <p className="text-xs text-muted">At least 8 characters, with a letter and a number.</p>
+        {error ? (
+          <p className="text-sm text-danger" role="alert">
+            {error}
           </p>
-          <div className="mt-8 space-y-4">
-            <label className="block">
-              <span className="label">Name</span>
-              <input className="field" value={name} onChange={(event) => setName(event.target.value)} required />
-            </label>
-            <label className="block">
-              <span className="label">Email</span>
-              <input className="field" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
-            </label>
-            <label className="block">
-              <span className="label">Password</span>
-              <input className="field" type="password" autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} required />
-            </label>
-          </div>
-          {error ? (
-            <p className="mt-4 text-sm text-rose" role="alert">
-              {error}
-            </p>
-          ) : null}
-          <button className="btn-primary mt-6 w-full" type="submit" disabled={register.isPending}>
-            {register.isPending ? 'Creating…' : 'Create account'}
-          </button>
-        </form>
-      </section>
-    </div>
+        ) : null}
+        <button className="btn-primary w-full" type="submit" disabled={register.isPending}>
+          {register.isPending ? 'Creating…' : 'Create account'}
+        </button>
+      </form>
+    </AuthFrame>
   );
 }

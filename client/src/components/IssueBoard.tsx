@@ -1,7 +1,14 @@
 import { Link } from 'react-router-dom';
 import { dueLabel, groupIssues } from '../lib/format';
-import { STATUSES, STATUS_LABEL, type Issue, type IssueStatus } from '../lib/types';
+import { STATUSES, STATUS_LABEL, type Issue, type IssueStatus, type Priority } from '../lib/types';
 import { Avatar, PriorityMark } from './ui';
+
+const priorityBar: Record<Priority, string> = {
+  low: 'bg-slate-300',
+  medium: 'bg-sky-500',
+  high: 'bg-amber-500',
+  urgent: 'bg-red-600',
+};
 
 export function IssueBoard({
   workspaceId,
@@ -18,7 +25,7 @@ export function IssueBoard({
       {STATUSES.map((status) => (
         <section
           key={status}
-          className="min-w-0 rounded-2xl border border-white/10 bg-ink-900/50"
+          className="min-w-0 rounded-lg bg-slate-100/80"
           onDragOver={(event) => event.preventDefault()}
           onDrop={(event) => {
             event.preventDefault();
@@ -27,11 +34,11 @@ export function IssueBoard({
           }}
           aria-label={`${STATUS_LABEL[status]} column`}
         >
-          <header className="flex items-center justify-between px-3 py-3">
-            <h3 className="text-sm font-semibold">{STATUS_LABEL[status]}</h3>
-            <span className="text-xs text-mist-500">{grouped[status].length}</span>
+          <header className="flex items-center justify-between px-3 py-2.5">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">{STATUS_LABEL[status]}</h3>
+            <span className="text-xs tabular-nums text-faint">{grouped[status].length}</span>
           </header>
-          <div className="space-y-2 px-2 pb-3">
+          <div className="space-y-2 px-2 pb-2">
             {grouped[status].map((issue) => (
               <article
                 key={issue.id}
@@ -40,30 +47,31 @@ export function IssueBoard({
                   event.dataTransfer.setData('text/plain', issue.id);
                   event.dataTransfer.effectAllowed = 'move';
                 }}
-                className="rounded-xl border border-white/10 bg-ink-950/80 p-3"
+                className="relative cursor-grab overflow-hidden rounded-md border border-line bg-white p-3 shadow-sm active:cursor-grabbing"
               >
-                <div className="flex items-center justify-between gap-2">
-                  <Link to={`/w/${workspaceId}/issues/${issue.id}`} className="font-mono text-xs text-mist-400 hover:text-acid">
+                <span className={`absolute inset-y-0 left-0 w-0.5 ${priorityBar[issue.priority]}`} aria-hidden="true" />
+                <div className="flex items-center justify-between gap-2 pl-1">
+                  <Link to={`/w/${workspaceId}/issues/${issue.id}`} className="font-mono text-[11px] text-muted hover:text-brand">
                     {issue.key}
                   </Link>
                   <PriorityMark priority={issue.priority} />
                 </div>
-                <Link to={`/w/${workspaceId}/issues/${issue.id}`} className="mt-2 block font-medium leading-snug hover:text-acid">
+                <Link to={`/w/${workspaceId}/issues/${issue.id}`} className="mt-1.5 block pl-1 text-sm font-medium leading-snug text-ink hover:text-brand">
                   {issue.title}
                 </Link>
-                <div className="mt-3 flex items-center justify-between gap-2">
+                <div className="mt-3 flex items-center justify-between gap-2 pl-1">
                   <div className="flex -space-x-1">
                     {issue.assignees.slice(0, 3).map((user) => (
                       <Avatar key={user.id} name={user.name} color={user.avatarColor} size="sm" />
                     ))}
                   </div>
-                  <span className={`text-xs ${issue.overdue ? 'text-rose' : 'text-mist-500'}`}>
+                  <span className={`text-xs ${issue.overdue ? 'font-medium text-danger' : 'text-faint'}`}>
                     {dueLabel(issue.dueDate, issue.overdue) ?? (issue.commentCount ? `${issue.commentCount} comments` : '')}
                   </span>
                 </div>
               </article>
             ))}
-            {!grouped[status].length ? <p className="px-2 py-6 text-center text-xs text-mist-500">Drop issues here</p> : null}
+            {!grouped[status].length ? <p className="px-2 py-6 text-center text-xs text-faint">No issues</p> : null}
           </div>
         </section>
       ))}

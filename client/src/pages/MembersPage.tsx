@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Avatar, RoleBadge, useDocumentTitle } from '../components/ui';
+import { Avatar, PageHeader, RoleBadge, useDocumentTitle } from '../components/ui';
 import { api, errorMessage } from '../lib/api';
 import type { Role } from '../lib/types';
 import { useAuthStore } from '../stores/authStore';
@@ -56,12 +56,10 @@ export function MembersPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-4xl font-bold">Members</h1>
-        <p className="mt-2 max-w-2xl text-mist-400">
-          Owners control the workspace. Admins manage projects and members. Members file issues and join the discussion.
-        </p>
-      </div>
+      <PageHeader
+        title="Members"
+        description="Owners control the workspace. Admins manage projects and members. Members file issues and join the discussion."
+      />
       {canInvite ? (
         <form
           className="panel grid gap-3 p-4 md:grid-cols-[1fr_160px_auto]"
@@ -88,15 +86,15 @@ export function MembersPage() {
               Invite
             </button>
           </div>
-          {error ? <p className="text-sm text-rose md:col-span-3" role="alert">{error}</p> : null}
+          {error ? <p className="text-sm text-danger md:col-span-3" role="alert">{error}</p> : null}
           {link ? (
-            <p className="text-sm text-mist-300 md:col-span-3">
-              Share this link once. It is not stored again. <span className="break-all font-mono text-acid">{link}</span>
+            <p className="text-sm text-muted md:col-span-3">
+              Share this link once. It is not stored again. <span className="break-all font-mono text-brand">{link}</span>
             </p>
           ) : null}
         </form>
       ) : null}
-      <ul className="panel divide-y divide-white/5">
+      <ul className="panel divide-y divide-line">
         {(members.data ?? []).map((member) => {
           const self = member.user.id === user?.id;
           const canEditTarget = !self && (actorRole === 'owner' || (actorRole === 'admin' && member.role === 'member'));
@@ -106,7 +104,7 @@ export function MembersPage() {
                 <Avatar name={member.user.name} color={member.user.avatarColor} />
                 <span>
                   <span className="block font-medium">{member.user.name}{self ? ' (you)' : ''}</span>
-                  <span className="block text-sm text-mist-500">{member.user.email}</span>
+                  <span className="block text-sm text-muted">{member.user.email}</span>
                 </span>
               </span>
               <span className="flex items-center gap-2">
@@ -143,8 +141,8 @@ export function MembersPage() {
       </ul>
       {invites.data?.length ? (
         <section>
-          <h2 className="mb-3 font-semibold">Pending invites</h2>
-          <ul className="panel divide-y divide-white/5">
+          <h2 className="mb-2 text-sm font-semibold">Pending invites</h2>
+          <ul className="panel divide-y divide-line">
             {invites.data.map((inviteItem) => (
               <li key={inviteItem.id} className="flex items-center justify-between px-4 py-3 text-sm">
                 <span>

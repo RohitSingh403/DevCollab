@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Avatar, PriorityMark, StatusBadge, useDocumentTitle } from '../components/ui';
+import { Avatar, useDocumentTitle } from '../components/ui';
 import { api, errorMessage } from '../lib/api';
 import { timeAgo, toDateInput } from '../lib/format';
 import { PRIORITIES, PRIORITY_LABEL, STATUSES, STATUS_LABEL, type IssueStatus, type Priority, type Role } from '../lib/types';
@@ -44,21 +44,27 @@ export function IssuePage() {
   const role = workspace.data?.role;
   const canDelete = Boolean(user && issue.data && (issue.data.reporter.id === user.id || role === 'owner' || role === 'admin'));
 
-  if (issue.isPending) return <p>Loading issue…</p>;
-  if (issue.isError) return <p className="text-rose">{errorMessage(issue.error)}</p>;
+  if (issue.isPending) return <p className="text-sm text-muted">Loading issue…</p>;
+  if (issue.isError) return <p className="text-sm text-danger">{errorMessage(issue.error)}</p>;
   const current = issue.data;
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
       <div>
-        <Link className="text-sm text-mist-400 hover:text-acid" to={`/w/${workspaceId}/projects/${current.project.id}`}>
-          {current.project.key} {current.project.name}
-        </Link>
-        <p className="mt-3 font-mono text-sm text-acid">{current.key}</p>
+        <p className="text-sm text-muted">
+          <Link className="hover:text-brand" to={`/w/${workspaceId}/projects`}>
+            Projects
+          </Link>
+          <span aria-hidden="true"> / </span>
+          <Link className="hover:text-brand" to={`/w/${workspaceId}/projects/${current.project.id}`}>
+            {current.project.name}
+          </Link>
+        </p>
+        <p className="mt-3 font-mono text-xs text-muted">{current.key}</p>
         <TitleEditor title={current.title} onSave={(title) => save.mutate({ title })} />
         <DescriptionEditor description={current.description} onSave={(description) => save.mutate({ description })} />
         <section className="mt-8">
-          <h2 className="font-semibold">Comments</h2>
+          <h2 className="text-sm font-semibold">Comments</h2>
           <ul className="mt-3 space-y-3">
             {(comments.data ?? []).map((comment) => (
               <CommentCard key={comment.id} comment={comment} role={role} />
@@ -79,10 +85,6 @@ export function IssuePage() {
               ))}
             </select>
           </label>
-          <div className="flex items-center gap-2">
-            <StatusBadge status={current.status} />
-            <PriorityMark priority={current.priority} />
-          </div>
           <label className="block">
             <span className="label">Priority</span>
             <select className="field" value={current.priority} onChange={(event) => save.mutate({ priority: event.target.value as Priority })}>
@@ -133,7 +135,7 @@ export function IssuePage() {
                   <button
                     key={label.id}
                     type="button"
-                    className={`rounded-full px-2.5 py-1 text-xs ${checked ? 'bg-white text-ink-950' : 'bg-white/5 text-mist-200'}`}
+                    className={`rounded border px-2 py-0.5 text-xs ${checked ? 'border-brand bg-brand-soft text-brand' : 'border-line bg-white text-muted'}`}
                     onClick={() => {
                       const ids = current.labels.map((item) => item.id);
                       save.mutate({ labelIds: checked ? ids.filter((id) => id !== label.id) : [...ids, label.id] });
@@ -146,7 +148,7 @@ export function IssuePage() {
               })}
             </div>
           </fieldset>
-          <p className="text-xs text-mist-500">Opened by {current.reporter.name} · {timeAgo(current.createdAt)}</p>
+          <p className="text-xs text-faint">Opened by {current.reporter.name} · {timeAgo(current.createdAt)}</p>
           {canDelete ? (
             <button
               className="btn-danger w-full"
@@ -160,12 +162,12 @@ export function IssuePage() {
           ) : null}
         </section>
         <section className="panel p-4">
-          <h2 className="font-semibold">History</h2>
+          <h2 className="text-sm font-semibold">History</h2>
           <ul className="mt-3 space-y-3">
             {(activity.data?.activities ?? []).map((item) => (
               <li key={item.id} className="text-sm">
                 <p>{item.message}</p>
-                <p className="text-xs text-mist-500">{timeAgo(item.createdAt)}</p>
+                <p className="text-xs text-faint">{timeAgo(item.createdAt)}</p>
               </li>
             ))}
           </ul>
@@ -189,7 +191,7 @@ function TitleEditor({ title, onSave }: { title: string; onSave: (title: string)
     <textarea
       ref={ref}
       rows={1}
-      className="mt-2 w-full resize-none overflow-hidden bg-transparent font-display text-3xl font-bold leading-tight outline-none sm:text-4xl"
+      className="mt-1 w-full resize-none overflow-hidden bg-transparent text-2xl font-semibold leading-snug tracking-tight text-ink outline-none"
       aria-label="Issue title"
       value={value}
       onChange={(event) => setValue(event.target.value)}
@@ -205,7 +207,7 @@ function DescriptionEditor({ description, onSave }: { description: string; onSav
   useEffect(() => setValue(description), [description]);
   return (
     <textarea
-      className="mt-4 min-h-32 w-full rounded-2xl border border-white/10 bg-ink-900/40 p-4 text-sm leading-6 outline-none focus:border-acid/50"
+      className="mt-3 min-h-28 w-full resize-y rounded-md border border-transparent bg-transparent px-1 py-2 text-sm leading-6 text-ink outline-none placeholder:text-faint focus:border-line focus:bg-white focus:px-3"
       aria-label="Issue description"
       placeholder="Add context for the people picking this up."
       value={value}
@@ -274,12 +276,12 @@ function CommentCard({
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['comments'] }),
   });
   return (
-    <li className="rounded-2xl border border-white/10 bg-ink-900/50 p-4">
+    <li className="rounded-lg border border-line bg-white p-4">
       <div className="flex items-center justify-between gap-3">
         <span className="flex items-center gap-2 text-sm">
           <Avatar name={comment.author.name} color={comment.author.avatarColor} size="sm" />
           <span className="font-medium">{comment.author.name}</span>
-          <span className="text-mist-500">{timeAgo(comment.createdAt)}{comment.edited ? ' · edited' : ''}</span>
+          <span className="text-faint">{timeAgo(comment.createdAt)}{comment.edited ? ' · edited' : ''}</span>
         </span>
         <span className="flex gap-1">
           {isAuthor ? (

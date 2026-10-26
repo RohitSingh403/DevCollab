@@ -3,28 +3,26 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
-  background:
-    radial-gradient(900px 420px at 0% -10%, rgba(231, 245, 106, 0.08), transparent 55%),
-    radial-gradient(700px 380px at 100% 0%, rgba(94, 224, 181, 0.06), transparent 50%),
-    #090b10;
-  color: #f5f7fb;
-  font-family: Figtree, ui-sans-serif, system-ui, sans-serif;
+  background: #f4f5f7;
+  color: #1c2128;
+  font-family: 'Source Sans 3', 'Segoe UI', ui-sans-serif, system-ui, sans-serif;
+  font-size: 15px;
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: #313b4e transparent;
+  scrollbar-color: #c5cad3 transparent;
 }
 
 ::selection {
-  background: #e7f56a;
-  color: #14180c;
+  background: #d6e4f5;
+  color: #1c2128;
 }
 
 #root {
@@ -33,39 +31,47 @@ body {
 
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acid disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .btn-primary {
-    @apply btn bg-acid text-ink-950 hover:bg-[#f3ff8d];
+    @apply btn bg-brand text-white hover:bg-brand-hover;
   }
 
   .btn-ghost {
-    @apply btn border border-white/10 bg-white/5 text-mist-50 hover:bg-white/10;
+    @apply btn border border-line bg-white text-ink hover:bg-slate-50;
   }
 
   .btn-danger {
-    @apply btn bg-rose/15 text-rose hover:bg-rose/25;
+    @apply btn border border-red-200 bg-white text-danger hover:bg-red-50;
   }
 
   .btn-quiet {
-    @apply btn px-3 text-mist-300 hover:bg-white/5 hover:text-mist-50;
+    @apply btn text-muted hover:bg-slate-100 hover:text-ink;
   }
 
   .field {
-    @apply w-full rounded-xl border border-white/10 bg-ink-950/70 px-3 py-2.5 text-sm text-mist-50 outline-none transition placeholder:text-mist-500 focus:border-acid/70 focus:ring-2 focus:ring-acid/30;
+    @apply w-full rounded-md border border-line bg-white px-2.5 py-1.5 text-sm text-ink shadow-sm outline-none transition placeholder:text-faint focus:border-brand focus:ring-2 focus:ring-brand/15;
+  }
+
+  .field-dark {
+    @apply w-full rounded-md border border-white/10 bg-white/5 px-2.5 py-1.5 text-sm text-white outline-none transition placeholder:text-slate-400 focus:border-white/30;
   }
 
   .panel {
-    @apply rounded-2xl border border-white/10 bg-ink-900/80 shadow-panel;
+    @apply rounded-lg border border-line bg-white;
   }
 
   .label {
-    @apply mb-1.5 block text-sm font-medium text-mist-200;
+    @apply mb-1 block text-xs font-medium text-muted;
   }
 
-  .kbd {
-    @apply rounded-md border border-white/10 bg-ink-800 px-1.5 py-0.5 font-mono text-[10px] text-mist-300;
+  .page-title {
+    @apply text-xl font-semibold tracking-tight text-ink;
+  }
+
+  .page-lead {
+    @apply mt-1 max-w-2xl text-sm leading-6 text-muted;
   }
 }
 

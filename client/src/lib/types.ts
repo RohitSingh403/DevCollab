@@ -22,7 +22,7 @@ export const PRIORITY_LABEL: Record<Priority, string> = {
   urgent: 'Urgent',
 };
 
-export const LABEL_COLORS = ['#ff6b81', '#f0b429', '#e7f56a', '#5ee0b5', '#5ccfe6', '#8eb6ff', '#d4bfff', '#ff9f68'];
+export const LABEL_COLORS = ['#b42318', '#b54708', '#175cd3', '#0e7c66', '#6941c6', '#363f72', '#c4320a', '#067647'];
 
 export interface User {
   id: string;

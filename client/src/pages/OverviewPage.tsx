@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AnalyticsPanels, StatGrid } from '../components/AnalyticsPanels';
-import { EmptyState, Modal, RoleBadge, useDocumentTitle } from '../components/ui';
+import { EmptyState, Modal, PageHeader, RoleBadge, useDocumentTitle } from '../components/ui';
 import { api, errorMessage } from '../lib/api';
 import { timeAgo } from '../lib/format';
 import { useUiStore } from '../stores/uiStore';
@@ -13,15 +13,14 @@ export function WorkspaceHome() {
   const [params] = useSearchParams();
   const forceNew = params.get('new') === '1';
   useDocumentTitle('Workspaces');
-  if (workspaces.isPending) return <p>Loading workspaces…</p>;
+  if (workspaces.isPending) return <p className="text-sm text-muted">Loading workspaces…</p>;
   if (!forceNew && workspaces.data?.length) {
     const next = workspaces.data.find((workspace) => workspace.id === remembered) ?? workspaces.data[0];
     return <Navigate to={`/w/${next.id}`} replace />;
   }
   return (
     <div className="mx-auto max-w-xl">
-      <h1 className="font-display text-4xl font-bold">Create a workspace</h1>
-      <p className="mt-2 text-mist-400">A workspace is the home for a team: projects, members, and the issues they share.</p>
+      <PageHeader title="Create a workspace" description="A workspace is the home for a team: projects, members, and the issues they share." />
       <div className="mt-6">
         <CreateWorkspaceForm />
       </div>
@@ -62,7 +61,7 @@ export function CreateWorkspaceForm({ onCreated }: { onCreated?: (id: string) =>
         <span className="label">Description</span>
         <textarea className="field min-h-24" value={description} onChange={(event) => setDescription(event.target.value)} />
       </label>
-      {error ? <p className="text-sm text-rose" role="alert">{error}</p> : null}
+      {error ? <p className="text-sm text-danger" role="alert">{error}</p> : null}
       <button className="btn-primary" type="submit" disabled={create.isPending}>
         {create.isPending ? 'Creating…' : 'Create workspace'}
       </button>
@@ -83,59 +82,61 @@ export function OverviewPage() {
   useDocumentTitle(workspace.data?.name ?? 'Overview');
   const canManage = workspace.data?.role === 'owner' || workspace.data?.role === 'admin';
 
-  if (workspace.isPending) return <p>Loading workspace…</p>;
-  if (workspace.isError) return <p className="text-rose">{errorMessage(workspace.error)}</p>;
+  if (workspace.isPending) return <p className="text-sm text-muted">Loading workspace…</p>;
+  if (workspace.isError) return <p className="text-sm text-danger">{errorMessage(workspace.error)}</p>;
   const current = workspace.data;
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="font-display text-4xl font-bold">{current.name}</h1>
+      <PageHeader
+        title={
+          <span className="inline-flex items-center gap-2">
+            {current.name}
             <RoleBadge role={current.role} />
-          </div>
-          <p className="mt-2 max-w-2xl text-mist-400">{current.description || 'No description yet.'}</p>
-        </div>
-        <div className="flex gap-2">
-          {canManage ? (
-            <button className="btn-ghost" type="button" onClick={() => setSettingsOpen(true)}>
-              Settings
-            </button>
-          ) : null}
-          <Link className="btn-primary" to={`/w/${workspaceId}/projects`}>
-            View projects
-          </Link>
-        </div>
-      </div>
-      {analytics.data ? <StatGrid analytics={analytics.data} /> : <p className="text-sm text-mist-500">Loading analytics…</p>}
+          </span>
+        }
+        description={current.description || 'No description yet.'}
+        actions={
+          <>
+            {canManage ? (
+              <button className="btn-ghost" type="button" onClick={() => setSettingsOpen(true)}>
+                Settings
+              </button>
+            ) : null}
+            <Link className="btn-primary" to={`/w/${workspaceId}/projects`}>
+              View projects
+            </Link>
+          </>
+        }
+      />
+      {analytics.data ? <StatGrid analytics={analytics.data} /> : <p className="text-sm text-muted">Loading analytics…</p>}
       {analytics.data ? <AnalyticsPanels analytics={analytics.data} /> : null}
       <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
         <section>
-          <h2 className="mb-3 font-semibold">Projects</h2>
-          <div className="space-y-2">
+          <h2 className="mb-2 text-sm font-semibold">Projects</h2>
+          <div className="panel divide-y divide-line">
             {(projects.data ?? []).map((project) => (
-              <Link key={project.id} to={`/w/${workspaceId}/projects/${project.id}`} className="panel flex items-center justify-between px-4 py-3 hover:border-acid/40">
+              <Link key={project.id} to={`/w/${workspaceId}/projects/${project.id}`} className="flex items-center justify-between px-4 py-3 hover:bg-slate-50">
                 <span>
-                  <span className="font-mono text-xs text-mist-400">{project.key}</span>
-                  <span className="mt-1 block font-medium">{project.name}</span>
+                  <span className="font-mono text-xs text-muted">{project.key}</span>
+                  <span className="mt-0.5 block text-sm font-medium">{project.name}</span>
                 </span>
-                <span className="text-sm text-mist-400">{project.openIssueCount} open</span>
+                <span className="text-sm text-muted">{project.openIssueCount} open</span>
               </Link>
             ))}
             {!projects.data?.length ? <EmptyState title="No projects yet" body="Projects group issues by product area, with their own keys and boards." action={<Link className="btn-primary" to={`/w/${workspaceId}/projects`}>Create a project</Link>} /> : null}
           </div>
         </section>
         <section>
-          <h2 className="mb-3 font-semibold">Recent activity</h2>
-          <ul className="panel divide-y divide-white/5">
+          <h2 className="mb-2 text-sm font-semibold">Recent activity</h2>
+          <ul className="panel divide-y divide-line">
             {(activity.data?.activities ?? []).slice(0, 8).map((item) => (
               <li key={item.id} className="px-4 py-3 text-sm">
                 <p>{item.message}</p>
-                <p className="mt-1 text-xs text-mist-500">{timeAgo(item.createdAt)}</p>
+                <p className="mt-1 text-xs text-faint">{timeAgo(item.createdAt)}</p>
               </li>
             ))}
-            {!activity.data?.activities.length ? <li className="px-4 py-6 text-sm text-mist-500">Activity will show up as the team files work.</li> : null}
+            {!activity.data?.activities.length ? <li className="px-4 py-6 text-sm text-muted">Activity will show up as the team files work.</li> : null}
           </ul>
         </section>
       </div>
@@ -205,15 +206,15 @@ function WorkspaceSettings({
           <span className="label">Description</span>
           <textarea className="field min-h-24" value={nextDescription} onChange={(event) => setNextDescription(event.target.value)} />
         </label>
-        {error ? <p className="text-sm text-rose">{error}</p> : null}
+        {error ? <p className="text-sm text-danger">{error}</p> : null}
         <button className="btn-primary" type="submit" disabled={save.isPending}>
           Save changes
         </button>
       </form>
       {canDelete ? (
-        <div className="mt-8 border-t border-white/10 pt-4">
-          <h3 className="font-semibold text-rose">Delete workspace</h3>
-          <p className="mt-1 text-sm text-mist-400">Type {name} to delete every project and issue in this workspace.</p>
+        <div className="mt-8 border-t border-line pt-4">
+          <h3 className="text-sm font-semibold text-danger">Delete workspace</h3>
+          <p className="mt-1 text-sm text-muted">Type {name} to delete every project and issue in this workspace.</p>
           <input className="field mt-3" value={confirm} onChange={(event) => setConfirm(event.target.value)} aria-label="Confirm workspace name" />
           <button className="btn-danger mt-3" type="button" disabled={confirm !== name || remove.isPending} onClick={() => remove.mutate()}>
             Delete workspace
