@@ -1,0 +1,81 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(900px 420px at 0% -10%, rgba(231, 245, 106, 0.08), transparent 55%),
+    radial-gradient(700px 380px at 100% 0%, rgba(94, 224, 181, 0.06), transparent 50%),
+    #090b10;
+  color: #f5f7fb;
+  font-family: Figtree, ui-sans-serif, system-ui, sans-serif;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #313b4e transparent;
+}
+
+::selection {
+  background: #e7f56a;
+  color: #14180c;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acid disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply btn bg-acid text-ink-950 hover:bg-[#f3ff8d];
+  }
+
+  .btn-ghost {
+    @apply btn border border-white/10 bg-white/5 text-mist-50 hover:bg-white/10;
+  }
+
+  .btn-danger {
+    @apply btn bg-rose/15 text-rose hover:bg-rose/25;
+  }
+
+  .btn-quiet {
+    @apply btn px-3 text-mist-300 hover:bg-white/5 hover:text-mist-50;
+  }
+
+  .field {
+    @apply w-full rounded-xl border border-white/10 bg-ink-950/70 px-3 py-2.5 text-sm text-mist-50 outline-none transition placeholder:text-mist-500 focus:border-acid/70 focus:ring-2 focus:ring-acid/30;
+  }
+
+  .panel {
+    @apply rounded-2xl border border-white/10 bg-ink-900/80 shadow-panel;
+  }
+
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-mist-200;
+  }
+
+  .kbd {
+    @apply rounded-md border border-white/10 bg-ink-800 px-1.5 py-0.5 font-mono text-[10px] text-mist-300;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
