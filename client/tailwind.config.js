@@ -4,25 +4,25 @@ export default {
   theme: {
     extend: {
       colors: {
-        canvas: '#f4f5f7',
-        ink: '#1c2128',
-        muted: '#5c6570',
-        faint: '#8b939e',
-        line: '#e2e5ea',
+        canvas: '#f6f7f9',
+        ink: '#121417',
+        muted: '#5f6773',
+        faint: '#8b929c',
+        line: '#e6e8ec',
         brand: {
-          DEFAULT: '#1d4f91',
-          hover: '#163e73',
-          soft: '#e8f0fa',
+          DEFAULT: '#1f4b99',
+          hover: '#173a78',
+          soft: '#eef3fb',
         },
-        sidebar: '#1a2332',
         danger: '#b42318',
       },
       fontFamily: {
-        sans: ['Source Sans 3', 'Segoe UI', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        sans: ['Inter', 'Segoe UI', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         mono: ['IBM Plex Mono', 'ui-monospace', 'monospace'],
       },
       boxShadow: {
-        pop: '0 8px 24px rgba(23, 32, 48, 0.12)',
+        pop: '0 12px 32px rgba(18, 20, 23, 0.12)',
+        card: '0 1px 2px rgba(18, 20, 23, 0.04)',
       },
     },
   },

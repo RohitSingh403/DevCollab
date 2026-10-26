@@ -1,14 +1,7 @@
 import { Link } from 'react-router-dom';
 import { dueLabel, groupIssues } from '../lib/format';
-import { STATUSES, STATUS_LABEL, type Issue, type IssueStatus, type Priority } from '../lib/types';
-import { Avatar, PriorityMark } from './ui';
-
-const priorityBar: Record<Priority, string> = {
-  low: 'bg-slate-300',
-  medium: 'bg-sky-500',
-  high: 'bg-amber-500',
-  urgent: 'bg-red-600',
-};
+import { STATUSES, STATUS_LABEL, type Issue, type IssueStatus } from '../lib/types';
+import { Avatar, PriorityMark, StatusDot } from './ui';
 
 export function IssueBoard({
   workspaceId,
@@ -25,7 +18,7 @@ export function IssueBoard({
       {STATUSES.map((status) => (
         <section
           key={status}
-          className="min-w-0 rounded-lg bg-slate-100/80"
+          className="min-w-0 rounded-xl bg-[#eef0f3] p-1.5"
           onDragOver={(event) => event.preventDefault()}
           onDrop={(event) => {
             event.preventDefault();
@@ -34,11 +27,14 @@ export function IssueBoard({
           }}
           aria-label={`${STATUS_LABEL[status]} column`}
         >
-          <header className="flex items-center justify-between px-3 py-2.5">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">{STATUS_LABEL[status]}</h3>
-            <span className="text-xs tabular-nums text-faint">{grouped[status].length}</span>
+          <header className="flex items-center justify-between px-2 py-2">
+            <h3 className="inline-flex items-center gap-2 text-[12px] font-medium text-ink">
+              <StatusDot status={status} />
+              {STATUS_LABEL[status]}
+            </h3>
+            <span className="rounded-full bg-white px-1.5 text-[11px] tabular-nums text-muted">{grouped[status].length}</span>
           </header>
-          <div className="space-y-2 px-2 pb-2">
+          <div className="space-y-1.5">
             {grouped[status].map((issue) => (
               <article
                 key={issue.id}
@@ -47,31 +43,40 @@ export function IssueBoard({
                   event.dataTransfer.setData('text/plain', issue.id);
                   event.dataTransfer.effectAllowed = 'move';
                 }}
-                className="relative cursor-grab overflow-hidden rounded-md border border-line bg-white p-3 shadow-sm active:cursor-grabbing"
+                className="cursor-grab rounded-lg border border-transparent bg-white p-3 shadow-sm transition hover:border-line active:cursor-grabbing"
               >
-                <span className={`absolute inset-y-0 left-0 w-0.5 ${priorityBar[issue.priority]}`} aria-hidden="true" />
-                <div className="flex items-center justify-between gap-2 pl-1">
-                  <Link to={`/w/${workspaceId}/issues/${issue.id}`} className="font-mono text-[11px] text-muted hover:text-brand">
+                <div className="flex items-center justify-between gap-2">
+                  <Link to={`/w/${workspaceId}/issues/${issue.id}`} className="font-mono text-[11px] text-faint hover:text-ink">
                     {issue.key}
                   </Link>
                   <PriorityMark priority={issue.priority} />
                 </div>
-                <Link to={`/w/${workspaceId}/issues/${issue.id}`} className="mt-1.5 block pl-1 text-sm font-medium leading-snug text-ink hover:text-brand">
+                <Link to={`/w/${workspaceId}/issues/${issue.id}`} className="mt-1.5 block text-[13px] font-medium leading-5 text-ink hover:underline">
                   {issue.title}
                 </Link>
-                <div className="mt-3 flex items-center justify-between gap-2 pl-1">
-                  <div className="flex -space-x-1">
+                {issue.labels.length ? (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {issue.labels.slice(0, 2).map((label) => (
+                      <span key={label.id} className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] text-muted">
+                        <span className="h-1.5 w-1.5 rounded-full" style={{ background: label.color }} />
+                        {label.name}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+                <div className="mt-3 flex items-center justify-between gap-2">
+                  <div className="flex -space-x-1.5">
                     {issue.assignees.slice(0, 3).map((user) => (
                       <Avatar key={user.id} name={user.name} color={user.avatarColor} size="sm" />
                     ))}
                   </div>
-                  <span className={`text-xs ${issue.overdue ? 'font-medium text-danger' : 'text-faint'}`}>
+                  <span className={`text-[11px] ${issue.overdue ? 'font-medium text-danger' : 'text-faint'}`}>
                     {dueLabel(issue.dueDate, issue.overdue) ?? (issue.commentCount ? `${issue.commentCount} comments` : '')}
                   </span>
                 </div>
               </article>
             ))}
-            {!grouped[status].length ? <p className="px-2 py-6 text-center text-xs text-faint">No issues</p> : null}
+            {!grouped[status].length ? <p className="px-2 py-8 text-center text-[12px] text-faint">Empty</p> : null}
           </div>
         </section>
       ))}

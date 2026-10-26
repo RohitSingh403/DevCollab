@@ -64,19 +64,19 @@ const previewIssues = [
 export function LandingPage() {
   useDocumentTitle('Work together');
   return (
-    <div className="min-h-screen bg-canvas">
+    <div className="min-h-screen bg-white">
       <SiteHeader />
       <main>
-        <section className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:py-20">
+        <section className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:py-24">
           <div>
-            <p className="text-sm font-medium text-brand">For software teams</p>
-            <h1 className="mt-2 max-w-xl text-4xl font-semibold tracking-tight text-ink">
-              The workspace where issues, roles, and discussion stay together.
+            <p className="text-[13px] font-medium text-muted">Team workspace for software</p>
+            <h1 className="mt-3 max-w-xl text-4xl font-semibold tracking-[-0.04em] text-ink sm:text-5xl sm:leading-[1.05]">
+              Projects, issues, and the people assigned to them.
             </h1>
-            <p className="mt-4 max-w-lg text-base leading-7 text-muted">
-              Create a workspace, invite the people doing the work, and keep projects, assignments, comments, and activity in one place.
+            <p className="mt-4 max-w-md text-[15px] leading-7 text-muted">
+              One place for roles, boards, comments, and the record of what changed. Built for a team that already has the work.
             </p>
-            <div className="mt-6 flex flex-wrap gap-2">
+            <div className="mt-7 flex flex-wrap gap-2">
               <Link className="btn-primary" to="/register">
                 Create account
               </Link>
@@ -85,35 +85,48 @@ export function LandingPage() {
               </Link>
             </div>
           </div>
-          <div className="overflow-hidden rounded-lg border border-line bg-white shadow-sm" aria-hidden="true">
-            <div className="flex items-center justify-between border-b border-line px-4 py-3">
-              <p className="text-sm font-medium">API Platform</p>
-              <span className="text-xs text-muted">5 open</span>
+          <div className="overflow-hidden rounded-2xl border border-line bg-canvas shadow-pop" aria-hidden="true">
+            <div className="flex items-center gap-1.5 border-b border-line bg-white px-4 py-3">
+              <span className="h-2.5 w-2.5 rounded-full bg-slate-200" />
+              <span className="h-2.5 w-2.5 rounded-full bg-slate-200" />
+              <span className="h-2.5 w-2.5 rounded-full bg-slate-200" />
+              <span className="ml-3 text-[12px] text-faint">Northwind Labs / API Platform</span>
             </div>
-            <table className="w-full text-left text-sm">
-              <tbody>
-                {previewIssues.map(([key, title, status, priority]) => (
-                  <tr key={key} className="border-b border-line last:border-0">
-                    <td className="px-4 py-3 font-mono text-xs text-muted">{key}</td>
-                    <td className="px-2 py-3">{title}</td>
-                    <td className="px-4 py-3 text-xs text-muted">{status}</td>
-                    <td className="px-4 py-3 text-xs text-muted">{priority}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="grid grid-cols-[148px_1fr]">
+              <div className="border-r border-line bg-white p-3 text-[12px] text-muted">
+                <p className="rounded-md bg-slate-100 px-2 py-1.5 font-medium text-ink">Overview</p>
+                <p className="px-2 py-1.5">Projects</p>
+                <p className="px-2 py-1.5">Members</p>
+                <p className="px-2 py-1.5">Activity</p>
+              </div>
+              <div className="p-3">
+                <table className="w-full overflow-hidden rounded-lg border border-line bg-white text-left text-[12px]">
+                  <tbody>
+                    {previewIssues.map(([key, title, status, priority]) => (
+                      <tr key={key} className="border-b border-line last:border-0">
+                        <td className="px-3 py-2.5 font-mono text-[11px] text-faint">{key}</td>
+                        <td className="px-2 py-2.5 font-medium text-ink">{title}</td>
+                        <td className="px-3 py-2.5 text-muted">{status}</td>
+                        <td className="px-3 py-2.5 text-muted">{priority}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </section>
-        <section className="border-t border-line bg-white">
-          <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:px-6 md:grid-cols-3">
+        <section className="border-t border-line bg-canvas">
+          <div className="mx-auto grid max-w-6xl gap-px bg-line px-0 py-px sm:grid-cols-3">
             {[
-              ['Workspaces and roles', 'Owners, admins, and members. Invites for people who already have an account, and a one-time link for everyone else.'],
-              ['Issues with a paper trail', 'Status, priority, labels, assignees, due dates, comments, and a history of what changed.'],
-              ['A live view of the team', 'Updates and notifications arrive as the work moves. Analytics come from the issues themselves.'],
-            ].map(([title, body]) => (
-              <div key={title}>
-                <h2 className="text-sm font-semibold text-ink">{title}</h2>
-                <p className="mt-2 text-sm leading-6 text-muted">{body}</p>
+              ['01', 'Workspaces and roles', 'Owners, admins, and members. Invite someone who already has an account, or send a one-time link.'],
+              ['02', 'Issues with a record', 'Status, priority, labels, assignees, due dates, comments, and a history of every change.'],
+              ['03', 'Live team activity', 'Comments and assignments show up for the rest of the workspace. Counts come from the issues themselves.'],
+            ].map(([index, title, body]) => (
+              <div key={title} className="bg-white px-6 py-8">
+                <p className="font-mono text-[11px] text-faint">{index}</p>
+                <h2 className="mt-3 text-[15px] font-semibold tracking-[-0.02em] text-ink">{title}</h2>
+                <p className="mt-2 text-[13px] leading-6 text-muted">{body}</p>
               </div>
             ))}
           </div>

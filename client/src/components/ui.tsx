@@ -5,16 +5,14 @@ import type { IssueStatus, Priority, Role } from '../lib/types';
 import { PRIORITY_LABEL, STATUS_LABEL } from '../lib/types';
 import { useUiStore } from '../stores/uiStore';
 
-export function Logo({ compact = false, tone = 'default' }: { compact?: boolean; tone?: 'default' | 'inverse' }) {
+export function Logo({ compact = false }: { compact?: boolean }) {
   return (
     <span className="inline-flex items-center gap-2">
       <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
-        <rect width="24" height="24" rx="5" fill="#1d4f91" />
-        <path d="M6.5 8h6M6.5 12h11M6.5 16h8" stroke="white" strokeWidth="1.6" strokeLinecap="round" />
+        <rect width="24" height="24" rx="6" fill="#121417" />
+        <path d="M6.5 8.2h6.2M6.5 12h11M6.5 15.8h8" stroke="white" strokeWidth="1.6" strokeLinecap="round" />
       </svg>
-      {compact ? null : (
-        <span className={`text-[15px] font-semibold tracking-tight ${tone === 'inverse' ? 'text-white' : 'text-ink'}`}>DevCollab</span>
-      )}
+      {compact ? null : <span className="text-[14px] font-semibold tracking-[-0.02em] text-ink">DevCollab</span>}
     </span>
   );
 }
@@ -47,7 +45,7 @@ export function Icon({ name, className = 'h-4 w-4' }: { name: IconName; classNam
     menu: <path d="M4 7h16M4 12h16M4 17h16" />,
   };
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       {paths[name]}
     </svg>
   );
@@ -74,7 +72,7 @@ export function Avatar({ name, color, size = 'md' }: { name: string; color: stri
   const dimension = size === 'sm' ? 'h-6 w-6 text-[10px]' : 'h-8 w-8 text-xs';
   return (
     <span
-      className={`grid ${dimension} shrink-0 place-items-center rounded-full font-semibold text-white`}
+      className={`grid ${dimension} shrink-0 place-items-center rounded-full font-semibold text-white ring-2 ring-white`}
       style={{ background: color }}
       title={name}
     >
@@ -83,13 +81,17 @@ export function Avatar({ name, color, size = 'md' }: { name: string; color: stri
   );
 }
 
-const statusClass: Record<IssueStatus, string> = {
-  backlog: 'bg-slate-100 text-slate-700',
-  todo: 'bg-blue-50 text-blue-800',
-  in_progress: 'bg-amber-50 text-amber-800',
-  in_review: 'bg-violet-50 text-violet-800',
-  done: 'bg-emerald-50 text-emerald-800',
+const statusDot: Record<IssueStatus, string> = {
+  backlog: 'bg-slate-400',
+  todo: 'bg-blue-600',
+  in_progress: 'bg-amber-500',
+  in_review: 'bg-violet-500',
+  done: 'bg-emerald-600',
 };
+
+export function StatusDot({ status }: { status: IssueStatus }) {
+  return <span className={`inline-block h-2 w-2 rounded-full ${statusDot[status]}`} aria-hidden="true" />;
+}
 
 const priorityClass: Record<Priority, string> = {
   low: 'bg-slate-300',
@@ -99,7 +101,12 @@ const priorityClass: Record<Priority, string> = {
 };
 
 export function StatusBadge({ status }: { status: IssueStatus }) {
-  return <span className={`inline-flex rounded px-1.5 py-0.5 text-xs font-medium ${statusClass[status]}`}>{STATUS_LABEL[status]}</span>;
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-2 py-0.5 text-[12px] font-medium text-ink">
+      <StatusDot status={status} />
+      {STATUS_LABEL[status]}
+    </span>
+  );
 }
 
 export function PriorityMark({ priority }: { priority: Priority }) {
@@ -112,13 +119,13 @@ export function PriorityMark({ priority }: { priority: Priority }) {
 }
 
 const roleClass: Record<Role, string> = {
-  owner: 'border-blue-200 bg-blue-50 text-blue-800',
-  admin: 'border-slate-200 bg-slate-100 text-slate-700',
-  member: 'border-line bg-white text-muted',
+  owner: 'bg-ink text-white',
+  admin: 'bg-slate-100 text-ink',
+  member: 'bg-white text-muted',
 };
 
 export function RoleBadge({ role }: { role: Role }) {
-  return <span className={`inline-flex rounded border px-1.5 py-0.5 text-xs font-medium capitalize ${roleClass[role]}`}>{role}</span>;
+  return <span className={`inline-flex rounded-full border border-line px-2 py-0.5 text-[11px] font-medium capitalize ${roleClass[role]}`}>{role}</span>;
 }
 
 export function PageHeader({
@@ -133,7 +140,7 @@ export function PageHeader({
   meta?: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-4">
       <div className="min-w-0">
         {meta ? <div className="mb-1 text-sm text-muted">{meta}</div> : null}
         <h1 className="page-title">{title}</h1>
@@ -182,10 +189,10 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative z-10 max-h-[90vh] w-full max-w-lg overflow-auto rounded-lg border border-line bg-white p-5 shadow-pop"
+        className="relative z-10 max-h-[90vh] w-full max-w-lg overflow-auto rounded-xl border border-line bg-white p-5 shadow-pop"
       >
         <div className="mb-4 flex items-start justify-between gap-4">
-          <h2 id={titleId} className="text-base font-semibold text-ink">
+          <h2 id={titleId} className="text-[15px] font-semibold tracking-[-0.02em] text-ink">
             {title}
           </h2>
           <button className="btn-quiet" onClick={onClose} type="button">
