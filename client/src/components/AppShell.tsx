@@ -86,20 +86,20 @@ export function AppShell() {
   const unread = notifications.data?.unread ?? 0;
 
   return (
-    <div className="min-h-screen bg-canvas lg:grid lg:grid-cols-[232px_1fr]">
-      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-brand focus:px-3 focus:py-2 focus:text-white">
+    <div className="min-h-screen bg-canvas lg:grid lg:grid-cols-[228px_1fr]">
+      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-ink focus:px-3 focus:py-2 focus:text-white">
         Skip to content
       </a>
-      {navOpen ? <button className="fixed inset-0 z-30 bg-slate-900/40 lg:hidden" aria-label="Close menu" onClick={() => setNavOpen(false)} /> : null}
-      <aside className={`fixed inset-y-0 left-0 z-40 flex w-[232px] flex-col bg-sidebar text-slate-300 transition lg:static ${navOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-        <div className="flex h-14 items-center border-b border-white/10 px-4">
-          <Logo tone="inverse" />
+      {navOpen ? <button className="fixed inset-0 z-30 bg-ink/30 lg:hidden" aria-label="Close menu" onClick={() => setNavOpen(false)} /> : null}
+      <aside className={`fixed inset-y-0 left-0 z-40 flex w-[228px] flex-col border-r border-line bg-white transition lg:static ${navOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+        <div className="flex h-14 items-center px-4">
+          <Logo />
         </div>
-        <div className="px-3 pt-3">
+        <div className="px-3">
           <label className="block">
-            <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-slate-400">Workspace</span>
+            <span className="sr-only">Workspace</span>
             <select
-              className="field-dark"
+              className="field"
               value={activeId ?? ''}
               aria-label="Workspace"
               onChange={(event) => {
@@ -124,10 +124,10 @@ export function AppShell() {
               end={link.suffix === ''}
               onClick={() => setNavOpen(false)}
               className={({ isActive }) =>
-                `flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm ${isActive ? 'bg-white/10 font-medium text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white'}`
+                `flex items-center gap-2.5 rounded-md px-2.5 py-[7px] text-[13px] ${isActive ? 'bg-slate-100 font-medium text-ink' : 'text-muted hover:bg-slate-50 hover:text-ink'}`
               }
             >
-              <Icon name={link.icon} />
+              <Icon name={link.icon} className="h-4 w-4" />
               {link.label}
             </NavLink>
           ))}
@@ -135,43 +135,43 @@ export function AppShell() {
             to="/notifications"
             onClick={() => setNavOpen(false)}
             className={({ isActive }) =>
-              `flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm ${isActive ? 'bg-white/10 font-medium text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white'}`
+              `flex items-center gap-2.5 rounded-md px-2.5 py-[7px] text-[13px] ${isActive ? 'bg-slate-100 font-medium text-ink' : 'text-muted hover:bg-slate-50 hover:text-ink'}`
             }
           >
-            <Icon name="bell" />
+            <Icon name="bell" className="h-4 w-4" />
             Notifications
-            {unread ? <span className="ml-auto rounded bg-brand px-1.5 text-[11px] font-medium text-white">{unread}</span> : null}
+            {unread ? <span className="ml-auto rounded-full bg-ink px-1.5 text-[10px] font-semibold leading-4 text-white">{unread}</span> : null}
           </NavLink>
         </nav>
-        <div className="border-t border-white/10 p-2">
+        <div className="border-t border-line p-2">
           <button
-            className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left hover:bg-white/5"
+            className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-[13px] text-muted hover:bg-slate-50 hover:text-ink"
             type="button"
             onClick={() => {
               setNavOpen(false);
               navigate('/app?new=1');
             }}
           >
-            <span className="text-sm text-slate-300">New workspace</span>
+            New workspace
           </button>
-          <button className="mt-1 flex w-full items-center gap-2 rounded-md px-2 py-2 text-left hover:bg-white/5" type="button" onClick={() => setProfileOpen(true)}>
+          <button className="mt-0.5 flex w-full items-center gap-2 rounded-md px-2 py-2 text-left hover:bg-slate-50" type="button" onClick={() => setProfileOpen(true)}>
             {user ? <Avatar name={user.name} color={user.avatarColor} size="sm" /> : null}
             <span className="min-w-0">
-              <span className="block truncate text-sm font-medium text-white">{user?.name}</span>
-              <span className="block truncate text-xs text-slate-400">{user?.email}</span>
+              <span className="block truncate text-[13px] font-medium text-ink">{user?.name}</span>
+              <span className="block truncate text-[11px] text-faint">{user?.email}</span>
             </span>
           </button>
         </div>
       </aside>
       <div className="min-w-0">
-        <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-line bg-white px-4">
-          <button className="btn-ghost px-2 lg:hidden" type="button" aria-label="Open menu" onClick={() => setNavOpen(true)}>
+        <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-line bg-white/90 px-4 backdrop-blur">
+          <button className="icon-btn lg:hidden" type="button" aria-label="Open menu" onClick={() => setNavOpen(true)}>
             <Icon name="menu" />
           </button>
           {activeId ? <SearchBox workspaceId={activeId} /> : <div className="flex-1" />}
           <div className="relative" ref={notesRef}>
             <button
-              className="btn-ghost relative px-2"
+              className="icon-btn relative"
               type="button"
               aria-label={unread ? `Inbox, ${unread} unread` : 'Inbox'}
               aria-expanded={notesOpen}
@@ -182,11 +182,11 @@ export function AppShell() {
             >
               <Icon name="bell" />
               {unread ? (
-                <span className="absolute -right-1 -top-1 rounded-full bg-brand px-1.5 text-[10px] font-semibold leading-4 text-white">{unread}</span>
+                <span className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-ink" />
               ) : null}
             </button>
             {notesOpen ? (
-              <div className="absolute right-0 z-30 mt-2 w-80 rounded-lg border border-line bg-white p-1 shadow-pop">
+              <div className="absolute right-0 z-30 mt-2 w-80 rounded-xl border border-line bg-white p-1 shadow-pop">
                 <p className="px-3 py-2 text-xs font-medium uppercase tracking-wide text-faint">Inbox</p>
                 {(notifications.data?.notifications ?? []).slice(0, 6).map((item) => (
                   <button
@@ -231,7 +231,7 @@ export function AppShell() {
               {user ? <Avatar name={user.name} color={user.avatarColor} size="sm" /> : null}
             </button>
             {accountOpen ? (
-              <div className="absolute right-0 z-30 mt-2 w-56 rounded-lg border border-line bg-white p-1 shadow-pop">
+              <div className="absolute right-0 z-30 mt-2 w-56 rounded-xl border border-line bg-white p-1 shadow-pop">
                 <div className="px-3 py-2">
                   <p className="truncate text-sm font-medium">{user?.name}</p>
                   <p className="truncate text-xs text-muted">{user?.email}</p>
@@ -257,7 +257,7 @@ export function AppShell() {
             ) : null}
           </div>
         </header>
-        <main id="main" className="px-4 py-6 sm:px-6">
+        <main id="main" className="mx-auto w-full max-w-[1240px] px-4 py-7 sm:px-8">
           <Outlet />
         </main>
       </div>
@@ -300,13 +300,13 @@ function SearchBox({ workspaceId }: { workspaceId: string }) {
       <Icon name="search" className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-faint" />
       <input
         id="workspace-search"
-        className="field max-w-md pl-8"
+        className="field h-9 max-w-md rounded-full bg-canvas pl-8 shadow-none"
         placeholder="Search issues"
         value={q}
         onChange={(event) => setQ(event.target.value)}
       />
       {deferred.length >= 2 ? (
-        <div className="absolute z-30 mt-1 w-full max-w-md rounded-lg border border-line bg-white p-1 shadow-pop">
+        <div className="absolute z-30 mt-1 w-full max-w-md rounded-xl border border-line bg-white p-1 shadow-pop">
           {(results.data ?? []).map((issue) => (
             <button
               key={issue.id}

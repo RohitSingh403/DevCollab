@@ -51,16 +51,17 @@ export function IssuePage() {
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
       <div>
-        <p className="text-sm text-muted">
-          <Link className="hover:text-brand" to={`/w/${workspaceId}/projects`}>
+        <p className="text-[13px] text-muted">
+          <Link className="crumb" to={`/w/${workspaceId}/projects`}>
             Projects
           </Link>
           <span aria-hidden="true"> / </span>
-          <Link className="hover:text-brand" to={`/w/${workspaceId}/projects/${current.project.id}`}>
+          <Link className="crumb" to={`/w/${workspaceId}/projects/${current.project.id}`}>
             {current.project.name}
           </Link>
+          <span aria-hidden="true"> / </span>
+          <span className="font-mono text-[12px] text-ink">{current.key}</span>
         </p>
-        <p className="mt-3 font-mono text-xs text-muted">{current.key}</p>
         <TitleEditor title={current.title} onSave={(title) => save.mutate({ title })} />
         <DescriptionEditor description={current.description} onSave={(description) => save.mutate({ description })} />
         <section className="mt-8">
@@ -73,11 +74,11 @@ export function IssuePage() {
           <CommentComposer issueId={issueId} />
         </section>
       </div>
-      <aside className="space-y-4">
-        <section className="panel space-y-4 p-4">
-          <label className="block">
-            <span className="label">Status</span>
-            <select className="field" value={current.status} onChange={(event) => save.mutate({ status: event.target.value as IssueStatus })}>
+      <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
+        <section className="panel divide-y divide-line">
+          <label className="grid grid-cols-[88px_1fr] items-center gap-3 px-4 py-3">
+            <span className="text-[12px] text-muted">Status</span>
+            <select className="field" aria-label="Status" value={current.status} onChange={(event) => save.mutate({ status: event.target.value as IssueStatus })}>
               {STATUSES.map((status) => (
                 <option key={status} value={status}>
                   {STATUS_LABEL[status]}
@@ -85,9 +86,9 @@ export function IssuePage() {
               ))}
             </select>
           </label>
-          <label className="block">
-            <span className="label">Priority</span>
-            <select className="field" value={current.priority} onChange={(event) => save.mutate({ priority: event.target.value as Priority })}>
+          <label className="grid grid-cols-[88px_1fr] items-center gap-3 px-4 py-3">
+            <span className="text-[12px] text-muted">Priority</span>
+            <select className="field" aria-label="Priority" value={current.priority} onChange={(event) => save.mutate({ priority: event.target.value as Priority })}>
               {PRIORITIES.map((priority) => (
                 <option key={priority} value={priority}>
                   {PRIORITY_LABEL[priority]}
@@ -95,18 +96,19 @@ export function IssuePage() {
               ))}
             </select>
           </label>
-          <label className="block">
-            <span className="label">Due date</span>
+          <label className="grid grid-cols-[88px_1fr] items-center gap-3 px-4 py-3">
+            <span className="text-[12px] text-muted">Due</span>
             <input
               className="field"
+              aria-label="Due date"
               type="date"
               value={toDateInput(current.dueDate)}
               onChange={(event) => save.mutate({ dueDate: event.target.value || null })}
             />
           </label>
-          <fieldset>
-            <legend className="label">Assignees</legend>
-            <div className="space-y-2">
+          <fieldset className="px-4 py-3">
+            <legend className="text-[12px] text-muted">Assignees</legend>
+            <div className="mt-2 space-y-2">
               {(members.data ?? []).map((member) => {
                 const checked = current.assignees.some((person) => person.id === member.user.id);
                 return (
@@ -126,16 +128,16 @@ export function IssuePage() {
               })}
             </div>
           </fieldset>
-          <fieldset>
-            <legend className="label">Labels</legend>
-            <div className="flex flex-wrap gap-2">
+          <fieldset className="px-4 py-3">
+            <legend className="text-[12px] text-muted">Labels</legend>
+            <div className="mt-2 flex flex-wrap gap-1.5">
               {(labels.data ?? []).map((label) => {
                 const checked = current.labels.some((item) => item.id === label.id);
                 return (
                   <button
                     key={label.id}
                     type="button"
-                    className={`rounded border px-2 py-0.5 text-xs ${checked ? 'border-brand bg-brand-soft text-brand' : 'border-line bg-white text-muted'}`}
+                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[12px] ${checked ? 'border-ink bg-ink text-white' : 'border-line bg-white text-muted'}`}
                     onClick={() => {
                       const ids = current.labels.map((item) => item.id);
                       save.mutate({ labelIds: checked ? ids.filter((id) => id !== label.id) : [...ids, label.id] });
@@ -148,8 +150,9 @@ export function IssuePage() {
               })}
             </div>
           </fieldset>
-          <p className="text-xs text-faint">Opened by {current.reporter.name} · {timeAgo(current.createdAt)}</p>
+          <p className="px-4 py-3 text-[12px] text-faint">Opened by {current.reporter.name} · {timeAgo(current.createdAt)}</p>
           {canDelete ? (
+            <div className="px-4 pb-4">
             <button
               className="btn-danger w-full"
               type="button"
@@ -159,6 +162,7 @@ export function IssuePage() {
             >
               Delete issue
             </button>
+            </div>
           ) : null}
         </section>
         <section className="panel p-4">
@@ -191,7 +195,7 @@ function TitleEditor({ title, onSave }: { title: string; onSave: (title: string)
     <textarea
       ref={ref}
       rows={1}
-      className="mt-1 w-full resize-none overflow-hidden bg-transparent text-2xl font-semibold leading-snug tracking-tight text-ink outline-none"
+      className="mt-2 w-full resize-none overflow-hidden bg-transparent text-[28px] font-semibold leading-tight tracking-[-0.03em] text-ink outline-none"
       aria-label="Issue title"
       value={value}
       onChange={(event) => setValue(event.target.value)}

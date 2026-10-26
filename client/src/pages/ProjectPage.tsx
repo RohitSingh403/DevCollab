@@ -130,7 +130,7 @@ export function ProjectPage() {
         }
       />
       {analytics.data ? <StatGrid analytics={analytics.data} /> : null}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="panel flex flex-wrap items-center gap-2 p-2">
         <select className="field w-auto" value={status} aria-label="Filter by status" onChange={(event) => updateFilter('status', event.target.value)}>
           <option value="">All statuses</option>
           {STATUSES.map((item) => (

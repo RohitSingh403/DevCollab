@@ -31,15 +31,18 @@ export function ProjectsPage() {
           {(projects.data ?? []).map((project) => {
             const progress = project.issueCount ? Math.round(((project.issueCount - project.openIssueCount) / project.issueCount) * 100) : 0;
             return (
-              <Link key={project.id} to={`/w/${workspaceId}/projects/${project.id}`} className="panel p-4 hover:border-slate-300">
+              <Link key={project.id} to={`/w/${workspaceId}/projects/${project.id}`} className="panel block p-5 transition hover:-translate-y-px hover:shadow-pop">
                 <div className="flex items-center justify-between">
-                  <span className="font-mono text-xs font-medium text-brand">{project.key}</span>
-                  <span className="text-xs text-muted">{project.openIssueCount} open</span>
+                  <span className="rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] font-medium text-ink">{project.key}</span>
+                  <span className="text-[12px] text-muted">{project.openIssueCount} open</span>
                 </div>
-                <h2 className="mt-2 text-base font-semibold">{project.name}</h2>
-                <p className="mt-1 line-clamp-2 text-sm text-muted">{project.description || 'No description yet.'}</p>
-                <div className="mt-4 h-1 rounded-full bg-slate-100">
-                  <div className="h-1 rounded-full bg-brand" style={{ width: `${progress}%` }} />
+                <h2 className="mt-3 text-[16px] font-semibold tracking-[-0.02em]">{project.name}</h2>
+                <p className="mt-1 line-clamp-2 min-h-10 text-[13px] leading-5 text-muted">{project.description || 'No description yet.'}</p>
+                <div className="mt-4 flex items-center gap-3">
+                  <div className="h-1 flex-1 rounded-full bg-slate-100">
+                    <div className="h-1 rounded-full bg-ink" style={{ width: `${progress}%` }} />
+                  </div>
+                  <span className="text-[11px] tabular-nums text-faint">{progress}%</span>
                 </div>
               </Link>
             );
