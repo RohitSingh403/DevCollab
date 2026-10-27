@@ -12,6 +12,8 @@ import type {
   Notification,
   Priority,
   Project,
+  SavedView,
+  ViewFilters,
   Role,
   User,
   Workspace,
@@ -120,6 +122,12 @@ export const api = {
   updateProject: (id: string, input: { name?: string; description?: string }) =>
     request<{ project: Project }>(`/api/projects/${id}`, { method: 'PATCH', body: JSON.stringify(input) }).then((data) => data.project),
   deleteProject: (id: string) => request<void>(`/api/projects/${id}`, { method: 'DELETE' }),
+  views: (projectId: string) => request<{ views: SavedView[] }>(`/api/projects/${projectId}/views`).then((data) => data.views),
+  createView: (projectId: string, input: { name: string; shared: boolean; filters: ViewFilters }) =>
+    request<{ view: SavedView }>(`/api/projects/${projectId}/views`, { method: 'POST', body: JSON.stringify(input) }).then(
+      (data) => data.view,
+    ),
+  deleteView: (projectId: string, viewId: string) => request<void>(`/api/projects/${projectId}/views/${viewId}`, { method: 'DELETE' }),
 
   issues: (projectId: string, params: URLSearchParams) =>
     request<IssueList>(`/api/projects/${projectId}/issues?${params.toString()}`),
