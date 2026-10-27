@@ -294,4 +294,88 @@ describe('workspaces, issues, and authorization', () => {
     expect(second.some((message) => message.includes('mentioned you on API-2'))).toBe(true);
     expect(second.some((message) => message.includes('commented on API-2'))).toBe(false);
   });
+
+  it('saves private and shared project views', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const teammate = await registerUser(authAgent(), 'Priya Nair');
+    const outsider = await registerUser(authAgent(), 'Jonah Patel');
+    const workspace = await createWorkspace(owner.agent, 'Views');
+    await owner.agent.post(`/api/workspaces/${workspace.id}/invites`).send({ email: teammate.email, role: 'member' });
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({
+      name: 'API Platform',
+      key: 'API',
+      description: 'Service layer',
+    });
+    const projectId = project.body.project.id as string;
+
+    await owner.agent.post(`/api/projects/${projectId}/issues`).send({
+      title: 'Owner high priority',
+      priority: 'high',
+      assigneeIds: [owner.user.id],
+    });
+    await owner.agent.post(`/api/projects/${projectId}/issues`).send({
+      title: 'Teammate high priority',
+      priority: 'high',
+      assigneeIds: [teammate.user.id],
+    });
+
+    const empty = await owner.agent.post(`/api/projects/${projectId}/views`).send({
+      name: 'Everything',
+      filters: {},
+    });
+    expect(empty.status).toBe(400);
+    expect(empty.body.error.code).toBe('empty_view');
+
+    const mine = await owner.agent.post(`/api/projects/${projectId}/views`).send({
+      name: 'My urgent work',
+      shared: false,
+      filters: { priority: 'high', assignee: 'me', layout: 'list' },
+    });
+    expect(mine.status).toBe(201);
+    expect(mine.body.view.mine).toBe(true);
+    expect(mine.body.view.filters.assignee).toBe('me');
+
+    const hidden = await teammate.agent.get(`/api/projects/${projectId}/views`);
+    expect(hidden.body.views.map((view: { name: string }) => view.name)).not.toContain('My urgent work');
+
+    const shared = await owner.agent.post(`/api/projects/${projectId}/views`).send({
+      name: 'Release blockers',
+      shared: true,
+      filters: { priority: 'high', overdue: true },
+    });
+    expect(shared.status).toBe(201);
+    const visible = await teammate.agent.get(`/api/projects/${projectId}/views`);
+    const blocker = visible.body.views.find((view: { name: string }) => view.name === 'Release blockers') as {
+      shared: boolean;
+      mine: boolean;
+      canDelete: boolean;
+    };
+    expect(blocker.shared).toBe(true);
+    expect(blocker.mine).toBe(false);
+    expect(blocker.canDelete).toBe(false);
+
+    const memberDelete = await teammate.agent.delete(`/api/projects/${projectId}/views/${shared.body.view.id}`);
+    expect(memberDelete.status).toBe(403);
+    const privateDelete = await teammate.agent.delete(`/api/projects/${projectId}/views/${mine.body.view.id}`);
+    expect(privateDelete.status).toBe(404);
+    const outsiderList = await outsider.agent.get(`/api/projects/${projectId}/views`);
+    expect(outsiderList.status).toBe(404);
+
+    const duplicate = await owner.agent.post(`/api/projects/${projectId}/views`).send({
+      name: 'My urgent work',
+      filters: { status: 'todo' },
+    });
+    expect(duplicate.status).toBe(409);
+
+    const ownerWork = await owner.agent.get(`/api/projects/${projectId}/issues`).query({ assignee: 'me', priority: 'high' });
+    expect(ownerWork.body.issues.map((issue: { title: string }) => issue.title)).toEqual(['Owner high priority']);
+    const teammateWork = await teammate.agent.get(`/api/projects/${projectId}/issues`).query({ assignee: 'me', priority: 'high' });
+    expect(teammateWork.body.issues.map((issue: { title: string }) => issue.title)).toEqual(['Teammate high priority']);
+
+    await owner.agent.patch(`/api/workspaces/${workspace.id}/members/${teammate.user.id}`).send({ role: 'admin' });
+    const adminDelete = await teammate.agent.delete(`/api/projects/${projectId}/views/${shared.body.view.id}`);
+    expect(adminDelete.status).toBe(204);
+    const ownerDelete = await owner.agent.delete(`/api/projects/${projectId}/views/${mine.body.view.id}`);
+    expect(ownerDelete.status).toBe(204);
+  });
 });

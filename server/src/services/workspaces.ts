@@ -9,6 +9,7 @@ import { Label } from '../models/Label';
 import { Membership } from '../models/Membership';
 import { Notification } from '../models/Notification';
 import { Project } from '../models/Project';
+import { SavedView } from '../models/SavedView';
 import { User } from '../models/User';
 import { Workspace } from '../models/Workspace';
 import type { Realtime } from '../realtime';
@@ -131,6 +132,7 @@ export async function deleteWorkspace(workspaceId: string) {
     Invite.deleteMany({ workspace: workspaceId }),
     Membership.deleteMany({ workspace: workspaceId }),
     Notification.deleteMany({ workspace: workspaceId }),
+    SavedView.deleteMany({ workspace: workspaceId }),
     Project.deleteMany({ _id: { $in: projectIds } }),
     Workspace.deleteOne({ _id: workspaceId }),
   ]);

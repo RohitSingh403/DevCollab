@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { IssueBoard } from '../components/IssueBoard';
 import { IssueForm } from '../components/IssueForm';
@@ -7,7 +7,8 @@ import { StatGrid } from '../components/AnalyticsPanels';
 import { Avatar, EmptyState, Modal, PageHeader, PriorityMark, StatusBadge, useDocumentTitle } from '../components/ui';
 import { api, errorMessage } from '../lib/api';
 import { dueLabel } from '../lib/format';
-import { PRIORITIES, PRIORITY_LABEL, STATUSES, STATUS_LABEL, type IssueStatus } from '../lib/types';
+import { PRIORITIES, PRIORITY_LABEL, STATUSES, STATUS_LABEL, type IssueStatus, type ViewFilters } from '../lib/types';
+import { currentFilters, hasViewFilter, sameFilters } from '../lib/views';
 import { useAuthStore } from '../stores/authStore';
 import { useUiStore } from '../stores/uiStore';
 
@@ -39,7 +40,9 @@ export function ProjectPage() {
     queryFn: () => api.issues(projectId, query),
   });
   const members = useQuery({ queryKey: ['members', workspaceId], queryFn: () => api.members(workspaceId) });
+  const views = useQuery({ queryKey: ['views', projectId], queryFn: () => api.views(projectId) });
   const [creating, setCreating] = useState(false);
+  const [savingView, setSavingView] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const pushToast = useUiStore((state) => state.pushToast);
@@ -91,6 +94,28 @@ export function ProjectPage() {
   }
 
   const canManage = workspace.data?.role === 'owner' || workspace.data?.role === 'admin';
+  const filters = currentFilters(params, user?.id ?? '');
+  const matchedView = (views.data ?? []).find((item) => sameFilters(item.filters, filters));
+  const otherFilters = Boolean(filters.status || filters.priority || filters.overdue || filters.q);
+  const allActive = !matchedView && !otherFilters && !filters.assignee;
+  const mineActive = !matchedView && (filters.assignee === 'me' || filters.assignee === user?.id) && !otherFilters;
+
+  function applyFilters(nextFilters: ViewFilters) {
+    const next = new URLSearchParams();
+    if (nextFilters.status) next.set('status', nextFilters.status);
+    if (nextFilters.priority) next.set('priority', nextFilters.priority);
+    if (nextFilters.assignee) next.set('assignee', nextFilters.assignee);
+    if (nextFilters.overdue) next.set('overdue', 'true');
+    if (nextFilters.q) next.set('q', nextFilters.q);
+    if (nextFilters.layout === 'list') next.set('view', 'list');
+    setParams(next);
+  }
+
+  const removeView = useMutation({
+    mutationFn: (viewId: string) => api.deleteView(projectId, viewId),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['views', projectId] }),
+    onError: (error) => pushToast(errorMessage(error)),
+  });
 
   return (
     <div className="space-y-5">
@@ -130,7 +155,50 @@ export function ProjectPage() {
         }
       />
       {analytics.data ? <StatGrid analytics={analytics.data} /> : null}
-      <div className="panel flex flex-wrap items-center gap-2 p-2">
+      <div className="panel">
+        <div className="flex flex-wrap items-center gap-1.5 border-b border-line px-2 py-2">
+          <FilterChip active={allActive} onClick={() => applyFilters({ status: '', priority: '', assignee: '', overdue: false, q: '', layout: filters.layout })}>
+            All issues
+          </FilterChip>
+          <FilterChip
+            active={mineActive}
+            onClick={() => applyFilters({ status: '', priority: '', assignee: 'me', overdue: false, q: '', layout: filters.layout })}
+          >
+            Assigned to me
+          </FilterChip>
+          {(views.data ?? []).map((item) => (
+            <span
+              key={item.id}
+              className={`inline-flex h-7 items-center rounded-full border text-[12px] ${matchedView?.id === item.id ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink'}`}
+            >
+              <button type="button" className="px-2.5" onClick={() => applyFilters(item.filters)}>
+                {item.name}
+              </button>
+              {item.shared ? <span className={`pr-2 text-[10px] uppercase tracking-wide ${matchedView?.id === item.id ? 'text-white/70' : 'text-faint'}`}>Shared</span> : null}
+              {item.canDelete ? (
+                <button
+                  type="button"
+                  className={`px-1.5 ${matchedView?.id === item.id ? 'text-white/80 hover:text-white' : 'text-faint hover:text-ink'}`}
+                  aria-label={`Delete ${item.name}`}
+                  onClick={() => {
+                    if (window.confirm(`Delete the view “${item.name}”?`)) removeView.mutate(item.id);
+                  }}
+                >
+                  ×
+                </button>
+              ) : null}
+            </span>
+          ))}
+          <button
+            className="btn-quiet ml-auto"
+            type="button"
+            disabled={!hasViewFilter(filters) || Boolean(matchedView?.mine)}
+            onClick={() => setSavingView(true)}
+          >
+            Save view
+          </button>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 p-2">
         <select className="field w-auto" value={status} aria-label="Filter by status" onChange={(event) => updateFilter('status', event.target.value)}>
           <option value="">All statuses</option>
           {STATUSES.map((item) => (
@@ -149,6 +217,7 @@ export function ProjectPage() {
         </select>
         <select className="field w-auto" value={assignee} aria-label="Filter by assignee" onChange={(event) => updateFilter('assignee', event.target.value)}>
           <option value="">Anyone</option>
+          <option value="me">Assigned to me</option>
           {(members.data ?? []).map((member) => (
             <option key={member.user.id} value={member.user.id}>
               {member.user.name}
@@ -172,7 +241,9 @@ export function ProjectPage() {
             </button>
           ))}
         </div>
+        </div>
       </div>
+      <SaveViewModal open={savingView} onClose={() => setSavingView(false)} projectId={projectId} filters={filters} />
       {issues.isPending ? <p className="text-sm text-muted">Loading issues…</p> : null}
       {issues.isError ? <p className="text-sm text-danger">{errorMessage(issues.error)}</p> : null}
       {issues.data && !issues.data.issues.length ? (
@@ -243,5 +314,78 @@ export function ProjectPage() {
         <IssueForm workspaceId={workspaceId} projectId={projectId} onCreated={() => setCreating(false)} />
       </Modal>
     </div>
+  );
+}
+
+function FilterChip({ active, onClick, children }: { active: boolean; onClick: () => void; children: string }) {
+  return (
+    <button
+      type="button"
+      className={`inline-flex h-7 items-center rounded-full border px-2.5 text-[12px] ${active ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink hover:bg-slate-50'}`}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
+}
+
+function SaveViewModal({
+  open,
+  onClose,
+  projectId,
+  filters,
+}: {
+  open: boolean;
+  onClose: () => void;
+  projectId: string;
+  filters: ViewFilters;
+}) {
+  const queryClient = useQueryClient();
+  const [name, setName] = useState('');
+  const [shared, setShared] = useState(false);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    if (!open) return;
+    setName('');
+    setShared(false);
+    setError('');
+  }, [open]);
+  const save = useMutation({
+    mutationFn: () => api.createView(projectId, { name: name.trim(), shared, filters }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['views', projectId] });
+      onClose();
+    },
+    onError: (reason) => setError(errorMessage(reason)),
+  });
+  return (
+    <Modal open={open} title="Save view" onClose={onClose}>
+      <form
+        className="space-y-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (name.trim().length >= 2) save.mutate();
+          else setError('Name the view with at least 2 characters.');
+        }}
+      >
+        <label className="block">
+          <span className="label">Name</span>
+          <input className="field" value={name} onChange={(event) => setName(event.target.value)} placeholder="My urgent work" required minLength={2} />
+        </label>
+        <label className="flex items-start gap-2 text-sm">
+          <input className="mt-0.5" type="checkbox" checked={shared} onChange={(event) => setShared(event.target.checked)} />
+          <span>
+            Share with this project
+            <span className="mt-0.5 block text-[12px] text-muted">
+              Teammates can open it. A filter assigned to you follows whoever opens the view.
+            </span>
+          </span>
+        </label>
+        {error ? <p className="text-sm text-danger" role="alert">{error}</p> : null}
+        <button className="btn-primary" type="submit" disabled={save.isPending}>
+          {save.isPending ? 'Saving…' : 'Save view'}
+        </button>
+      </form>
+    </Modal>
   );
 }

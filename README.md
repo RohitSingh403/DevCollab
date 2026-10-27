@@ -14,6 +14,7 @@ It is a team system: shared data, roles, and authorization. It is not a personal
 - A starter workspace on signup, with a project and sample issues so the first session is not an empty board
 - @mentions in comments, which notify that person in their inbox and over the live connection
 - Filters, text search, and pagination
+- Saved project views, private or shared. A view assigned to “me” shows each person their own work
 - A board you can drag between columns, plus a list view
 - Workspace and project analytics: open work, overdue issues, completions this week, status mix, and 14 days of activity
 - Real-time issue, comment, and notification events for other members
@@ -141,7 +142,8 @@ Authenticated routes expect the session cookie. Collection responses are paginat
 | POST | `/api/workspaces/:id/invites` | Add a user or mint an invite link |
 | POST | `/api/invites/:token/accept` | Accept an invite |
 | GET, POST | `/api/workspaces/:id/projects` | Projects in a workspace |
-| GET, POST | `/api/projects/:id/issues` | Filtered, paginated issues |
+| GET, POST | `/api/projects/:id/issues` | Filtered, paginated issues. `assignee=me` means the signed-in user |
+| GET, POST, DELETE | `/api/projects/:id/views` | Saved filters for a project. Private views stay with their author; shared views are visible to the project |
 | PATCH, DELETE | `/api/issues/:id` | Update or delete an issue |
 | GET, POST | `/api/issues/:id/comments` | Discussion |
 | GET | `/api/workspaces/:id/analytics` | Workspace totals |
