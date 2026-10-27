@@ -214,4 +214,84 @@ describe('workspaces, issues, and authorization', () => {
     const search = await teammate.agent.get(`/api/workspaces/${workspace.id}/search`).query({ q: 'Lock down' });
     expect(search.body.issues.map((issue: { key: string }) => issue.key)).toEqual(['API-1']);
   });
+
+  it('opens a starter workspace for a new account', async () => {
+    const owner = await registerUser(authAgent(), 'Priya Nair');
+    const spaces = await owner.agent.get('/api/workspaces');
+    expect(spaces.body.workspaces).toHaveLength(1);
+    const workspace = spaces.body.workspaces[0] as { id: string; name: string; role: string };
+    expect(workspace.name).toBe("Priya's workspace");
+    expect(workspace.role).toBe('owner');
+
+    const projects = await owner.agent.get(`/api/workspaces/${workspace.id}/projects`);
+    expect(projects.body.projects).toHaveLength(1);
+    expect(projects.body.projects[0].key).toBe('APP');
+
+    const issues = await owner.agent.get(`/api/projects/${projects.body.projects[0].id}/issues`);
+    expect(issues.body.total).toBeGreaterThanOrEqual(3);
+    expect(issues.body.issues.some((issue: { status: string }) => issue.status === 'done')).toBe(true);
+
+    const notes = await owner.agent.get('/api/notifications');
+    expect(notes.body.unread).toBe(0);
+  });
+
+  it('notifies the teammate named in a comment once', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const teammate = await registerUser(authAgent(), 'Priya Nair');
+    const workspace = await createWorkspace(owner.agent, 'Mentions');
+    const invited = await owner.agent
+      .post(`/api/workspaces/${workspace.id}/invites`)
+      .send({ email: teammate.email, role: 'member' });
+    expect(invited.status).toBe(201);
+
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({
+      name: 'API Platform',
+      key: 'API',
+      description: 'Service layer',
+    });
+    const open = await owner.agent.post(`/api/projects/${project.body.project.id}/issues`).send({
+      title: 'Review the auth change',
+      description: 'Needs a second pair of eyes.',
+    });
+    expect(open.status).toBe(201);
+
+    const mentioned = await owner.agent.post(`/api/issues/${open.body.issue.id}/comments`).send({
+      body: 'Can @Priya Nair take a look? @Nobody should stay quiet.',
+    });
+    expect(mentioned.status).toBe(201);
+
+    const notes = await teammate.agent.get('/api/notifications');
+    const messages = notes.body.notifications.map((item: { message: string }) => item.message) as string[];
+    expect(messages.some((message) => message.includes('mentioned you on API-1'))).toBe(true);
+    expect(messages.some((message) => message.includes('commented on API-1'))).toBe(false);
+
+    const self = await owner.agent.post(`/api/issues/${open.body.issue.id}/comments`).send({
+      body: 'I will handle this @Maya Chen',
+    });
+    expect(self.status).toBe(201);
+    const ownerNotes = await owner.agent.get('/api/notifications');
+    expect(ownerNotes.body.notifications.some((item: { message: string }) => item.message.includes('mentioned you'))).toBe(false);
+
+    const sameMention = await owner.agent.patch(`/api/comments/${mentioned.body.comment.id}`).send({
+      body: 'Can @Priya Nair take a look? Still waiting.',
+    });
+    expect(sameMention.status).toBe(200);
+    const afterEdit = await teammate.agent.get('/api/notifications');
+    expect(
+      afterEdit.body.notifications.filter((item: { message: string }) => item.message.includes('mentioned you on API-1')).length,
+    ).toBe(1);
+
+    const assigned = await owner.agent.post(`/api/projects/${project.body.project.id}/issues`).send({
+      title: 'Assigned review',
+      assigneeIds: [teammate.user.id],
+    });
+    const both = await owner.agent.post(`/api/issues/${assigned.body.issue.id}/comments`).send({
+      body: '@priya nair this is yours',
+    });
+    expect(both.status).toBe(201);
+    const afterAssign = await teammate.agent.get('/api/notifications');
+    const second = afterAssign.body.notifications.map((item: { message: string }) => item.message) as string[];
+    expect(second.some((message) => message.includes('mentioned you on API-2'))).toBe(true);
+    expect(second.some((message) => message.includes('commented on API-2'))).toBe(false);
+  });
 });

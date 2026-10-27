@@ -114,7 +114,12 @@ commentRouter.patch(
   '/:commentId',
   asyncHandler(async (req, res) => {
     const input = parseBody<ReturnType<typeof commentSchema.parse>>(commentSchema, req.body);
-    const comment = await updateComment(req.params.commentId, req.authUser!.id, input.body);
+    const comment = await updateComment(
+      req.params.commentId,
+      req.authUser!,
+      input.body,
+      realtimeFrom(ioFromApp(req.app)),
+    );
     res.json({ comment });
   }),
 );

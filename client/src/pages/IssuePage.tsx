@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Avatar, useDocumentTitle } from '../components/ui';
 import { api, errorMessage } from '../lib/api';
 import { timeAgo, toDateInput } from '../lib/format';
+import { commentSegments, insertMention, matchingMembers, mentionAtCursor } from '../lib/mentions';
 import { PRIORITIES, PRIORITY_LABEL, STATUSES, STATUS_LABEL, type IssueStatus, type Priority, type Role } from '../lib/types';
 import { useAuthStore } from '../stores/authStore';
 import { useUiStore } from '../stores/uiStore';
@@ -43,6 +44,7 @@ export function IssuePage() {
 
   const role = workspace.data?.role;
   const canDelete = Boolean(user && issue.data && (issue.data.reporter.id === user.id || role === 'owner' || role === 'admin'));
+  const people = (members.data ?? []).map((member) => ({ id: member.user.id, name: member.user.name }));
 
   if (issue.isPending) return <p className="text-sm text-muted">Loading issue…</p>;
   if (issue.isError) return <p className="text-sm text-danger">{errorMessage(issue.error)}</p>;
@@ -68,10 +70,10 @@ export function IssuePage() {
           <h2 className="text-sm font-semibold">Comments</h2>
           <ul className="mt-3 space-y-3">
             {(comments.data ?? []).map((comment) => (
-              <CommentCard key={comment.id} comment={comment} role={role} />
+              <CommentCard key={comment.id} comment={comment} role={role} members={people} />
             ))}
           </ul>
-          <CommentComposer issueId={issueId} />
+          <CommentComposer issueId={issueId} members={people} />
         </section>
       </div>
       <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
@@ -223,7 +225,7 @@ function DescriptionEditor({ description, onSave }: { description: string; onSav
   );
 }
 
-function CommentComposer({ issueId }: { issueId: string }) {
+function CommentComposer({ issueId, members }: { issueId: string; members: { id: string; name: string }[] }) {
   const [body, setBody] = useState('');
   const queryClient = useQueryClient();
   const pushToast = useUiStore((state) => state.pushToast);
@@ -244,10 +246,8 @@ function CommentComposer({ issueId }: { issueId: string }) {
         if (body.trim()) add.mutate();
       }}
     >
-      <label className="block">
-        <span className="label">Add a comment</span>
-        <textarea className="field min-h-24" value={body} onChange={(event) => setBody(event.target.value)} />
-      </label>
+      <MentionField label="Add a comment" value={body} onChange={setBody} members={members} />
+      <p className="text-[12px] text-muted">Type @ to mention a teammate. They get an inbox alert.</p>
       <button className="btn-primary" type="submit" disabled={!body.trim() || add.isPending}>
         Comment
       </button>
@@ -255,12 +255,131 @@ function CommentComposer({ issueId }: { issueId: string }) {
   );
 }
 
+function MentionField({
+  label,
+  value,
+  onChange,
+  members,
+  minHeight = 'min-h-24',
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  members: { id: string; name: string }[];
+  minHeight?: string;
+}) {
+  const listId = useId();
+  const field = useRef<HTMLTextAreaElement>(null);
+  const [caret, setCaret] = useState(0);
+  const [active, setActive] = useState(0);
+  const [dismissedAt, setDismissedAt] = useState<number | null>(null);
+  const query = mentionAtCursor(value, caret);
+  const matches = query ? matchingMembers(members, query.query) : [];
+  const open = Boolean(query) && dismissedAt !== query?.start;
+
+  useEffect(() => {
+    setActive(0);
+  }, [query?.start, query?.query]);
+
+  function choose(name: string) {
+    if (!query) return;
+    const next = insertMention(value, query.start, caret, name);
+    onChange(next.value);
+    setCaret(next.caret);
+    requestAnimationFrame(() => {
+      field.current?.focus();
+      field.current?.setSelectionRange(next.caret, next.caret);
+    });
+  }
+
+  return (
+    <div className="relative">
+      <span className="label">{label}</span>
+      {open ? (
+        <div id={listId} className="absolute bottom-full z-20 mb-1 max-h-52 w-full overflow-auto rounded-lg border border-line bg-white py-1 shadow-pop" role="listbox">
+          {matches.length ? (
+            matches.map((member, index) => (
+              <button
+                key={member.id}
+                type="button"
+                role="option"
+                aria-selected={index === active}
+                className={`flex w-full px-3 py-1.5 text-left text-[13px] ${index === active ? 'bg-slate-100 text-ink' : 'text-ink hover:bg-slate-50'}`}
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  choose(member.name);
+                }}
+              >
+                {member.name}
+              </button>
+            ))
+          ) : (
+            <p className="px-3 py-1.5 text-[13px] text-muted">No teammates match</p>
+          )}
+        </div>
+      ) : null}
+      <textarea
+        ref={field}
+        className={`field ${minHeight}`}
+        aria-label={label}
+        aria-expanded={open}
+        aria-controls={open ? listId : undefined}
+        aria-autocomplete="list"
+        value={value}
+        onClick={(event) => setCaret(event.currentTarget.selectionStart ?? 0)}
+        onKeyUp={(event) => {
+          if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Enter' || event.key === 'Escape') return;
+          setCaret(event.currentTarget.selectionStart ?? 0);
+        }}
+        onChange={(event) => {
+          onChange(event.target.value);
+          setCaret(event.target.selectionStart ?? event.target.value.length);
+        }}
+        onKeyDown={(event) => {
+          if (!open) return;
+          if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            if (matches.length) setActive((index) => (index + 1) % matches.length);
+          } else if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            if (matches.length) setActive((index) => (index - 1 + matches.length) % matches.length);
+          } else if (event.key === 'Escape') {
+            event.preventDefault();
+            setDismissedAt(query?.start ?? null);
+          } else if (event.key === 'Enter' && matches[active]) {
+            event.preventDefault();
+            choose(matches[active].name);
+          }
+        }}
+      />
+    </div>
+  );
+}
+
+function CommentBody({ body, names }: { body: string; names: string[] }) {
+  return (
+    <p className="mt-3 whitespace-pre-wrap text-sm leading-6">
+      {commentSegments(body, names).map((part, index) =>
+        part.mention ? (
+          <span key={index} className="rounded bg-brand-soft px-0.5 font-medium text-brand">
+            {part.text}
+          </span>
+        ) : (
+          <span key={index}>{part.text}</span>
+        ),
+      )}
+    </p>
+  );
+}
+
 function CommentCard({
   comment,
   role,
+  members,
 }: {
   comment: { id: string; body: string; author: { id: string; name: string; avatarColor: string }; createdAt: string; edited: boolean };
   role?: Role;
+  members: { id: string; name: string }[];
 }) {
   const user = useAuthStore((state) => state.user);
   const queryClient = useQueryClient();
@@ -308,13 +427,13 @@ function CommentCard({
             save.mutate();
           }}
         >
-          <textarea className="field min-h-20" value={body} onChange={(event) => setBody(event.target.value)} />
+          <MentionField label="Edit comment" value={body} onChange={setBody} members={members} minHeight="min-h-20" />
           <button className="btn-primary" type="submit">
             Save comment
           </button>
         </form>
       ) : (
-        <p className="mt-3 whitespace-pre-wrap text-sm leading-6">{comment.body}</p>
+        <CommentBody body={comment.body} names={members.map((member) => member.name)} />
       )}
     </li>
   );

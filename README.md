@@ -11,6 +11,8 @@ It is a team system: shared data, roles, and authorization. It is not a personal
 - Email invites for people who already have an account, and one-time links for everyone else
 - Projects with short keys (`API-12`) and per-project issue numbers
 - Issues with status, priority, labels, assignees, due dates, comments, and history
+- A starter workspace on signup, with a project and sample issues so the first session is not an empty board
+- @mentions in comments, which notify that person in their inbox and over the live connection
 - Filters, text search, and pagination
 - A board you can drag between columns, plus a list view
 - Workspace and project analytics: open work, overdue issues, completions this week, status mix, and 14 days of activity
