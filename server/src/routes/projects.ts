@@ -2,10 +2,11 @@ import { Router } from 'express';
 import { asyncHandler } from '../asyncHandler';
 import { requireAuth } from '../middleware/auth';
 import { requireProject, requireWorkspace } from '../middleware/access';
-import { createProjectSchema, paginationSchema, updateProjectSchema } from '../schemas';
+import { createProjectSchema, createViewSchema, paginationSchema, updateProjectSchema } from '../schemas';
 import { buildAnalytics } from '../services/analytics';
 import { listActivity } from '../services/feed';
 import { createProject, deleteProject, getProject, listProjects, updateProject } from '../services/projects';
+import { createView, deleteView, listViews } from '../services/views';
 import { ioFromApp, realtimeFrom } from '../realtime';
 import { parseBody } from '../validate';
 import { issueRouterForProject } from './issues';
@@ -78,6 +79,45 @@ projectRouter.get(
   asyncHandler(async (req, res) => {
     const query = paginationSchema.parse(req.query);
     res.json(await listActivity({ project: req.params.projectId }, query.page, query.limit));
+  }),
+);
+
+projectRouter.get(
+  '/:projectId/views',
+  requireProject(),
+  asyncHandler(async (req, res) => {
+    res.json({ views: await listViews(req.params.projectId, req.authUser!.id, req.membershipRole!) });
+  }),
+);
+
+projectRouter.post(
+  '/:projectId/views',
+  requireProject(),
+  asyncHandler(async (req, res) => {
+    const input = parseBody<ReturnType<typeof createViewSchema.parse>>(createViewSchema, req.body);
+    const view = await createView(
+      req.params.projectId,
+      req.authUser!,
+      req.membershipRole!,
+      input,
+      realtimeFrom(ioFromApp(req.app)),
+    );
+    res.status(201).json({ view });
+  }),
+);
+
+projectRouter.delete(
+  '/:projectId/views/:viewId',
+  requireProject(),
+  asyncHandler(async (req, res) => {
+    await deleteView(
+      req.params.projectId,
+      req.params.viewId,
+      req.authUser!.id,
+      req.membershipRole!,
+      realtimeFrom(ioFromApp(req.app)),
+    );
+    res.status(204).send();
   }),
 );
 

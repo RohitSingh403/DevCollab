@@ -18,6 +18,7 @@ export function useRealtime(workspaceId?: string) {
       void queryClient.invalidateQueries({ queryKey: ['activity'] });
       void queryClient.invalidateQueries({ queryKey: ['projects'] });
       void queryClient.invalidateQueries({ queryKey: ['comments'] });
+      void queryClient.invalidateQueries({ queryKey: ['views'] });
     };
     const onNotification = (notification: { message?: string }) => {
       void queryClient.invalidateQueries({ queryKey: ['notifications'] });
@@ -32,6 +33,8 @@ export function useRealtime(workspaceId?: string) {
     socket.on('comment:deleted', refreshWork);
     socket.on('activity:created', refreshWork);
     socket.on('notification:created', onNotification);
+    socket.on('view:saved', refreshWork);
+    socket.on('view:deleted', refreshWork);
 
     if (workspaceId) socket.emit('workspace:join', workspaceId);
 
@@ -45,6 +48,8 @@ export function useRealtime(workspaceId?: string) {
       socket.off('comment:deleted', refreshWork);
       socket.off('activity:created', refreshWork);
       socket.off('notification:created', onNotification);
+      socket.off('view:saved', refreshWork);
+      socket.off('view:deleted', refreshWork);
     };
   }, [workspaceId, queryClient, pushToast]);
 }
