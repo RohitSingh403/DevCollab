@@ -17,6 +17,7 @@ import { serializeComment, serializeIssue } from '../serializers';
 import { escapeRegex, pageMeta } from '../utils';
 import { recordActivity } from './activity';
 import { assertWorkspaceMembers, membershipFor } from './membership';
+import { mentionedUserIds, workspaceMembers } from './mentions';
 import { notifyUsers } from './notifications';
 
 const ISSUE_POPULATE = [
@@ -333,34 +334,107 @@ export async function addComment(
     },
     rt,
   );
-  const recipients = [String(issue.reporter), ...issue.assignees.map((id) => String(id))];
-  await notifyUsers(
-    {
-      userIds: recipients,
-      workspaceId,
-      actorId: input.actor.id,
-      type: 'comment.created',
-      message: `${input.actor.name} commented on ${key}`,
-      link: `/w/${workspaceId}/issues/${issue._id}`,
-    },
+  await notifyComment({
+    issue,
+    actor: input.actor,
+    key,
+    body: input.body,
+    previousBody: '',
+    includeWatchers: true,
     rt,
-  );
+  });
   rt?.toWorkspace(workspaceId, 'comment:created', { issueId: String(issue._id), commentId: dto.id });
   return dto;
 }
 
-export async function updateComment(commentId: string, actorId: string, body: string) {
+export async function updateComment(
+  commentId: string,
+  actor: { id: string; name: string },
+  body: string,
+  rt?: Realtime,
+) {
   const comment = await Comment.findById(commentId);
   if (!comment) throw new ApiError(404, 'Comment not found', 'not_found');
-  await membershipFor(actorId, String(comment.workspace));
-  if (String(comment.author) !== actorId) {
+  await membershipFor(actor.id, String(comment.workspace));
+  if (String(comment.author) !== actor.id) {
     throw new ApiError(403, 'You can only edit your own comments', 'forbidden');
   }
+  const previousBody = comment.body;
   comment.body = body;
   comment.editedAt = new Date();
   await comment.save();
+  const issue = await Issue.findById(comment.issue).select('key workspace project reporter assignees number');
+  if (issue) {
+    const project = await Project.findById(issue.project).select('key');
+    await notifyComment({
+      issue,
+      actor,
+      key: `${project?.key ?? 'ISSUE'}-${issue.number}`,
+      body,
+      previousBody,
+      includeWatchers: false,
+      rt,
+    });
+    rt?.toWorkspace(String(issue.workspace), 'comment:updated', {
+      issueId: String(issue._id),
+      commentId: String(comment._id),
+    });
+  }
   const populated = await comment.populate('author', 'name email avatarColor');
   return serializeComment(populated);
+}
+
+async function notifyComment({
+  issue,
+  actor,
+  key,
+  body,
+  previousBody,
+  includeWatchers,
+  rt,
+}: {
+  issue: { _id: unknown; workspace: unknown; reporter?: unknown; assignees?: unknown[] };
+  actor: { id: string; name: string };
+  key: string;
+  body: string;
+  previousBody: string;
+  includeWatchers: boolean;
+  rt?: Realtime;
+}) {
+  const workspaceId = String(issue.workspace);
+  const members = await workspaceMembers(workspaceId);
+  const mentioned = mentionedUserIds(body, members);
+  const already = new Set(mentionedUserIds(previousBody, members));
+  const freshMentions = mentioned.filter((id) => !already.has(id));
+  const mentionedNow = new Set(freshMentions);
+  const link = `/w/${workspaceId}/issues/${String(issue._id)}`;
+  if (includeWatchers) {
+    const watchers = [issue.reporter, ...(issue.assignees ?? [])]
+      .map((id) => String(id))
+      .filter((id) => !mentionedNow.has(id));
+    await notifyUsers(
+      {
+        userIds: watchers,
+        workspaceId,
+        actorId: actor.id,
+        type: 'comment.created',
+        message: `${actor.name} commented on ${key}`,
+        link,
+      },
+      rt,
+    );
+  }
+  await notifyUsers(
+    {
+      userIds: freshMentions,
+      workspaceId,
+      actorId: actor.id,
+      type: 'comment.mentioned',
+      message: `${actor.name} mentioned you on ${key}`,
+      link,
+    },
+    rt,
+  );
 }
 
 export async function deleteComment(

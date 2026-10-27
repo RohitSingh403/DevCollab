@@ -277,7 +277,7 @@ export function RegisterPage() {
           <span className="label">Password</span>
           <input className="field" type="password" autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} required />
         </label>
-        <p className="text-xs text-muted">At least 8 characters, with a letter and a number.</p>
+        <p className="text-xs text-muted">At least 8 characters, with a letter and a number. A starter workspace is created with the account.</p>
         {error ? (
           <p className="text-sm text-danger" role="alert">
             {error}

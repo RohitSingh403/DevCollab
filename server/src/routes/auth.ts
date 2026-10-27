@@ -8,6 +8,7 @@ import { requireAuth, signToken, toAuthUser } from '../middleware/auth';
 import { User } from '../models/User';
 import { loginSchema, registerSchema, updateProfileSchema } from '../schemas';
 import { serializeUser } from '../serializers';
+import { provisionStarter } from '../services/starter';
 import { colorFromString } from '../utils';
 import { parseBody } from '../validate';
 
@@ -44,6 +45,12 @@ authRouter.post(
       passwordHash,
       avatarColor: colorFromString(input.email),
     });
+    try {
+      await provisionStarter({ id: String(user._id), name: user.name });
+    } catch (error) {
+      await User.deleteOne({ _id: user._id });
+      throw error;
+    }
     res.status(201).json({ user: sendSession(res, user) });
   }),
 );
