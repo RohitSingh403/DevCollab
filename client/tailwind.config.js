@@ -4,33 +4,25 @@ export default {
   theme: {
     extend: {
       colors: {
-        ink: {
-          950: '#090b10',
-          900: '#10141b',
-          800: '#171d27',
-          700: '#222a38',
-          600: '#313b4e',
+        canvas: '#f6f7f9',
+        ink: '#121417',
+        muted: '#5f6773',
+        faint: '#8b929c',
+        line: '#e6e8ec',
+        brand: {
+          DEFAULT: '#1f4b99',
+          hover: '#173a78',
+          soft: '#eef3fb',
         },
-        mist: {
-          50: '#f5f7fb',
-          200: '#d5deea',
-          300: '#b7c3d4',
-          400: '#93a0b5',
-          500: '#7d8ba0',
-        },
-        acid: '#e7f56a',
-        mint: '#5ee0b5',
-        sky: '#8eb6ff',
-        amber: '#f0b429',
-        rose: '#ff6b81',
+        danger: '#b42318',
       },
       fontFamily: {
-        sans: ['Figtree', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        display: ['Syne', 'Figtree', 'ui-sans-serif', 'sans-serif'],
+        sans: ['Inter', 'Segoe UI', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         mono: ['IBM Plex Mono', 'ui-monospace', 'monospace'],
       },
       boxShadow: {
-        panel: '0 24px 60px rgba(0, 0, 0, 0.28)',
+        pop: '0 12px 32px rgba(18, 20, 23, 0.12)',
+        card: '0 1px 2px rgba(18, 20, 23, 0.04)',
       },
     },
   },

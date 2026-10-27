@@ -40,9 +40,9 @@ export async function seedDatabase() {
   await Membership.create({ workspace: workspace.id, user: jonah._id, role: 'admin' });
   await Membership.create({ workspace: workspace.id, user: priya._id, role: 'member' });
 
-  const bug = await createLabel(workspace.id, actor.id, 'bug', '#ff6b81');
-  const feature = await createLabel(workspace.id, actor.id, 'feature', '#8eb6ff');
-  const docs = await createLabel(workspace.id, actor.id, 'docs', '#e7f56a');
+  const bug = await createLabel(workspace.id, actor.id, 'bug', '#b42318');
+  const feature = await createLabel(workspace.id, actor.id, 'feature', '#175cd3');
+  const docs = await createLabel(workspace.id, actor.id, 'docs', '#0e7c66');
 
   const api = await createProject(workspace.id, actor, {
     name: 'API Platform',

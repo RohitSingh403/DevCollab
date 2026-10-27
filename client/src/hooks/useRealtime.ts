@@ -28,6 +28,7 @@ export function useRealtime(workspaceId?: string) {
     socket.on('issue:updated', refreshWork);
     socket.on('issue:deleted', refreshWork);
     socket.on('comment:created', refreshWork);
+    socket.on('comment:updated', refreshWork);
     socket.on('comment:deleted', refreshWork);
     socket.on('activity:created', refreshWork);
     socket.on('notification:created', onNotification);
@@ -40,6 +41,7 @@ export function useRealtime(workspaceId?: string) {
       socket.off('issue:updated', refreshWork);
       socket.off('issue:deleted', refreshWork);
       socket.off('comment:created', refreshWork);
+      socket.off('comment:updated', refreshWork);
       socket.off('comment:deleted', refreshWork);
       socket.off('activity:created', refreshWork);
       socket.off('notification:created', onNotification);

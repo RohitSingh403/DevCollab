@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { EmptyState, Modal, useDocumentTitle } from '../components/ui';
+import { EmptyState, Modal, PageHeader, useDocumentTitle } from '../components/ui';
 import { api, errorMessage } from '../lib/api';
 import { suggestKey } from '../lib/format';
 
@@ -13,17 +13,17 @@ export function ProjectsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="font-display text-4xl font-bold">Projects</h1>
-          <p className="mt-2 text-mist-400">Each project has a key, a board, and its own issue history.</p>
-        </div>
-        <button className="btn-primary" type="button" onClick={() => setOpen(true)}>
-          New project
-        </button>
-      </div>
-      {projects.isPending ? <p>Loading projects…</p> : null}
-      {projects.isError ? <p className="text-rose">{errorMessage(projects.error)}</p> : null}
+      <PageHeader
+        title="Projects"
+        description="Each project has a key, a board, and its own issue history."
+        actions={
+          <button className="btn-primary" type="button" onClick={() => setOpen(true)}>
+            New project
+          </button>
+        }
+      />
+      {projects.isPending ? <p className="text-sm text-muted">Loading projects…</p> : null}
+      {projects.isError ? <p className="text-sm text-danger">{errorMessage(projects.error)}</p> : null}
       {projects.data && !projects.data.length ? (
         <EmptyState title="Start with one project" body="A key like API or WEB prefixes every issue the team files." action={<button className="btn-primary" type="button" onClick={() => setOpen(true)}>New project</button>} />
       ) : (
@@ -31,15 +31,18 @@ export function ProjectsPage() {
           {(projects.data ?? []).map((project) => {
             const progress = project.issueCount ? Math.round(((project.issueCount - project.openIssueCount) / project.issueCount) * 100) : 0;
             return (
-              <Link key={project.id} to={`/w/${workspaceId}/projects/${project.id}`} className="panel p-4 hover:border-acid/40">
+              <Link key={project.id} to={`/w/${workspaceId}/projects/${project.id}`} className="panel block p-5 transition hover:-translate-y-px hover:shadow-pop">
                 <div className="flex items-center justify-between">
-                  <span className="font-mono text-sm text-acid">{project.key}</span>
-                  <span className="text-sm text-mist-400">{project.openIssueCount} open</span>
+                  <span className="rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] font-medium text-ink">{project.key}</span>
+                  <span className="text-[12px] text-muted">{project.openIssueCount} open</span>
                 </div>
-                <h2 className="mt-2 text-xl font-semibold">{project.name}</h2>
-                <p className="mt-1 line-clamp-2 text-sm text-mist-400">{project.description || 'No description yet.'}</p>
-                <div className="mt-4 h-1.5 rounded-full bg-white/5">
-                  <div className="h-1.5 rounded-full bg-mint" style={{ width: `${progress}%` }} />
+                <h2 className="mt-3 text-[16px] font-semibold tracking-[-0.02em]">{project.name}</h2>
+                <p className="mt-1 line-clamp-2 min-h-10 text-[13px] leading-5 text-muted">{project.description || 'No description yet.'}</p>
+                <div className="mt-4 flex items-center gap-3">
+                  <div className="h-1 flex-1 rounded-full bg-slate-100">
+                    <div className="h-1 rounded-full bg-ink" style={{ width: `${progress}%` }} />
+                  </div>
+                  <span className="text-[11px] tabular-nums text-faint">{progress}%</span>
                 </div>
               </Link>
             );
@@ -109,7 +112,7 @@ function CreateProjectModal({ workspaceId, open, onClose }: { workspaceId: strin
           <span className="label">Description</span>
           <textarea className="field min-h-20" value={description} onChange={(event) => setDescription(event.target.value)} />
         </label>
-        {error ? <p className="text-sm text-rose" role="alert">{error}</p> : null}
+        {error ? <p className="text-sm text-danger" role="alert">{error}</p> : null}
         <button className="btn-primary" type="submit" disabled={create.isPending}>
           Create project
         </button>
