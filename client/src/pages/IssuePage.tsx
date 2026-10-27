@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Avatar, PriorityMark, StatusBadge, useDocumentTitle } from '../components/ui';
+import { Avatar, useDocumentTitle } from '../components/ui';
 import { api, errorMessage } from '../lib/api';
 import { timeAgo, toDateInput } from '../lib/format';
+import { commentSegments, insertMention, matchingMembers, mentionAtCursor } from '../lib/mentions';
 import { PRIORITIES, PRIORITY_LABEL, STATUSES, STATUS_LABEL, type IssueStatus, type Priority, type Role } from '../lib/types';
 import { useAuthStore } from '../stores/authStore';
 import { useUiStore } from '../stores/uiStore';
@@ -43,35 +44,43 @@ export function IssuePage() {
 
   const role = workspace.data?.role;
   const canDelete = Boolean(user && issue.data && (issue.data.reporter.id === user.id || role === 'owner' || role === 'admin'));
+  const people = (members.data ?? []).map((member) => ({ id: member.user.id, name: member.user.name }));
 
-  if (issue.isPending) return <p>Loading issue…</p>;
-  if (issue.isError) return <p className="text-rose">{errorMessage(issue.error)}</p>;
+  if (issue.isPending) return <p className="text-sm text-muted">Loading issue…</p>;
+  if (issue.isError) return <p className="text-sm text-danger">{errorMessage(issue.error)}</p>;
   const current = issue.data;
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
       <div>
-        <Link className="text-sm text-mist-400 hover:text-acid" to={`/w/${workspaceId}/projects/${current.project.id}`}>
-          {current.project.key} {current.project.name}
-        </Link>
-        <p className="mt-3 font-mono text-sm text-acid">{current.key}</p>
+        <p className="text-[13px] text-muted">
+          <Link className="crumb" to={`/w/${workspaceId}/projects`}>
+            Projects
+          </Link>
+          <span aria-hidden="true"> / </span>
+          <Link className="crumb" to={`/w/${workspaceId}/projects/${current.project.id}`}>
+            {current.project.name}
+          </Link>
+          <span aria-hidden="true"> / </span>
+          <span className="font-mono text-[12px] text-ink">{current.key}</span>
+        </p>
         <TitleEditor title={current.title} onSave={(title) => save.mutate({ title })} />
         <DescriptionEditor description={current.description} onSave={(description) => save.mutate({ description })} />
         <section className="mt-8">
-          <h2 className="font-semibold">Comments</h2>
+          <h2 className="text-sm font-semibold">Comments</h2>
           <ul className="mt-3 space-y-3">
             {(comments.data ?? []).map((comment) => (
-              <CommentCard key={comment.id} comment={comment} role={role} />
+              <CommentCard key={comment.id} comment={comment} role={role} members={people} />
             ))}
           </ul>
-          <CommentComposer issueId={issueId} />
+          <CommentComposer issueId={issueId} members={people} />
         </section>
       </div>
-      <aside className="space-y-4">
-        <section className="panel space-y-4 p-4">
-          <label className="block">
-            <span className="label">Status</span>
-            <select className="field" value={current.status} onChange={(event) => save.mutate({ status: event.target.value as IssueStatus })}>
+      <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
+        <section className="panel divide-y divide-line">
+          <label className="grid grid-cols-[88px_1fr] items-center gap-3 px-4 py-3">
+            <span className="text-[12px] text-muted">Status</span>
+            <select className="field" aria-label="Status" value={current.status} onChange={(event) => save.mutate({ status: event.target.value as IssueStatus })}>
               {STATUSES.map((status) => (
                 <option key={status} value={status}>
                   {STATUS_LABEL[status]}
@@ -79,13 +88,9 @@ export function IssuePage() {
               ))}
             </select>
           </label>
-          <div className="flex items-center gap-2">
-            <StatusBadge status={current.status} />
-            <PriorityMark priority={current.priority} />
-          </div>
-          <label className="block">
-            <span className="label">Priority</span>
-            <select className="field" value={current.priority} onChange={(event) => save.mutate({ priority: event.target.value as Priority })}>
+          <label className="grid grid-cols-[88px_1fr] items-center gap-3 px-4 py-3">
+            <span className="text-[12px] text-muted">Priority</span>
+            <select className="field" aria-label="Priority" value={current.priority} onChange={(event) => save.mutate({ priority: event.target.value as Priority })}>
               {PRIORITIES.map((priority) => (
                 <option key={priority} value={priority}>
                   {PRIORITY_LABEL[priority]}
@@ -93,18 +98,19 @@ export function IssuePage() {
               ))}
             </select>
           </label>
-          <label className="block">
-            <span className="label">Due date</span>
+          <label className="grid grid-cols-[88px_1fr] items-center gap-3 px-4 py-3">
+            <span className="text-[12px] text-muted">Due</span>
             <input
               className="field"
+              aria-label="Due date"
               type="date"
               value={toDateInput(current.dueDate)}
               onChange={(event) => save.mutate({ dueDate: event.target.value || null })}
             />
           </label>
-          <fieldset>
-            <legend className="label">Assignees</legend>
-            <div className="space-y-2">
+          <fieldset className="px-4 py-3">
+            <legend className="text-[12px] text-muted">Assignees</legend>
+            <div className="mt-2 space-y-2">
               {(members.data ?? []).map((member) => {
                 const checked = current.assignees.some((person) => person.id === member.user.id);
                 return (
@@ -124,16 +130,16 @@ export function IssuePage() {
               })}
             </div>
           </fieldset>
-          <fieldset>
-            <legend className="label">Labels</legend>
-            <div className="flex flex-wrap gap-2">
+          <fieldset className="px-4 py-3">
+            <legend className="text-[12px] text-muted">Labels</legend>
+            <div className="mt-2 flex flex-wrap gap-1.5">
               {(labels.data ?? []).map((label) => {
                 const checked = current.labels.some((item) => item.id === label.id);
                 return (
                   <button
                     key={label.id}
                     type="button"
-                    className={`rounded-full px-2.5 py-1 text-xs ${checked ? 'bg-white text-ink-950' : 'bg-white/5 text-mist-200'}`}
+                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[12px] ${checked ? 'border-ink bg-ink text-white' : 'border-line bg-white text-muted'}`}
                     onClick={() => {
                       const ids = current.labels.map((item) => item.id);
                       save.mutate({ labelIds: checked ? ids.filter((id) => id !== label.id) : [...ids, label.id] });
@@ -146,8 +152,9 @@ export function IssuePage() {
               })}
             </div>
           </fieldset>
-          <p className="text-xs text-mist-500">Opened by {current.reporter.name} · {timeAgo(current.createdAt)}</p>
+          <p className="px-4 py-3 text-[12px] text-faint">Opened by {current.reporter.name} · {timeAgo(current.createdAt)}</p>
           {canDelete ? (
+            <div className="px-4 pb-4">
             <button
               className="btn-danger w-full"
               type="button"
@@ -157,15 +164,16 @@ export function IssuePage() {
             >
               Delete issue
             </button>
+            </div>
           ) : null}
         </section>
         <section className="panel p-4">
-          <h2 className="font-semibold">History</h2>
+          <h2 className="text-sm font-semibold">History</h2>
           <ul className="mt-3 space-y-3">
             {(activity.data?.activities ?? []).map((item) => (
               <li key={item.id} className="text-sm">
                 <p>{item.message}</p>
-                <p className="text-xs text-mist-500">{timeAgo(item.createdAt)}</p>
+                <p className="text-xs text-faint">{timeAgo(item.createdAt)}</p>
               </li>
             ))}
           </ul>
@@ -189,7 +197,7 @@ function TitleEditor({ title, onSave }: { title: string; onSave: (title: string)
     <textarea
       ref={ref}
       rows={1}
-      className="mt-2 w-full resize-none overflow-hidden bg-transparent font-display text-3xl font-bold leading-tight outline-none sm:text-4xl"
+      className="mt-2 w-full resize-none overflow-hidden bg-transparent text-[28px] font-semibold leading-tight tracking-[-0.03em] text-ink outline-none"
       aria-label="Issue title"
       value={value}
       onChange={(event) => setValue(event.target.value)}
@@ -205,7 +213,7 @@ function DescriptionEditor({ description, onSave }: { description: string; onSav
   useEffect(() => setValue(description), [description]);
   return (
     <textarea
-      className="mt-4 min-h-32 w-full rounded-2xl border border-white/10 bg-ink-900/40 p-4 text-sm leading-6 outline-none focus:border-acid/50"
+      className="mt-3 min-h-28 w-full resize-y rounded-md border border-transparent bg-transparent px-1 py-2 text-sm leading-6 text-ink outline-none placeholder:text-faint focus:border-line focus:bg-white focus:px-3"
       aria-label="Issue description"
       placeholder="Add context for the people picking this up."
       value={value}
@@ -217,7 +225,7 @@ function DescriptionEditor({ description, onSave }: { description: string; onSav
   );
 }
 
-function CommentComposer({ issueId }: { issueId: string }) {
+function CommentComposer({ issueId, members }: { issueId: string; members: { id: string; name: string }[] }) {
   const [body, setBody] = useState('');
   const queryClient = useQueryClient();
   const pushToast = useUiStore((state) => state.pushToast);
@@ -238,10 +246,8 @@ function CommentComposer({ issueId }: { issueId: string }) {
         if (body.trim()) add.mutate();
       }}
     >
-      <label className="block">
-        <span className="label">Add a comment</span>
-        <textarea className="field min-h-24" value={body} onChange={(event) => setBody(event.target.value)} />
-      </label>
+      <MentionField label="Add a comment" value={body} onChange={setBody} members={members} />
+      <p className="text-[12px] text-muted">Type @ to mention a teammate. They get an inbox alert.</p>
       <button className="btn-primary" type="submit" disabled={!body.trim() || add.isPending}>
         Comment
       </button>
@@ -249,12 +255,131 @@ function CommentComposer({ issueId }: { issueId: string }) {
   );
 }
 
+function MentionField({
+  label,
+  value,
+  onChange,
+  members,
+  minHeight = 'min-h-24',
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  members: { id: string; name: string }[];
+  minHeight?: string;
+}) {
+  const listId = useId();
+  const field = useRef<HTMLTextAreaElement>(null);
+  const [caret, setCaret] = useState(0);
+  const [active, setActive] = useState(0);
+  const [dismissedAt, setDismissedAt] = useState<number | null>(null);
+  const query = mentionAtCursor(value, caret);
+  const matches = query ? matchingMembers(members, query.query) : [];
+  const open = Boolean(query) && dismissedAt !== query?.start;
+
+  useEffect(() => {
+    setActive(0);
+  }, [query?.start, query?.query]);
+
+  function choose(name: string) {
+    if (!query) return;
+    const next = insertMention(value, query.start, caret, name);
+    onChange(next.value);
+    setCaret(next.caret);
+    requestAnimationFrame(() => {
+      field.current?.focus();
+      field.current?.setSelectionRange(next.caret, next.caret);
+    });
+  }
+
+  return (
+    <div className="relative">
+      <span className="label">{label}</span>
+      {open ? (
+        <div id={listId} className="absolute bottom-full z-20 mb-1 max-h-52 w-full overflow-auto rounded-lg border border-line bg-white py-1 shadow-pop" role="listbox">
+          {matches.length ? (
+            matches.map((member, index) => (
+              <button
+                key={member.id}
+                type="button"
+                role="option"
+                aria-selected={index === active}
+                className={`flex w-full px-3 py-1.5 text-left text-[13px] ${index === active ? 'bg-slate-100 text-ink' : 'text-ink hover:bg-slate-50'}`}
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  choose(member.name);
+                }}
+              >
+                {member.name}
+              </button>
+            ))
+          ) : (
+            <p className="px-3 py-1.5 text-[13px] text-muted">No teammates match</p>
+          )}
+        </div>
+      ) : null}
+      <textarea
+        ref={field}
+        className={`field ${minHeight}`}
+        aria-label={label}
+        aria-expanded={open}
+        aria-controls={open ? listId : undefined}
+        aria-autocomplete="list"
+        value={value}
+        onClick={(event) => setCaret(event.currentTarget.selectionStart ?? 0)}
+        onKeyUp={(event) => {
+          if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Enter' || event.key === 'Escape') return;
+          setCaret(event.currentTarget.selectionStart ?? 0);
+        }}
+        onChange={(event) => {
+          onChange(event.target.value);
+          setCaret(event.target.selectionStart ?? event.target.value.length);
+        }}
+        onKeyDown={(event) => {
+          if (!open) return;
+          if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            if (matches.length) setActive((index) => (index + 1) % matches.length);
+          } else if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            if (matches.length) setActive((index) => (index - 1 + matches.length) % matches.length);
+          } else if (event.key === 'Escape') {
+            event.preventDefault();
+            setDismissedAt(query?.start ?? null);
+          } else if (event.key === 'Enter' && matches[active]) {
+            event.preventDefault();
+            choose(matches[active].name);
+          }
+        }}
+      />
+    </div>
+  );
+}
+
+function CommentBody({ body, names }: { body: string; names: string[] }) {
+  return (
+    <p className="mt-3 whitespace-pre-wrap text-sm leading-6">
+      {commentSegments(body, names).map((part, index) =>
+        part.mention ? (
+          <span key={index} className="rounded bg-brand-soft px-0.5 font-medium text-brand">
+            {part.text}
+          </span>
+        ) : (
+          <span key={index}>{part.text}</span>
+        ),
+      )}
+    </p>
+  );
+}
+
 function CommentCard({
   comment,
   role,
+  members,
 }: {
   comment: { id: string; body: string; author: { id: string; name: string; avatarColor: string }; createdAt: string; edited: boolean };
   role?: Role;
+  members: { id: string; name: string }[];
 }) {
   const user = useAuthStore((state) => state.user);
   const queryClient = useQueryClient();
@@ -274,12 +399,12 @@ function CommentCard({
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['comments'] }),
   });
   return (
-    <li className="rounded-2xl border border-white/10 bg-ink-900/50 p-4">
+    <li className="rounded-lg border border-line bg-white p-4">
       <div className="flex items-center justify-between gap-3">
         <span className="flex items-center gap-2 text-sm">
           <Avatar name={comment.author.name} color={comment.author.avatarColor} size="sm" />
           <span className="font-medium">{comment.author.name}</span>
-          <span className="text-mist-500">{timeAgo(comment.createdAt)}{comment.edited ? ' · edited' : ''}</span>
+          <span className="text-faint">{timeAgo(comment.createdAt)}{comment.edited ? ' · edited' : ''}</span>
         </span>
         <span className="flex gap-1">
           {isAuthor ? (
@@ -302,13 +427,13 @@ function CommentCard({
             save.mutate();
           }}
         >
-          <textarea className="field min-h-20" value={body} onChange={(event) => setBody(event.target.value)} />
+          <MentionField label="Edit comment" value={body} onChange={setBody} members={members} minHeight="min-h-20" />
           <button className="btn-primary" type="submit">
             Save comment
           </button>
         </form>
       ) : (
-        <p className="mt-3 whitespace-pre-wrap text-sm leading-6">{comment.body}</p>
+        <CommentBody body={comment.body} names={members.map((member) => member.name)} />
       )}
     </li>
   );

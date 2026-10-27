@@ -71,7 +71,8 @@ function NotFound() {
   return (
     <main className="grid min-h-screen place-items-center px-4 text-center">
       <div>
-        <h1 className="font-display text-4xl font-bold">That page is not in this workspace.</h1>
+        <h1 className="text-xl font-semibold">Page not found</h1>
+        <p className="mt-2 text-sm text-muted">That page is not in this workspace.</p>
         <a className="btn-primary mt-6" href="/">
           Back home
         </a>

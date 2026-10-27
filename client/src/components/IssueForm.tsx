@@ -107,7 +107,7 @@ export function IssueForm({
         <legend className="label">Assignees</legend>
         <div className="flex flex-wrap gap-2">
           {(members.data ?? []).map((member) => (
-            <label key={member.user.id} className="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1 text-sm">
+            <label key={member.user.id} className="inline-flex items-center gap-2 rounded-md border border-line bg-white px-2.5 py-1 text-sm">
               <input
                 type="checkbox"
                 checked={assigneeIds.includes(member.user.id)}
@@ -122,7 +122,7 @@ export function IssueForm({
         <legend className="label">Labels</legend>
         <div className="flex flex-wrap gap-2">
           {(labels.data ?? []).map((label) => (
-            <label key={label.id} className="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1 text-sm">
+            <label key={label.id} className="inline-flex items-center gap-2 rounded-md border border-line bg-white px-2.5 py-1 text-sm">
               <input type="checkbox" checked={labelIds.includes(label.id)} onChange={() => toggle(labelIds, label.id, setLabelIds)} />
               <span className="h-2.5 w-2.5 rounded-full" style={{ background: label.color }} />
               {label.name}
@@ -142,7 +142,7 @@ export function IssueForm({
               <button
                 key={color}
                 type="button"
-                className={`h-6 w-6 rounded-full ${labelColor === color ? 'ring-2 ring-white' : ''}`}
+                className={`h-5 w-5 rounded-full ${labelColor === color ? 'ring-2 ring-brand ring-offset-2' : ''}`}
                 style={{ background: color }}
                 aria-label={color}
                 onClick={() => setLabelColor(color)}
@@ -155,7 +155,7 @@ export function IssueForm({
         </div>
       </fieldset>
       {error ? (
-        <p className="text-sm text-rose" role="alert">
+        <p className="text-sm text-danger" role="alert">
           {error}
         </p>
       ) : null}
