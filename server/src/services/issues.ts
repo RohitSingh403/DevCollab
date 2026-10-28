@@ -91,6 +91,61 @@ export async function listIssues(input: {
   return { issues: issues.map((issue) => serializeIssue(issue)), ...pageMeta(input.page, input.limit, total) };
 }
 
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+export function workBucket(dueDate: Date | null, now: Date) {
+  if (!dueDate) return 'undated' as const;
+  if (dueDate.getTime() < now.getTime()) return 'overdue' as const;
+  if (dueDate.getTime() < now.getTime() + WEEK_MS) return 'dueSoon' as const;
+  return 'later' as const;
+}
+
+export async function listMyWork(workspaceId: string, userId: string, now = new Date()) {
+  const issues = await Issue.find({
+    workspace: workspaceId,
+    assignees: userId,
+    status: { $ne: 'done' },
+  }).populate(ISSUE_POPULATE);
+
+  const groups = {
+    overdue: [] as typeof issues,
+    dueSoon: [] as typeof issues,
+    later: [] as typeof issues,
+    undated: [] as typeof issues,
+  };
+  for (const issue of issues) {
+    groups[workBucket(issue.dueDate ?? null, now)].push(issue);
+  }
+  const byDue = (left: { dueDate?: Date | null }, right: { dueDate?: Date | null }) =>
+    (left.dueDate?.getTime() ?? 0) - (right.dueDate?.getTime() ?? 0);
+  groups.overdue.sort(byDue);
+  groups.dueSoon.sort(byDue);
+  groups.later.sort(byDue);
+  groups.undated.sort((left, right) => right.priorityRank - left.priorityRank || right.updatedAt.getTime() - left.updatedAt.getTime());
+
+  const sections = [
+    { id: 'overdue', label: 'Overdue', issues: groups.overdue },
+    { id: 'dueSoon', label: 'Due this week', issues: groups.dueSoon },
+    { id: 'later', label: 'Due later', issues: groups.later },
+    { id: 'undated', label: 'No due date', issues: groups.undated },
+  ] as const;
+
+  return {
+    total: issues.length,
+    counts: {
+      overdue: groups.overdue.length,
+      dueSoon: groups.dueSoon.length,
+      later: groups.later.length,
+      undated: groups.undated.length,
+    },
+    groups: sections.map((section) => ({
+      id: section.id,
+      label: section.label,
+      issues: section.issues.map((issue) => serializeIssue(issue)),
+    })),
+  };
+}
+
 export async function searchWorkspaceIssues(workspaceId: string, q: string) {
   const issues = await Issue.find({
     workspace: workspaceId,

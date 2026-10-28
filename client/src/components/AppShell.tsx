@@ -11,6 +11,7 @@ import { Avatar, Icon, Logo, Modal, type IconName } from './ui';
 
 const links: { label: string; suffix: string; icon: IconName }[] = [
   { label: 'Overview', suffix: '', icon: 'overview' },
+  { label: 'My work', suffix: '/my-work', icon: 'work' },
   { label: 'Projects', suffix: '/projects', icon: 'projects' },
   { label: 'Members', suffix: '/members', icon: 'members' },
   { label: 'Activity', suffix: '/activity', icon: 'activity' },
@@ -30,6 +31,7 @@ export function AppShell() {
   const workspaces = useQuery({ queryKey: ['workspaces'], queryFn: api.workspaces });
   const notifications = useQuery({ queryKey: ['notifications'], queryFn: api.notifications });
   const activeId = paramId ?? remembered ?? workspaces.data?.[0]?.id;
+  const myWork = useQuery({ queryKey: ['my-work', activeId], queryFn: () => api.myWork(activeId!), enabled: Boolean(activeId) });
   useRealtime(activeId);
   const [notesOpen, setNotesOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
@@ -129,6 +131,13 @@ export function AppShell() {
             >
               <Icon name={link.icon} className="h-4 w-4" />
               {link.label}
+              {link.suffix === '/my-work' && myWork.data && myWork.data.total > 0 ? (
+                <span
+                  className={`ml-auto rounded-full px-1.5 text-[10px] font-semibold leading-4 text-white ${myWork.data.counts.overdue > 0 ? 'bg-danger' : 'bg-ink'}`}
+                >
+                  {myWork.data.total}
+                </span>
+              ) : null}
             </NavLink>
           ))}
           <NavLink
