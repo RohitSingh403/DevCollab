@@ -44,6 +44,25 @@ export interface Workspace {
   updatedAt: string;
 }
 
+export interface ViewFilters {
+  status: string;
+  priority: string;
+  assignee: string;
+  overdue: boolean;
+  q: string;
+  layout: 'board' | 'list';
+}
+
+export interface SavedView {
+  id: string;
+  name: string;
+  shared: boolean;
+  mine: boolean;
+  canDelete: boolean;
+  createdBy: { id: string; name: string };
+  filters: ViewFilters;
+}
+
 export interface Project {
   id: string;
   workspaceId: string;

@@ -29,7 +29,8 @@ issueRouterForProject.get(
   requireProject(),
   asyncHandler(async (req, res) => {
     const query = listIssueSchema.parse(req.query);
-    res.json(await listIssues({ projectId: req.params.projectId, ...query }));
+    const assignee = query.assignee === 'me' ? req.authUser!.id : query.assignee;
+    res.json(await listIssues({ projectId: req.params.projectId, ...query, assignee }));
   }),
 );
 
