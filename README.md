@@ -4,6 +4,18 @@ DevCollab is a multi-user workspace for software teams. People create a workspac
 
 It is a team system: shared data, roles, and authorization. It is not a personal timer or habit tracker.
 
+## Preview
+
+A new account opens on a workspace that already has a project, a board, and activity. The seeded team is `maya@devcollab.dev` / `Password123!`.
+
+![Workspace overview with open, overdue, and done counts](docs/screenshots/overview.png)
+
+![Project board filtered by a saved view](docs/screenshots/board.png)
+
+![Issue detail with status, priority, assignees, and comments](docs/screenshots/issue.png)
+
+![Members with owner, admin, and member roles](docs/screenshots/members.png)
+
 ## Features
 
 - Email and password accounts, bcrypt hashing, and an httpOnly JWT cookie
