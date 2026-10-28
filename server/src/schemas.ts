@@ -116,7 +116,7 @@ export const updateIssueSchema = z
 export const listIssueSchema = z.object({
   status: z.enum(STATUSES).optional(),
   priority: z.enum(PRIORITIES).optional(),
-  assignee: objectId.optional(),
+  assignee: z.union([z.literal('me'), objectId]).optional(),
   label: objectId.optional(),
   q: z.string().trim().max(80).optional(),
   overdue: z.enum(['true', 'false']).optional(),
@@ -133,6 +133,25 @@ export const paginationSchema = z.object({
 export const commentSchema = z
   .object({
     body: z.string().trim().min(1).max(2000),
+  })
+  .strict();
+
+export const viewFiltersSchema = z
+  .object({
+    status: z.enum(STATUSES).or(z.literal('')).optional().default(''),
+    priority: z.enum(PRIORITIES).or(z.literal('')).optional().default(''),
+    assignee: z.union([z.literal(''), z.literal('me'), objectId]).optional().default(''),
+    overdue: z.boolean().optional().default(false),
+    q: z.string().trim().max(80).optional().default(''),
+    layout: z.enum(['board', 'list']).optional().default('board'),
+  })
+  .strict();
+
+export const createViewSchema = z
+  .object({
+    name: z.string().trim().min(2).max(40),
+    shared: z.boolean().optional().default(false),
+    filters: viewFiltersSchema,
   })
   .strict();
 
