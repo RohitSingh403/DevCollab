@@ -10,6 +10,7 @@ import { LandingPage, LoginPage, RegisterPage } from './pages/AuthPages';
 import { InvitePage } from './pages/InvitePage';
 import { IssuePage } from './pages/IssuePage';
 import { MembersPage } from './pages/MembersPage';
+import { MyWorkPage } from './pages/MyWorkPage';
 import { OverviewPage, WorkspaceHome } from './pages/OverviewPage';
 import { ProjectPage } from './pages/ProjectPage';
 import { ProjectsPage } from './pages/ProjectsPage';
@@ -99,6 +100,7 @@ export default function App() {
           <Route path="/app" element={<WorkspaceHome />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/w/:workspaceId" element={<OverviewPage />} />
+          <Route path="/w/:workspaceId/my-work" element={<MyWorkPage />} />
           <Route path="/w/:workspaceId/projects" element={<ProjectsPage />} />
           <Route path="/w/:workspaceId/projects/:projectId" element={<ProjectPage />} />
           <Route path="/w/:workspaceId/issues/:issueId" element={<IssuePage />} />

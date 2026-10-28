@@ -13,7 +13,7 @@ import {
 } from '../schemas';
 import { buildAnalytics } from '../services/analytics';
 import { listActivity } from '../services/feed';
-import { searchWorkspaceIssues } from '../services/issues';
+import { listMyWork, searchWorkspaceIssues } from '../services/issues';
 import {
   acceptInvite,
   createLabel,
@@ -201,6 +201,14 @@ workspaceRouter.get(
     res.json({
       analytics: await buildAnalytics({ workspace: workspaceId }, { workspace: workspaceId }),
     });
+  }),
+);
+
+workspaceRouter.get(
+  '/:workspaceId/my-work',
+  requireWorkspace(),
+  asyncHandler(async (req, res) => {
+    res.json(await listMyWork(req.params.workspaceId, req.authUser!.id));
   }),
 );
 
