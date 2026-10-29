@@ -115,6 +115,10 @@ export function StatusBadge({ status }: { status: IssueStatus }) {
   );
 }
 
+export function BlockedMark() {
+  return <span className="inline-flex items-center rounded-full bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-danger">Blocked</span>;
+}
+
 export function PriorityMark({ priority }: { priority: Priority }) {
   return (
     <span className="inline-flex items-center gap-1.5 text-xs text-muted">

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Blockers } from '../components/Blockers';
 import { Avatar, useDocumentTitle } from '../components/ui';
 import { api, errorMessage } from '../lib/api';
 import { timeAgo, toDateInput } from '../lib/format';
@@ -65,7 +66,13 @@ export function IssuePage() {
           <span className="font-mono text-[12px] text-ink">{current.key}</span>
         </p>
         <TitleEditor title={current.title} onSave={(title) => save.mutate({ title })} />
+        {current.blocked ? (
+          <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-[13px] text-danger">
+            Blocked by {(current.blockedBy ?? []).filter((item) => item.status !== 'done').map((item) => item.key).join(', ') || 'an open issue'}
+          </p>
+        ) : null}
         <DescriptionEditor description={current.description} onSave={(description) => save.mutate({ description })} />
+        <Blockers workspaceId={workspaceId} issue={current} />
         <section className="mt-8">
           <h2 className="text-sm font-semibold">Comments</h2>
           <ul className="mt-3 space-y-3">
