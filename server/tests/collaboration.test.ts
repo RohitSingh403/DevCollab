@@ -378,4 +378,75 @@ describe('workspaces, issues, and authorization', () => {
     const ownerDelete = await owner.agent.delete(`/api/projects/${projectId}/views/${mine.body.view.id}`);
     expect(ownerDelete.status).toBe(204);
   });
+
+  it('lists open issues assigned to the signed-in user', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const teammate = await registerUser(authAgent(), 'Priya Nair');
+    const outsider = await registerUser(authAgent(), 'Jonah Patel');
+    const workspace = await createWorkspace(owner.agent, 'Queue');
+    await owner.agent.post(`/api/workspaces/${workspace.id}/invites`).send({ email: teammate.email, role: 'member' });
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({
+      name: 'API Platform',
+      key: 'API',
+      description: 'Service layer',
+    });
+    const projectId = project.body.project.id as string;
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const soon = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
+    const later = new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString();
+
+    await owner.agent.post(`/api/projects/${projectId}/issues`).send({
+      title: 'Late review',
+      assigneeIds: [teammate.user.id],
+      dueDate: yesterday,
+      priority: 'high',
+    });
+    await owner.agent.post(`/api/projects/${projectId}/issues`).send({
+      title: 'Ship the filter',
+      assigneeIds: [teammate.user.id],
+      dueDate: soon,
+    });
+    await owner.agent.post(`/api/projects/${projectId}/issues`).send({
+      title: 'Plan the next milestone',
+      assigneeIds: [teammate.user.id],
+      dueDate: later,
+    });
+    await owner.agent.post(`/api/projects/${projectId}/issues`).send({
+      title: 'Write the empty state',
+      assigneeIds: [teammate.user.id],
+    });
+    const done = await owner.agent.post(`/api/projects/${projectId}/issues`).send({
+      title: 'Already finished',
+      assigneeIds: [teammate.user.id],
+      status: 'done',
+    });
+    expect(done.status).toBe(201);
+    await owner.agent.post(`/api/projects/${projectId}/issues`).send({
+      title: 'Owner only',
+      assigneeIds: [owner.user.id],
+      dueDate: soon,
+    });
+
+    const hidden = await outsider.agent.get(`/api/workspaces/${workspace.id}/my-work`);
+    expect(hidden.status).toBe(404);
+
+    const queue = await teammate.agent.get(`/api/workspaces/${workspace.id}/my-work`);
+    expect(queue.status).toBe(200);
+    expect(queue.body.total).toBe(4);
+    expect(queue.body.counts).toMatchObject({ overdue: 1, dueSoon: 1, later: 1, undated: 1 });
+    expect(queue.body.groups.find((group: { id: string }) => group.id === 'overdue').issues.map((issue: { title: string }) => issue.title)).toEqual([
+      'Late review',
+    ]);
+    expect(queue.body.groups.flatMap((group: { issues: { title: string }[] }) => group.issues.map((issue) => issue.title))).not.toContain(
+      'Already finished',
+    );
+    expect(queue.body.groups.flatMap((group: { issues: { title: string }[] }) => group.issues.map((issue) => issue.title))).not.toContain(
+      'Owner only',
+    );
+
+    const ownerQueue = await owner.agent.get(`/api/workspaces/${workspace.id}/my-work`);
+    expect(ownerQueue.body.groups.flatMap((group: { issues: { title: string }[] }) => group.issues.map((issue) => issue.title))).toEqual([
+      'Owner only',
+    ]);
+  });
 });
