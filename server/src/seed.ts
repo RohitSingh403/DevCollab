@@ -5,6 +5,7 @@ import { logger } from './logger';
 import { Membership } from './models/Membership';
 import { User } from './models/User';
 import { Workspace } from './models/Workspace';
+import { addBlocker } from './services/blockers';
 import { addComment, createIssue } from './services/issues';
 import { createProject } from './services/projects';
 import { createLabel, createWorkspace } from './services/workspaces';
@@ -77,7 +78,7 @@ export async function seedDatabase() {
     labelIds: [bug.id],
     dueDate: isoDaysFromNow(-1),
   });
-  await createIssue({
+  const comments = await createIssue({
     projectId: api.id,
     actor,
     title: 'Paginate comments on long issue threads',
@@ -122,7 +123,7 @@ export async function seedDatabase() {
     labelIds: [feature.id],
     dueDate: isoDaysFromNow(2),
   });
-  await createIssue({
+  const notifications = await createIssue({
     projectId: web.id,
     actor,
     title: 'Show unread notifications without a refresh',
@@ -133,6 +134,9 @@ export async function seedDatabase() {
     labelIds: [feature.id],
     dueDate: isoDaysFromNow(1),
   });
+
+  await addBlocker({ issueId: comments.id, blockerId: roles.id, actor });
+  await addBlocker({ issueId: notifications.id, blockerId: session.id, actor });
 
   await addComment({
     issueId: session.id,
