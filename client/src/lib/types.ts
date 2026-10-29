@@ -103,6 +103,18 @@ export interface Issue {
   updatedAt: string;
 }
 
+export interface MyWorkGroup {
+  id: 'overdue' | 'dueSoon' | 'later' | 'undated';
+  label: string;
+  issues: Issue[];
+}
+
+export interface MyWork {
+  total: number;
+  counts: { overdue: number; dueSoon: number; later: number; undated: number };
+  groups: MyWorkGroup[];
+}
+
 export interface IssueList {
   issues: Issue[];
   page: number;

@@ -30,6 +30,12 @@ export function Icon({ name, className = 'h-4 w-4' }: { name: IconName; classNam
       </>
     ),
     activity: <path d="M4 16l4-5 3 3 5-7 4 4" />,
+    work: (
+      <>
+        <rect x="6" y="4" width="12" height="16" rx="2" />
+        <path d="M9 4.5h6v2H9zM9 11h6M9 15h4" />
+      </>
+    ),
     bell: (
       <>
         <path d="M6 16h12l-1.2-2.1V10a4.8 4.8 0 0 0-9.6 0v3.9L6 16z" />
@@ -51,7 +57,7 @@ export function Icon({ name, className = 'h-4 w-4' }: { name: IconName; classNam
   );
 }
 
-export type IconName = 'overview' | 'projects' | 'members' | 'activity' | 'bell' | 'search' | 'menu';
+export type IconName = 'overview' | 'projects' | 'members' | 'activity' | 'work' | 'bell' | 'search' | 'menu';
 
 export function Spinner() {
   return <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent" aria-hidden="true" />;
