@@ -4,7 +4,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { IssueBoard } from '../components/IssueBoard';
 import { IssueForm } from '../components/IssueForm';
 import { StatGrid } from '../components/AnalyticsPanels';
-import { Avatar, EmptyState, Modal, PageHeader, PriorityMark, StatusBadge, useDocumentTitle } from '../components/ui';
+import { Avatar, BlockedMark, EmptyState, Modal, PageHeader, PriorityMark, StatusBadge, useDocumentTitle } from '../components/ui';
 import { api, errorMessage } from '../lib/api';
 import { dueLabel } from '../lib/format';
 import { PRIORITIES, PRIORITY_LABEL, STATUSES, STATUS_LABEL, type IssueStatus, type ViewFilters } from '../lib/types';
@@ -274,6 +274,7 @@ export function ProjectPage() {
                     <Link to={`/w/${workspaceId}/issues/${issue.id}`} className="mt-0.5 block font-medium hover:text-brand">
                       {issue.title}
                     </Link>
+                    {issue.blocked ? <span className="mt-1 inline-flex"><BlockedMark /></span> : null}
                   </td>
                   <td className="px-4 py-3">
                     <StatusBadge status={issue.status} />

@@ -16,6 +16,7 @@ import type { Realtime } from '../realtime';
 import { serializeComment, serializeIssue } from '../serializers';
 import { escapeRegex, pageMeta } from '../utils';
 import { recordActivity } from './activity';
+import { clearBlockerRefs, relationsFor, syncDependents } from './blockers';
 import { assertWorkspaceMembers, membershipFor } from './membership';
 import { mentionedUserIds, workspaceMembers } from './mentions';
 import { notifyUsers } from './notifications';
@@ -147,19 +148,42 @@ export async function listMyWork(workspaceId: string, userId: string, now = new 
 }
 
 export async function searchWorkspaceIssues(workspaceId: string, q: string) {
-  const issues = await Issue.find({
+  const titleMatches = await Issue.find({
     workspace: workspaceId,
     title: { $regex: escapeRegex(q), $options: 'i' },
   })
     .sort({ updatedAt: -1 })
     .limit(8)
     .populate(ISSUE_POPULATE);
-  return issues.map((issue) => serializeIssue(issue));
+
+  const key = q.trim().match(/^([A-Za-z][A-Za-z0-9]{1,9})-(\d+)$/);
+  const keyed = [];
+  if (key) {
+    const project = await Project.findOne({ workspace: workspaceId, key: key[1].toUpperCase() }).select('_id');
+    if (project) {
+      const match = await Issue.findOne({ project: project._id, number: Number(key[2]) }).populate(ISSUE_POPULATE);
+      if (match) keyed.push(match);
+    }
+  }
+
+  const seen = new Set<string>();
+  const merged = [...keyed, ...titleMatches].filter((issue) => {
+    const id = String(issue._id);
+    if (seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
+  return merged.slice(0, 8).map((issue) => serializeIssue(issue));
+}
+
+async function presentIssue(issueId: string) {
+  const issue = await loadIssue(issueId);
+  const relations = await relationsFor(issueId);
+  return { ...serializeIssue(issue), ...relations };
 }
 
 export async function getIssue(issueId: string) {
-  const issue = await loadIssue(issueId);
-  return serializeIssue(issue);
+  return presentIssue(issueId);
 }
 
 export async function createIssue(
@@ -247,6 +271,7 @@ export async function updateIssue(
   if (!issue) throw new ApiError(404, 'Issue not found', 'not_found');
   const workspaceId = String(issue.workspace);
   const parts: string[] = [];
+  let statusChanged = false;
 
   if (input.title !== undefined && input.title !== issue.title) {
     issue.title = input.title;
@@ -261,6 +286,7 @@ export async function updateIssue(
     if (input.status !== 'done' && issue.status === 'done') issue.completedAt = null;
     parts.push(`status to ${STATUS_LABEL[input.status]}`);
     issue.status = input.status;
+    statusChanged = true;
   }
   if (input.priority && input.priority !== issue.priority) {
     issue.priority = input.priority;
@@ -295,10 +321,11 @@ export async function updateIssue(
     }
   }
 
-  if (!parts.length) return serializeIssue(await loadIssue(String(issue._id)));
+  if (!parts.length) return presentIssue(String(issue._id));
 
   await issue.save();
-  const dto = serializeIssue(await loadIssue(String(issue._id)));
+  if (statusChanged) await syncDependents(String(issue._id), input.actor, rt);
+  const dto = await presentIssue(String(issue._id));
   await recordActivity(
     {
       workspaceId,
@@ -338,6 +365,7 @@ export async function deleteIssue(issueId: string, actor: { id: string; name: st
   const key = `${project.key ?? 'ISSUE'}-${issue.number}`;
   const workspaceId = String(issue.workspace);
   const projectId = String(project._id ?? issue.project);
+  await clearBlockerRefs([issueId], rt);
   await Comment.deleteMany({ issue: issue._id });
   await issue.deleteOne();
   await recordActivity(

@@ -17,6 +17,8 @@ const issueSchema = new Schema(
     dueDate: { type: Date, default: null },
     completedAt: { type: Date, default: null },
     commentCount: { type: Number, default: 0 },
+    blockedBy: [{ type: Schema.Types.ObjectId, ref: 'Issue' }],
+    blocked: { type: Boolean, default: false },
   },
   { timestamps: true },
 );
@@ -25,6 +27,7 @@ issueSchema.index({ project: 1, number: 1 }, { unique: true });
 issueSchema.index({ project: 1, status: 1, updatedAt: -1 });
 issueSchema.index({ workspace: 1, dueDate: 1 });
 issueSchema.index({ assignees: 1 });
+issueSchema.index({ blockedBy: 1 });
 
 issueSchema.pre('save', function setRank() {
   this.priorityRank = PRIORITY_RANK[this.priority as Priority] ?? PRIORITY_RANK.medium;

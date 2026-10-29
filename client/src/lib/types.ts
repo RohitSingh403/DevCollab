@@ -81,6 +81,14 @@ export interface Label {
   color: string;
 }
 
+export interface IssueLink {
+  id: string;
+  key: string;
+  title: string;
+  status: IssueStatus;
+  statusLabel: string;
+}
+
 export interface Issue {
   id: string;
   number: number;
@@ -98,6 +106,9 @@ export interface Issue {
   dueDate: string | null;
   overdue: boolean;
   commentCount: number;
+  blocked: boolean;
+  blockedBy?: IssueLink[];
+  blocking?: IssueLink[];
   completedAt: string | null;
   createdAt: string;
   updatedAt: string;

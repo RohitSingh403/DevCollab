@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { dueLabel, groupIssues } from '../lib/format';
 import { STATUSES, STATUS_LABEL, type Issue, type IssueStatus } from '../lib/types';
-import { Avatar, PriorityMark, StatusDot } from './ui';
+import { Avatar, BlockedMark, PriorityMark, StatusDot } from './ui';
 
 export function IssueBoard({
   workspaceId,
@@ -46,9 +46,12 @@ export function IssueBoard({
                 className="cursor-grab rounded-lg border border-transparent bg-white p-3 shadow-sm transition hover:border-line active:cursor-grabbing"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <Link to={`/w/${workspaceId}/issues/${issue.id}`} className="font-mono text-[11px] text-faint hover:text-ink">
-                    {issue.key}
-                  </Link>
+                  <span className="inline-flex min-w-0 items-center gap-1.5">
+                    <Link to={`/w/${workspaceId}/issues/${issue.id}`} className="font-mono text-[11px] text-faint hover:text-ink">
+                      {issue.key}
+                    </Link>
+                    {issue.blocked ? <BlockedMark /> : null}
+                  </span>
                   <PriorityMark priority={issue.priority} />
                 </div>
                 <Link to={`/w/${workspaceId}/issues/${issue.id}`} className="mt-1.5 block text-[13px] font-medium leading-5 text-ink hover:underline">

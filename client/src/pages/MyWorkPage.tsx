@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
-import { EmptyState, PageHeader, PriorityMark, StatusBadge, useDocumentTitle } from '../components/ui';
+import { BlockedMark, EmptyState, PageHeader, PriorityMark, StatusBadge, useDocumentTitle } from '../components/ui';
 import { api, errorMessage } from '../lib/api';
 import { dueLabel } from '../lib/format';
 import type { MyWorkGroup } from '../lib/types';
@@ -62,6 +62,7 @@ export function MyWorkPage() {
                       <span className="mt-0.5 block text-[12px] text-faint">{issue.project.name}</span>
                     </span>
                     <span className="flex flex-wrap items-center gap-3">
+                      {issue.blocked ? <BlockedMark /> : null}
                       <StatusBadge status={issue.status} />
                       <PriorityMark priority={issue.priority} />
                       <span className={`text-[12px] ${issue.overdue ? 'text-danger' : 'text-muted'}`}>{dueLabel(issue.dueDate, issue.overdue) ?? 'No due date'}</span>
