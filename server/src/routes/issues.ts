@@ -5,6 +5,7 @@ import { requireIssue, requireProject } from '../middleware/access';
 import { blockerSchema, commentSchema, createIssueSchema, listIssueSchema, paginationSchema, updateIssueSchema } from '../schemas';
 import { listActivity } from '../services/feed';
 import { addBlocker, removeBlocker } from '../services/blockers';
+import { setWatching } from '../services/watchers';
 import {
   addComment,
   createIssue,
@@ -54,7 +55,7 @@ issueRouter.get(
   '/:issueId',
   requireIssue(),
   asyncHandler(async (req, res) => {
-    res.json({ issue: await getIssue(req.params.issueId) });
+    res.json({ issue: await getIssue(req.params.issueId, req.authUser!.id) });
   }),
 );
 
@@ -86,7 +87,7 @@ issueRouter.post(
   asyncHandler(async (req, res) => {
     const input = parseBody<ReturnType<typeof blockerSchema.parse>>(blockerSchema, req.body);
     await addBlocker({ issueId: req.params.issueId, blockerId: input.blockerId, actor: req.authUser! }, realtimeFrom(ioFromApp(req.app)));
-    res.status(201).json({ issue: await getIssue(req.params.issueId) });
+    res.status(201).json({ issue: await getIssue(req.params.issueId, req.authUser!.id) });
   }),
 );
 
@@ -98,7 +99,25 @@ issueRouter.delete(
       { issueId: req.params.issueId, blockerId: req.params.blockerId, actor: req.authUser! },
       realtimeFrom(ioFromApp(req.app)),
     );
-    res.json({ issue: await getIssue(req.params.issueId) });
+    res.json({ issue: await getIssue(req.params.issueId, req.authUser!.id) });
+  }),
+);
+
+issueRouter.post(
+  '/:issueId/watch',
+  requireIssue(),
+  asyncHandler(async (req, res) => {
+    await setWatching(req.params.issueId, req.authUser!.id, true, realtimeFrom(ioFromApp(req.app)));
+    res.json({ issue: await getIssue(req.params.issueId, req.authUser!.id) });
+  }),
+);
+
+issueRouter.delete(
+  '/:issueId/watch',
+  requireIssue(),
+  asyncHandler(async (req, res) => {
+    await setWatching(req.params.issueId, req.authUser!.id, false, realtimeFrom(ioFromApp(req.app)));
+    res.json({ issue: await getIssue(req.params.issueId, req.authUser!.id) });
   }),
 );
 

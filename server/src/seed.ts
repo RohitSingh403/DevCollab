@@ -6,6 +6,7 @@ import { Membership } from './models/Membership';
 import { User } from './models/User';
 import { Workspace } from './models/Workspace';
 import { addBlocker } from './services/blockers';
+import { setWatching } from './services/watchers';
 import { addComment, createIssue } from './services/issues';
 import { createProject } from './services/projects';
 import { createLabel, createWorkspace } from './services/workspaces';
@@ -136,6 +137,7 @@ export async function seedDatabase() {
   });
 
   await addBlocker({ issueId: comments.id, blockerId: roles.id, actor });
+  await setWatching(session.id, String(priya._id), true);
   await addBlocker({ issueId: notifications.id, blockerId: session.id, actor });
 
   await addComment({

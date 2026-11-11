@@ -147,6 +147,8 @@ export const api = {
     ),
   removeBlocker: (issueId: string, blockerId: string) =>
     request<{ issue: Issue }>(`/api/issues/${issueId}/blockers/${blockerId}`, { method: 'DELETE' }).then((data) => data.issue),
+  watchIssue: (issueId: string, watching: boolean) =>
+    request<{ issue: Issue }>(`/api/issues/${issueId}/watch`, { method: watching ? 'POST' : 'DELETE' }).then((data) => data.issue),
   search: (workspaceId: string, q: string) =>
     request<{ issues: Issue[] }>(`/api/workspaces/${workspaceId}/search?q=${encodeURIComponent(q)}`).then((data) => data.issues),
 
