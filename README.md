@@ -16,6 +16,8 @@ A new account opens on a workspace that already has a project, a board, and acti
 
 ![Issue detail with status, priority, assignees, and comments](docs/screenshots/issue.png)
 
+![An issue blocked by another issue in the workspace](docs/screenshots/blockers.png)
+
 ![Members with owner, admin, and member roles](docs/screenshots/members.png)
 
 ## Features
@@ -30,6 +32,7 @@ A new account opens on a workspace that already has a project, a board, and acti
 - Filters, text search, and pagination
 - Saved project views, private or shared. A view assigned to “me” shows each person their own work
 - My work, a personal queue of open issues assigned to you: overdue, due this week, due later, and no due date
+- Blockers between issues in the same workspace. The issue, the board, and My work show when work is still blocked, and that mark clears when the blocker is done
 - A board you can drag between columns, plus a list view
 - Workspace and project analytics: open work, overdue issues, completions this week, status mix, and 14 days of activity
 - Real-time issue, comment, and notification events for other members
@@ -160,6 +163,8 @@ Authenticated routes expect the session cookie. Collection responses are paginat
 | GET, POST | `/api/projects/:id/issues` | Filtered, paginated issues. `assignee=me` means the signed-in user |
 | GET, POST, DELETE | `/api/projects/:id/views` | Saved filters for a project. Private views stay with their author; shared views are visible to the project |
 | PATCH, DELETE | `/api/issues/:id` | Update or delete an issue |
+| POST | `/api/issues/:id/blockers` | Block this issue on another issue in the same workspace |
+| DELETE | `/api/issues/:id/blockers/:blockerId` | Remove that blocker |
 | GET, POST | `/api/issues/:id/comments` | Discussion |
 | GET | `/api/workspaces/:id/my-work` | Open issues assigned to the signed-in user |
 | GET | `/api/workspaces/:id/analytics` | Workspace totals |
@@ -173,7 +178,7 @@ Socket.IO authenticates with the same cookie. Clients emit `workspace:join` with
 
 ## Tests
 
-Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, notifications, analytics, and a Socket.IO broadcast. They boot MongoDB in memory, so they do not need a local database.
+Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, blockers, notifications, analytics, and a Socket.IO broadcast. They boot MongoDB in memory, so they do not need a local database.
 
 ```bash
 npm test
@@ -210,6 +215,7 @@ COOKIE_SAMESITE=none
 - Issue numbers increment on the project document, so concurrent creates do not reuse a number.
 - `completedAt` is set when an issue moves to Done and cleared if it is reopened. "Done this week" uses that field.
 - `commentCount` is stored on the issue and updated when comments are added or removed.
+- `blocked` stays true while any linked blocker is still open. Adding, removing, completing, reopening, or deleting a blocker updates it.
 - Analytics use aggregation pipelines. Day buckets are UTC.
 - List endpoints are paginated. The board requests up to 100 issues and says when the filter still has more.
 

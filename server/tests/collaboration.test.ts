@@ -449,4 +449,96 @@ describe('workspaces, issues, and authorization', () => {
       'Owner only',
     ]);
   });
+
+  it('links blockers in one workspace and clears the mark when the blocker is done', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const teammate = await registerUser(authAgent(), 'Priya Nair');
+    const outsider = await registerUser(authAgent(), 'Jonah Patel');
+    const workspace = await createWorkspace(owner.agent, 'Dependencies');
+    await owner.agent.post(`/api/workspaces/${workspace.id}/invites`).send({ email: teammate.email, role: 'member' });
+    const api = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({
+      name: 'API Platform',
+      key: 'API',
+      description: 'Service layer',
+    });
+    const web = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({
+      name: 'Web Client',
+      key: 'WEB',
+      description: 'Interface',
+    });
+    const foundation = await owner.agent.post(`/api/projects/${api.body.project.id}/issues`).send({
+      title: 'Ship the session cookies',
+      assigneeIds: [owner.user.id],
+    });
+    const waiting = await owner.agent.post(`/api/projects/${web.body.project.id}/issues`).send({
+      title: 'Show the inbox live',
+      assigneeIds: [teammate.user.id],
+    });
+    expect(foundation.status).toBe(201);
+    const foundationId = foundation.body.issue.id as string;
+    const waitingId = waiting.body.issue.id as string;
+
+    const otherWorkspace = await createWorkspace(outsider.agent, 'Elsewhere');
+    const otherProject = await outsider.agent.post(`/api/workspaces/${otherWorkspace.id}/projects`).send({
+      name: 'Other',
+      key: 'OTH',
+      description: 'Private',
+    });
+    const foreign = await outsider.agent.post(`/api/projects/${otherProject.body.project.id}/issues`).send({ title: 'Outside work' });
+
+    const hidden = await outsider.agent.post(`/api/issues/${waitingId}/blockers`).send({ blockerId: foundationId });
+    expect(hidden.status).toBe(404);
+
+    const self = await owner.agent.post(`/api/issues/${waitingId}/blockers`).send({ blockerId: waitingId });
+    expect(self.status).toBe(400);
+    expect(self.body.error.code).toBe('self_block');
+
+    const outside = await owner.agent.post(`/api/issues/${waitingId}/blockers`).send({ blockerId: foreign.body.issue.id });
+    expect(outside.status).toBe(404);
+
+    const linked = await owner.agent.post(`/api/issues/${waitingId}/blockers`).send({ blockerId: foundationId });
+    expect(linked.status).toBe(201);
+    expect(linked.body.issue.blocked).toBe(true);
+    expect(linked.body.issue.blockedBy.map((item: { key: string }) => item.key)).toEqual(['API-1']);
+
+    const duplicate = await owner.agent.post(`/api/issues/${waitingId}/blockers`).send({ blockerId: foundationId });
+    expect(duplicate.status).toBe(409);
+
+    const cycle = await owner.agent.post(`/api/issues/${foundationId}/blockers`).send({ blockerId: waitingId });
+    expect(cycle.status).toBe(400);
+    expect(cycle.body.error.code).toBe('blocker_cycle');
+
+    const blockerView = await owner.agent.get(`/api/issues/${foundationId}`);
+    expect(blockerView.body.issue.blocked).toBe(false);
+    expect(blockerView.body.issue.blocking.map((item: { key: string }) => item.key)).toEqual(['WEB-1']);
+
+    const byKey = await owner.agent.get(`/api/workspaces/${workspace.id}/search`).query({ q: 'WEB-1' });
+    expect(byKey.body.issues.map((item: { title: string }) => item.title)).toContain('Show the inbox live');
+
+    const queue = await teammate.agent.get(`/api/workspaces/${workspace.id}/my-work`);
+    const queued = queue.body.groups.flatMap((group: { issues: { title: string; blocked: boolean }[] }) => group.issues);
+    expect(queued.find((item: { title: string }) => item.title === 'Show the inbox live').blocked).toBe(true);
+
+    const done = await owner.agent.patch(`/api/issues/${foundationId}`).send({ status: 'done' });
+    expect(done.status).toBe(200);
+    const cleared = await teammate.agent.get(`/api/issues/${waitingId}`);
+    expect(cleared.body.issue.blocked).toBe(false);
+    expect(cleared.body.issue.blockedBy.map((item: { status: string }) => item.status)).toEqual(['done']);
+    const notes = await teammate.agent.get('/api/notifications');
+    expect(notes.body.notifications.some((item: { message: string }) => item.message.includes('API-1 is done, so WEB-1 is no longer blocked'))).toBe(
+      true,
+    );
+
+    const reopened = await owner.agent.patch(`/api/issues/${foundationId}`).send({ status: 'todo' });
+    expect(reopened.status).toBe(200);
+    const blockedAgain = await teammate.agent.get(`/api/issues/${waitingId}`);
+    expect(blockedAgain.body.issue.blocked).toBe(true);
+
+    const removed = await teammate.agent.delete(`/api/issues/${waitingId}/blockers/${foundationId}`);
+    expect(removed.status).toBe(200);
+    expect(removed.body.issue.blocked).toBe(false);
+    expect(removed.body.issue.blockedBy).toEqual([]);
+    const blockerAfter = await owner.agent.get(`/api/issues/${foundationId}`);
+    expect(blockerAfter.body.issue.blocking).toEqual([]);
+  });
 });

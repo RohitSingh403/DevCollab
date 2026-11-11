@@ -2,8 +2,9 @@ import { Router } from 'express';
 import { asyncHandler } from '../asyncHandler';
 import { requireAuth } from '../middleware/auth';
 import { requireIssue, requireProject } from '../middleware/access';
-import { commentSchema, createIssueSchema, listIssueSchema, paginationSchema, updateIssueSchema } from '../schemas';
+import { blockerSchema, commentSchema, createIssueSchema, listIssueSchema, paginationSchema, updateIssueSchema } from '../schemas';
 import { listActivity } from '../services/feed';
+import { addBlocker, removeBlocker } from '../services/blockers';
 import {
   addComment,
   createIssue,
@@ -76,6 +77,28 @@ issueRouter.delete(
   asyncHandler(async (req, res) => {
     await deleteIssue(req.params.issueId, req.authUser!, req.membershipRole!, realtimeFrom(ioFromApp(req.app)));
     res.status(204).send();
+  }),
+);
+
+issueRouter.post(
+  '/:issueId/blockers',
+  requireIssue(),
+  asyncHandler(async (req, res) => {
+    const input = parseBody<ReturnType<typeof blockerSchema.parse>>(blockerSchema, req.body);
+    await addBlocker({ issueId: req.params.issueId, blockerId: input.blockerId, actor: req.authUser! }, realtimeFrom(ioFromApp(req.app)));
+    res.status(201).json({ issue: await getIssue(req.params.issueId) });
+  }),
+);
+
+issueRouter.delete(
+  '/:issueId/blockers/:blockerId',
+  requireIssue(),
+  asyncHandler(async (req, res) => {
+    await removeBlocker(
+      { issueId: req.params.issueId, blockerId: req.params.blockerId, actor: req.authUser! },
+      realtimeFrom(ioFromApp(req.app)),
+    );
+    res.json({ issue: await getIssue(req.params.issueId) });
   }),
 );
 
