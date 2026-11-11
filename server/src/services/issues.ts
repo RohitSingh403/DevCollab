@@ -13,13 +13,14 @@ import { Issue } from '../models/Issue';
 import { Label } from '../models/Label';
 import { Project } from '../models/Project';
 import type { Realtime } from '../realtime';
-import { serializeComment, serializeIssue } from '../serializers';
+import { serializeComment, serializeIssue, serializeUser } from '../serializers';
 import { escapeRegex, pageMeta } from '../utils';
 import { recordActivity } from './activity';
 import { clearBlockerRefs, relationsFor, syncDependents } from './blockers';
 import { assertWorkspaceMembers, membershipFor } from './membership';
 import { mentionedUserIds, workspaceMembers } from './mentions';
 import { notifyUsers } from './notifications';
+import { notifyAudience } from './watchers';
 
 const ISSUE_POPULATE = [
   { path: 'assignees', select: 'name email avatarColor' },
@@ -176,14 +177,24 @@ export async function searchWorkspaceIssues(workspaceId: string, q: string) {
   return merged.slice(0, 8).map((issue) => serializeIssue(issue));
 }
 
-async function presentIssue(issueId: string) {
-  const issue = await loadIssue(issueId);
+async function presentIssue(issueId: string, userId?: string) {
+  const issue = await Issue.findById(issueId).populate([
+    ...ISSUE_POPULATE,
+    { path: 'watchers', select: 'name email avatarColor' },
+  ]);
+  if (!issue) throw new ApiError(404, 'Issue not found', 'not_found');
   const relations = await relationsFor(issueId);
-  return { ...serializeIssue(issue), ...relations };
+  const watchers = (issue.watchers ?? []).map((user) => serializeUser(user));
+  return {
+    ...serializeIssue(issue),
+    ...relations,
+    watchers,
+    watching: Boolean(userId && watchers.some((user) => user.id === userId)),
+  };
 }
 
-export async function getIssue(issueId: string) {
-  return presentIssue(issueId);
+export async function getIssue(issueId: string, userId?: string) {
+  return presentIssue(issueId, userId);
 }
 
 export async function createIssue(
@@ -321,11 +332,11 @@ export async function updateIssue(
     }
   }
 
-  if (!parts.length) return presentIssue(String(issue._id));
+  if (!parts.length) return presentIssue(String(issue._id), input.actor.id);
 
   await issue.save();
   if (statusChanged) await syncDependents(String(issue._id), input.actor, rt);
-  const dto = await presentIssue(String(issue._id));
+  const dto = await presentIssue(String(issue._id), input.actor.id);
   await recordActivity(
     {
       workspaceId,
@@ -345,6 +356,19 @@ export async function updateIssue(
         actorId: input.actor.id,
         type: 'issue.assigned',
         message: `${input.actor.name} assigned you to ${dto.key}`,
+        link: `/w/${workspaceId}/issues/${dto.id}`,
+      },
+      rt,
+    );
+  }
+  if (statusChanged) {
+    await notifyUsers(
+      {
+        userIds: notifyAudience(issue),
+        workspaceId,
+        actorId: input.actor.id,
+        type: 'issue.status',
+        message: `${input.actor.name} moved ${dto.key} to ${dto.statusLabel}`,
         link: `/w/${workspaceId}/issues/${dto.id}`,
       },
       rt,
@@ -492,9 +516,7 @@ async function notifyComment({
   const mentionedNow = new Set(freshMentions);
   const link = `/w/${workspaceId}/issues/${String(issue._id)}`;
   if (includeWatchers) {
-    const watchers = [issue.reporter, ...(issue.assignees ?? [])]
-      .map((id) => String(id))
-      .filter((id) => !mentionedNow.has(id));
+    const watchers = notifyAudience(issue).filter((id) => !mentionedNow.has(id));
     await notifyUsers(
       {
         userIds: watchers,
