@@ -13,6 +13,7 @@ const issueSchema = new Schema(
     priorityRank: { type: Number, default: PRIORITY_RANK.medium },
     labels: [{ type: Schema.Types.ObjectId, ref: 'Label' }],
     assignees: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    watchers: [{ type: Schema.Types.ObjectId, ref: 'User' }],
     reporter: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     dueDate: { type: Date, default: null },
     completedAt: { type: Date, default: null },
@@ -27,6 +28,7 @@ issueSchema.index({ project: 1, number: 1 }, { unique: true });
 issueSchema.index({ project: 1, status: 1, updatedAt: -1 });
 issueSchema.index({ workspace: 1, dueDate: 1 });
 issueSchema.index({ assignees: 1 });
+issueSchema.index({ watchers: 1 });
 issueSchema.index({ blockedBy: 1 });
 
 issueSchema.pre('save', function setRank() {

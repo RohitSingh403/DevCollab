@@ -340,6 +340,7 @@ export async function removeMember(
   const user = await User.findById(targetUserId).select('name');
   await target.deleteOne();
   await Issue.updateMany({ workspace: workspaceId, assignees: targetUserId }, { $pull: { assignees: targetUserId } });
+  await Issue.updateMany({ workspace: workspaceId, watchers: targetUserId }, { $pull: { watchers: targetUserId } });
   await recordActivity(
     {
       workspaceId,

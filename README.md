@@ -18,6 +18,8 @@ A new account opens on a workspace that already has a project, a board, and acti
 
 ![An issue blocked by another issue in the workspace](docs/screenshots/blockers.png)
 
+![Jonah following an issue from the watchers panel](docs/screenshots/watchers.png)
+
 ![Members with owner, admin, and member roles](docs/screenshots/members.png)
 
 ## Features
@@ -33,6 +35,7 @@ A new account opens on a workspace that already has a project, a board, and acti
 - Saved project views, private or shared. A view assigned to “me” shows each person their own work
 - My work, a personal queue of open issues assigned to you: overdue, due this week, due later, and no due date
 - Blockers between issues in the same workspace. The issue, the board, and My work show when work is still blocked, and that mark clears when the blocker is done
+- Watchers. Any member can follow an issue and get the comment, status, and blocker alerts that the reporter and assignees already get
 - A board you can drag between columns, plus a list view
 - Workspace and project analytics: open work, overdue issues, completions this week, status mix, and 14 days of activity
 - Real-time issue, comment, and notification events for other members
@@ -165,6 +168,7 @@ Authenticated routes expect the session cookie. Collection responses are paginat
 | PATCH, DELETE | `/api/issues/:id` | Update or delete an issue |
 | POST | `/api/issues/:id/blockers` | Block this issue on another issue in the same workspace |
 | DELETE | `/api/issues/:id/blockers/:blockerId` | Remove that blocker |
+| POST, DELETE | `/api/issues/:id/watch` | Follow or unfollow an issue |
 | GET, POST | `/api/issues/:id/comments` | Discussion |
 | GET | `/api/workspaces/:id/my-work` | Open issues assigned to the signed-in user |
 | GET | `/api/workspaces/:id/analytics` | Workspace totals |
@@ -178,7 +182,7 @@ Socket.IO authenticates with the same cookie. Clients emit `workspace:join` with
 
 ## Tests
 
-Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, blockers, notifications, analytics, and a Socket.IO broadcast. They boot MongoDB in memory, so they do not need a local database.
+Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, blockers, watchers, notifications, analytics, and a Socket.IO broadcast. They boot MongoDB in memory, so they do not need a local database.
 
 ```bash
 npm test
