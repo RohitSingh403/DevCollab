@@ -141,6 +141,12 @@ export const api = {
   updateIssue: (id: string, input: Partial<IssueInput>) =>
     request<{ issue: Issue }>(`/api/issues/${id}`, { method: 'PATCH', body: JSON.stringify(input) }).then((data) => data.issue),
   deleteIssue: (id: string) => request<void>(`/api/issues/${id}`, { method: 'DELETE' }),
+  addBlocker: (issueId: string, blockerId: string) =>
+    request<{ issue: Issue }>(`/api/issues/${issueId}/blockers`, { method: 'POST', body: JSON.stringify({ blockerId }) }).then(
+      (data) => data.issue,
+    ),
+  removeBlocker: (issueId: string, blockerId: string) =>
+    request<{ issue: Issue }>(`/api/issues/${issueId}/blockers/${blockerId}`, { method: 'DELETE' }).then((data) => data.issue),
   search: (workspaceId: string, q: string) =>
     request<{ issues: Issue[] }>(`/api/workspaces/${workspaceId}/search?q=${encodeURIComponent(q)}`).then((data) => data.issues),
 

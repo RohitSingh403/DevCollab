@@ -101,6 +101,12 @@ export const createIssueSchema = z
   })
   .strict();
 
+export const blockerSchema = z
+  .object({
+    blockerId: objectId,
+  })
+  .strict();
+
 export const updateIssueSchema = z
   .object({
     title: z.string().trim().min(3).max(140).optional(),

@@ -37,6 +37,7 @@ export interface IssueDto {
   dueDate: string | null;
   overdue: boolean;
   commentCount: number;
+  blocked: boolean;
   completedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -87,6 +88,7 @@ export function serializeIssue(issue: {
   workspace: unknown;
   dueDate?: Date | string | null;
   commentCount?: number;
+  blocked?: boolean;
   completedAt?: Date | string | null;
   createdAt: Date | string;
   updatedAt: Date | string;
@@ -111,6 +113,7 @@ export function serializeIssue(issue: {
     dueDate,
     overdue: Boolean(dueDate && status !== 'done' && new Date(dueDate).getTime() < Date.now()),
     commentCount: issue.commentCount ?? 0,
+    blocked: Boolean(issue.blocked),
     completedAt: iso(issue.completedAt),
     createdAt: iso(issue.createdAt) ?? new Date(0).toISOString(),
     updatedAt: iso(issue.updatedAt) ?? new Date(0).toISOString(),

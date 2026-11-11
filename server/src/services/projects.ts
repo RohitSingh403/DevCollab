@@ -6,6 +6,7 @@ import { Issue } from '../models/Issue';
 import { Project } from '../models/Project';
 import type { Realtime } from '../realtime';
 import { recordActivity } from './activity';
+import { clearBlockerRefs } from './blockers';
 
 export async function listProjects(workspaceId: string) {
   const projects = await Project.find({ workspace: workspaceId }).sort({ name: 1 }).lean();
@@ -125,6 +126,8 @@ export async function updateProject(
 export async function deleteProject(projectId: string, actor: { id: string; name: string }, rt?: Realtime) {
   const project = await Project.findById(projectId);
   if (!project) throw new ApiError(404, 'Project not found', 'not_found');
+  const doomed = await Issue.find({ project: project._id }).distinct('_id');
+  await clearBlockerRefs(doomed.map((id) => String(id)), rt);
   await Comment.deleteMany({ project: project._id });
   await Issue.deleteMany({ project: project._id });
   await SavedView.deleteMany({ project: project._id });
