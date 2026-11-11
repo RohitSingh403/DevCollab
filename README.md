@@ -20,6 +20,8 @@ A new account opens on a workspace that already has a project, a board, and acti
 
 ![Jonah following an issue from the watchers panel](docs/screenshots/watchers.png)
 
+![Command menu finding an issue by its key](docs/screenshots/command-menu.png)
+
 ![Members with owner, admin, and member roles](docs/screenshots/members.png)
 
 ## Features
@@ -32,6 +34,7 @@ A new account opens on a workspace that already has a project, a board, and acti
 - A starter workspace on signup, with a project and sample issues so the first session is not an empty board
 - @mentions in comments, which notify that person in their inbox and over the live connection
 - Filters, text search, and pagination
+- A command menu, opened with Ctrl K or ⌘K, that jumps to a page, a project, or an issue key such as `API-12`
 - Saved project views, private or shared. A view assigned to “me” shows each person their own work
 - My work, a personal queue of open issues assigned to you: overdue, due this week, due later, and no due date
 - Blockers between issues in the same workspace. The issue, the board, and My work show when work is still blocked, and that mark clears when the blocker is done
