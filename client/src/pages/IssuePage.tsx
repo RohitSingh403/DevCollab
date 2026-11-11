@@ -35,6 +35,12 @@ export function IssuePage() {
     onError: (error) => pushToast(errorMessage(error)),
   });
 
+  const follow = useMutation({
+    mutationFn: (watching: boolean) => api.watchIssue(issueId, watching),
+    onSuccess: (next) => queryClient.setQueryData(['issue', issueId], next),
+    onError: (error) => pushToast(errorMessage(error)),
+  });
+
   const remove = useMutation({
     mutationFn: () => api.deleteIssue(issueId),
     onSuccess: () => {
@@ -136,6 +142,32 @@ export function IssuePage() {
                 );
               })}
             </div>
+          </fieldset>
+          <fieldset className="px-4 py-3">
+            <legend className="flex items-center justify-between gap-3 text-[12px] text-muted">
+              <span>Watchers</span>
+              <button
+                className={current.watching ? 'btn-ghost' : 'btn-primary'}
+                type="button"
+                onClick={() => follow.mutate(!current.watching)}
+                disabled={follow.isPending}
+              >
+                {current.watching ? 'Unfollow' : 'Follow'}
+              </button>
+            </legend>
+            <p className="mt-2 text-[12px] text-faint">Followers, the reporter, and assignees get comments, status changes, and blocker updates.</p>
+            {(current.watchers ?? []).length ? (
+              <ul className="mt-3 space-y-2">
+                {(current.watchers ?? []).map((person) => (
+                  <li key={person.id} className="flex items-center gap-2 text-sm">
+                    <Avatar name={person.name} color={person.avatarColor} size="sm" />
+                    {person.name}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-2 text-[12px] text-muted">No one is following yet.</p>
+            )}
           </fieldset>
           <fieldset className="px-4 py-3">
             <legend className="text-[12px] text-muted">Labels</legend>

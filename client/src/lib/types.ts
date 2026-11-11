@@ -101,6 +101,8 @@ export interface Issue {
   labels: Label[];
   assignees: User[];
   reporter: User;
+  watchers?: User[];
+  watching?: boolean;
   project: { id: string; name: string; key: string };
   workspaceId: string;
   dueDate: string | null;

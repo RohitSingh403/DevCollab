@@ -6,6 +6,7 @@ import type { Realtime } from '../realtime';
 import { assertObjectId } from '../utils';
 import { recordActivity } from './activity';
 import { notifyUsers } from './notifications';
+import { notifyAudience } from './watchers';
 
 const BLOCKER_LIMIT = 20;
 
@@ -114,7 +115,7 @@ export async function addBlocker(
   );
   await notifyUsers(
     {
-      userIds: [String(issue.reporter), ...issue.assignees.map((id) => String(id))],
+      userIds: notifyAudience(issue),
       workspaceId,
       actorId: input.actor.id,
       type: 'issue.blocked',
@@ -174,7 +175,7 @@ export async function syncDependents(blockerId: string, actor: { id: string; nam
     publish(rt, workspaceId, String(dependent._id), String(dependent.project));
     await notifyUsers(
       {
-        userIds: [String(dependent.reporter), ...dependent.assignees.map((id) => String(id))],
+        userIds: notifyAudience(dependent),
         workspaceId,
         actorId: actor.id,
         type: blocked ? 'issue.blocked' : 'issue.unblocked',

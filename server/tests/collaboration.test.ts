@@ -541,4 +541,63 @@ describe('workspaces, issues, and authorization', () => {
     const blockerAfter = await owner.agent.get(`/api/issues/${foundationId}`);
     expect(blockerAfter.body.issue.blocking).toEqual([]);
   });
+
+  it('notifies followers about comments, status, and blockers, once', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const teammate = await registerUser(authAgent(), 'Priya Nair');
+    const outsider = await registerUser(authAgent(), 'Jonah Patel');
+    const workspace = await createWorkspace(owner.agent, 'Followers');
+    await owner.agent.post(`/api/workspaces/${workspace.id}/invites`).send({ email: teammate.email, role: 'member' });
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({
+      name: 'API Platform',
+      key: 'API',
+      description: 'Service layer',
+    });
+    const issue = await owner.agent.post(`/api/projects/${project.body.project.id}/issues`).send({
+      title: 'Review the auth change',
+    });
+    const issueId = issue.body.issue.id as string;
+    const other = await owner.agent.post(`/api/projects/${project.body.project.id}/issues`).send({
+      title: 'Ship the session cookies',
+    });
+
+    const hidden = await outsider.agent.post(`/api/issues/${issueId}/watch`);
+    expect(hidden.status).toBe(404);
+
+    const followed = await teammate.agent.post(`/api/issues/${issueId}/watch`);
+    expect(followed.status).toBe(200);
+    expect(followed.body.issue.watching).toBe(true);
+    expect(followed.body.issue.watchers.map((person: { name: string }) => person.name)).toEqual(['Priya Nair']);
+
+    const again = await teammate.agent.post(`/api/issues/${issueId}/watch`);
+    expect(again.status).toBe(200);
+    expect(again.body.issue.watchers).toHaveLength(1);
+
+    const ownerView = await owner.agent.get(`/api/issues/${issueId}`);
+    expect(ownerView.body.issue.watching).toBe(false);
+
+    await owner.agent.post(`/api/issues/${issueId}/comments`).send({ body: 'First pass is ready.' });
+    await owner.agent.patch(`/api/issues/${issueId}`).send({ status: 'in_progress' });
+    await owner.agent.post(`/api/issues/${issueId}/blockers`).send({ blockerId: other.body.issue.id });
+
+    const notes = await teammate.agent.get('/api/notifications');
+    const messages = notes.body.notifications.map((item: { message: string }) => item.message) as string[];
+    expect(messages.filter((message) => message.includes('commented on API-1'))).toHaveLength(1);
+    expect(messages.some((message) => message.includes('moved API-1 to In progress'))).toBe(true);
+    expect(messages.some((message) => message.includes('marked API-1 as blocked by API-2'))).toBe(true);
+
+    const ownerNotes = await owner.agent.get('/api/notifications');
+    expect(ownerNotes.body.notifications.some((item: { message: string }) => item.message.includes('commented on API-1'))).toBe(false);
+
+    await teammate.agent.delete(`/api/issues/${issueId}/watch`);
+    await owner.agent.post(`/api/issues/${issueId}/comments`).send({ body: 'Second pass.' });
+    const after = await teammate.agent.get('/api/notifications');
+    expect(after.body.notifications.filter((item: { message: string }) => item.message.includes('commented on API-1'))).toHaveLength(1);
+
+    await teammate.agent.post(`/api/issues/${issueId}/watch`);
+    const removed = await owner.agent.delete(`/api/workspaces/${workspace.id}/members/${teammate.user.id}`);
+    expect(removed.status).toBe(204);
+    const cleared = await owner.agent.get(`/api/issues/${issueId}`);
+    expect(cleared.body.issue.watchers).toEqual([]);
+  });
 });
