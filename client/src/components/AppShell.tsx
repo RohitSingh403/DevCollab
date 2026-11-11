@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useDeferredValue, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useNavigate, useParams } from 'react-router-dom';
+import { CommandMenu, commandShortcut } from './CommandMenu';
 import { api, errorMessage } from '../lib/api';
 import { timeAgo } from '../lib/format';
 import { disconnectSocket } from '../lib/socket';
@@ -33,6 +34,7 @@ export function AppShell() {
   const activeId = paramId ?? remembered ?? workspaces.data?.[0]?.id;
   const myWork = useQuery({ queryKey: ['my-work', activeId], queryFn: () => api.myWork(activeId!), enabled: Boolean(activeId) });
   useRealtime(activeId);
+  const [commandOpen, setCommandOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -47,6 +49,17 @@ export function AppShell() {
   useEffect(() => {
     setName(user?.name ?? '');
   }, [user?.name]);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setCommandOpen((open) => !open);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   useEffect(() => {
     if (!notesOpen && !accountOpen) return;
@@ -177,7 +190,19 @@ export function AppShell() {
           <button className="icon-btn lg:hidden" type="button" aria-label="Open menu" onClick={() => setNavOpen(true)}>
             <Icon name="menu" />
           </button>
-          {activeId ? <SearchBox workspaceId={activeId} /> : <div className="flex-1" />}
+          {activeId ? (
+            <button
+              className="field flex h-9 min-w-0 max-w-md flex-1 items-center gap-2 rounded-full bg-canvas pl-3 pr-2 text-left text-[13px] text-muted shadow-none"
+              type="button"
+              onClick={() => setCommandOpen(true)}
+            >
+              <Icon name="search" className="h-4 w-4 text-faint" />
+              <span className="min-w-0 flex-1 truncate">Search or jump to…</span>
+              <kbd className="hidden rounded border border-line bg-white px-1.5 font-mono text-[10px] text-faint sm:inline">{commandShortcut()}</kbd>
+            </button>
+          ) : (
+            <div className="flex-1" />
+          )}
           <div className="relative" ref={notesRef}>
             <button
               className="icon-btn relative"
@@ -288,51 +313,7 @@ export function AppShell() {
           </button>
         </form>
       </Modal>
-    </div>
-  );
-}
-
-function SearchBox({ workspaceId }: { workspaceId: string }) {
-  const [q, setQ] = useState('');
-  const deferred = useDeferredValue(q.trim());
-  const navigate = useNavigate();
-  const results = useQuery({
-    queryKey: ['search', workspaceId, deferred],
-    queryFn: () => api.search(workspaceId, deferred),
-    enabled: deferred.length >= 2,
-  });
-  return (
-    <div className="relative min-w-0 flex-1">
-      <label className="sr-only" htmlFor="workspace-search">
-        Search issues
-      </label>
-      <Icon name="search" className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-faint" />
-      <input
-        id="workspace-search"
-        className="field h-9 max-w-md rounded-full bg-canvas pl-8 shadow-none"
-        placeholder="Search issues"
-        value={q}
-        onChange={(event) => setQ(event.target.value)}
-      />
-      {deferred.length >= 2 ? (
-        <div className="absolute z-30 mt-1 w-full max-w-md rounded-xl border border-line bg-white p-1 shadow-pop">
-          {(results.data ?? []).map((issue) => (
-            <button
-              key={issue.id}
-              type="button"
-              className="block w-full rounded-md px-3 py-2 text-left hover:bg-slate-50"
-              onClick={() => {
-                setQ('');
-                navigate(`/w/${workspaceId}/issues/${issue.id}`);
-              }}
-            >
-              <span className="font-mono text-xs text-muted">{issue.key}</span>
-              <span className="mt-0.5 block text-sm">{issue.title}</span>
-            </button>
-          ))}
-          {results.isFetched && !results.data?.length ? <p className="px-3 py-3 text-sm text-muted">No matching issues.</p> : null}
-        </div>
-      ) : null}
+      {activeId ? <CommandMenu open={commandOpen} workspaceId={activeId} onClose={() => setCommandOpen(false)} /> : null}
     </div>
   );
 }
