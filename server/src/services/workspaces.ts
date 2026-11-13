@@ -2,6 +2,7 @@ import { env } from '../config';
 import { canAssignRole, canManageTarget, type InviteRole, type Role } from '../constants';
 import { ApiError, isDuplicateKey } from '../errors';
 import { Activity } from '../models/Activity';
+import { Cycle } from '../models/Cycle';
 import { Comment } from '../models/Comment';
 import { Invite } from '../models/Invite';
 import { Issue } from '../models/Issue';
@@ -133,6 +134,7 @@ export async function deleteWorkspace(workspaceId: string) {
     Membership.deleteMany({ workspace: workspaceId }),
     Notification.deleteMany({ workspace: workspaceId }),
     SavedView.deleteMany({ workspace: workspaceId }),
+    Cycle.deleteMany({ workspace: workspaceId }),
     Project.deleteMany({ _id: { $in: projectIds } }),
     Workspace.deleteOne({ _id: workspaceId }),
   ]);

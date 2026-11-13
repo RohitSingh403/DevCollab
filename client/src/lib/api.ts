@@ -5,6 +5,7 @@ import type {
   Invite,
   InvitePreview,
   Issue,
+  Cycle,
   IssueList,
   MyWork,
   IssueStatus,
@@ -62,6 +63,7 @@ export interface IssueInput {
   assigneeIds?: string[];
   labelIds?: string[];
   dueDate?: string | null;
+  cycleId?: string | null;
 }
 
 export const api = {
@@ -130,6 +132,11 @@ export const api = {
       (data) => data.view,
     ),
   deleteView: (projectId: string, viewId: string) => request<void>(`/api/projects/${projectId}/views/${viewId}`, { method: 'DELETE' }),
+  cycles: (projectId: string) => request<{ cycles: Cycle[] }>(`/api/projects/${projectId}/cycles`).then((data) => data.cycles),
+  startCycle: (projectId: string, input: { name: string; startsAt: string; endsAt: string; carryOpen?: boolean }) =>
+    request<{ cycle: Cycle }>(`/api/projects/${projectId}/cycles`, { method: 'POST', body: JSON.stringify(input) }).then(
+      (data) => data.cycle,
+    ),
 
   issues: (projectId: string, params: URLSearchParams) =>
     request<IssueList>(`/api/projects/${projectId}/issues?${params.toString()}`),

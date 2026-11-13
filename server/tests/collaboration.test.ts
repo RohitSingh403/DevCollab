@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { dayKey } from '../src/dates';
+import { scanDueReminders } from '../src/services/reminders';
 import { authAgent, createWorkspace, registerUser } from './helpers';
 
 describe('workspaces, issues, and authorization', () => {
@@ -663,5 +665,113 @@ describe('workspaces, issues, and authorization', () => {
     }
     const overflow = await owner.agent.post(`/api/issues/${issueId}/checklist`).send({ text: 'One too many' });
     expect(overflow.status).toBe(400);
+  });
+
+  it('reminds assignees once when an issue is due today and once when it is overdue', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const teammate = await registerUser(authAgent(), 'Jonah Patel');
+    const workspace = await createWorkspace(owner.agent, 'Reminders');
+    await owner.agent.post(`/api/workspaces/${workspace.id}/invites`).send({ email: teammate.email, role: 'member' });
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({
+      name: 'API Platform',
+      key: 'API',
+      description: 'Service layer',
+    });
+    const today = dayKey(new Date());
+    const created = await owner.agent.post(`/api/projects/${project.body.project.id}/issues`).send({
+      title: 'Rotate the signing key',
+      assigneeIds: [teammate.user.id],
+      dueDate: today,
+    });
+    const issueId = created.body.issue.id as string;
+    expect(created.body.issue.overdue).toBe(false);
+
+    expect(await scanDueReminders(new Date())).toBe(1);
+    expect(await scanDueReminders(new Date())).toBe(0);
+    const first = await teammate.agent.get('/api/notifications');
+    expect(first.body.notifications.filter((item: { message: string }) => item.message.includes('API-1 Rotate the signing key is due today'))).toHaveLength(1);
+    const ownerNotes = await owner.agent.get('/api/notifications');
+    expect(ownerNotes.body.notifications.some((item: { message: string }) => item.message.includes('due today'))).toBe(false);
+
+    const yesterday = dayKey(new Date(Date.now() - 24 * 60 * 60 * 1000));
+    await owner.agent.patch(`/api/issues/${issueId}`).send({ dueDate: yesterday });
+    expect(await scanDueReminders(new Date())).toBe(1);
+    expect(await scanDueReminders(new Date())).toBe(0);
+    const overdue = await teammate.agent.get('/api/notifications');
+    expect(overdue.body.notifications.filter((item: { message: string }) => item.message.includes('API-1 Rotate the signing key is overdue'))).toHaveLength(1);
+
+    await owner.agent.patch(`/api/issues/${issueId}`).send({ status: 'done' });
+    expect(await scanDueReminders(new Date())).toBe(0);
+  });
+
+  it('keeps one active cycle per project and can filter the board to it', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const outsider = await registerUser(authAgent(), 'Outsider');
+    const workspace = await createWorkspace(owner.agent, 'Cycles');
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({
+      name: 'API Platform',
+      key: 'API',
+      description: 'Service layer',
+    });
+    const projectId = project.body.project.id as string;
+    const other = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({
+      name: 'Web Client',
+      key: 'WEB',
+      description: 'Interface',
+    });
+    const open = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Ship the session cookie' });
+    const finished = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Write the first notes', status: 'done' });
+    const foreign = await owner.agent.post(`/api/projects/${other.body.project.id}/issues`).send({ title: 'Draw the board' });
+
+    const hidden = await outsider.agent.post(`/api/projects/${projectId}/cycles`).send({
+      name: 'Cycle 1',
+      startsAt: '2026-11-01',
+      endsAt: '2026-11-14',
+    });
+    expect(hidden.status).toBe(404);
+    const backwards = await owner.agent.post(`/api/projects/${projectId}/cycles`).send({
+      name: 'Cycle 1',
+      startsAt: '2026-11-20',
+      endsAt: '2026-11-01',
+    });
+    expect(backwards.status).toBe(400);
+
+    const first = await owner.agent.post(`/api/projects/${projectId}/cycles`).send({
+      name: 'Cycle 1',
+      startsAt: '2026-11-01',
+      endsAt: '2026-11-14',
+    });
+    expect(first.status).toBe(201);
+    const cycleId = first.body.cycle.id as string;
+    await owner.agent.patch(`/api/issues/${open.body.issue.id}`).send({ cycleId });
+    await owner.agent.patch(`/api/issues/${finished.body.issue.id}`).send({ cycleId });
+    const wrongProject = await owner.agent.patch(`/api/issues/${foreign.body.issue.id}`).send({ cycleId });
+    expect(wrongProject.status).toBe(400);
+
+    const second = await owner.agent.post(`/api/projects/${projectId}/cycles`).send({
+      name: 'Cycle 2',
+      startsAt: '2026-11-15',
+      endsAt: '2026-11-28',
+    });
+    expect(second.status).toBe(201);
+    expect(second.body.cycle.status).toBe('active');
+    const listed = await owner.agent.get(`/api/projects/${projectId}/cycles`);
+    expect(listed.body.cycles.map((cycle: { name: string; status: string }) => [cycle.name, cycle.status])).toEqual([
+      ['Cycle 2', 'active'],
+      ['Cycle 1', 'completed'],
+    ]);
+    const carried = await owner.agent.get(`/api/issues/${open.body.issue.id}`);
+    expect(carried.body.issue.cycle.name).toBe('Cycle 2');
+    const stayed = await owner.agent.get(`/api/issues/${finished.body.issue.id}`);
+    expect(stayed.body.issue.cycle.name).toBe('Cycle 1');
+
+    const board = await owner.agent.get(`/api/projects/${projectId}/issues`).query({ cycle: 'active' });
+    expect(board.body.issues.map((issue: { title: string }) => issue.title)).toEqual(['Ship the session cookie']);
+    const analytics = await owner.agent.get(`/api/projects/${projectId}/analytics`);
+    expect(analytics.body.analytics.cycle).toMatchObject({ name: 'Cycle 2', total: 1, done: 0 });
+
+    await owner.agent.patch(`/api/issues/${open.body.issue.id}`).send({ cycleId: null });
+    const cleared = await owner.agent.get(`/api/projects/${projectId}/issues`).query({ cycle: 'active' });
+    expect(cleared.body.issues).toEqual([]);
   });
 });

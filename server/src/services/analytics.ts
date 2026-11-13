@@ -1,5 +1,6 @@
 import mongoose, { type FilterQuery } from 'mongoose';
 import { STATUSES, type IssueStatus, type Priority } from '../constants';
+import { utcDayStart } from '../dates';
 import { Activity } from '../models/Activity';
 import { Issue } from '../models/Issue';
 import { serializeUser } from '../serializers';
@@ -43,7 +44,7 @@ export async function buildAnalytics(issueMatch: FilterQuery<unknown>, activityM
       { $match: { ...issues, status: { $ne: 'done' } } },
       { $group: { _id: '$priority', count: { $sum: 1 } } },
     ]),
-    Issue.countDocuments({ ...issues, dueDate: { $lt: now }, status: { $ne: 'done' } }),
+    Issue.countDocuments({ ...issues, dueDate: { $lt: utcDayStart(now) }, status: { $ne: 'done' } }),
     Issue.countDocuments({ ...issues, completedAt: { $gte: weekAgo } }),
     Issue.countDocuments(issues),
     Issue.aggregate<{ _id: unknown; count: number; user: { _id: unknown; name: string; email: string; avatarColor: string } }>([
