@@ -22,6 +22,8 @@ A new account opens on a workspace that already has a project, a board, and acti
 
 ![Command menu finding an issue by its key](docs/screenshots/command-menu.png)
 
+![A comment with bold text, a list, and a link](docs/screenshots/comment-markdown.png)
+
 ![Members with owner, admin, and member roles](docs/screenshots/members.png)
 
 ## Features
@@ -33,6 +35,7 @@ A new account opens on a workspace that already has a project, a board, and acti
 - Issues with status, priority, labels, assignees, due dates, comments, and history
 - A starter workspace on signup, with a project and sample issues so the first session is not an empty board
 - @mentions in comments, which notify that person in their inbox and over the live connection
+- Comment markdown for bold, lists, and links. HTML is shown as text, and only http and https links are clickable
 - Filters, text search, and pagination
 - A command menu, opened with Ctrl K or ⌘K, that jumps to a page, a project, or an issue key such as `API-12`
 - Saved project views, private or shared. A view assigned to “me” shows each person their own work

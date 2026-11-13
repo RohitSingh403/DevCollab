@@ -143,7 +143,7 @@ export async function seedDatabase() {
   await addComment({
     issueId: session.id,
     actor: { id: String(jonah._id), name: jonah.name },
-    body: 'Cookie flags look right for local dev. We should force Secure once this is on HTTPS.',
+    body: 'Cookie flags look right for local dev. We should force **Secure** once this is on HTTPS.\n\n- HttpOnly\n- SameSite\n\nSee [the cookie guide](https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies).',
   });
   await addComment({
     issueId: roles.id,
