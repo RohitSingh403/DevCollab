@@ -60,7 +60,10 @@ export function MyWorkPage() {
                     <span className="min-w-0">
                       <span className="font-mono text-[11px] text-muted">{issue.key}</span>
                       <span className="mt-0.5 block truncate text-[14px] font-medium text-ink">{issue.title}</span>
-                      <span className="mt-0.5 block text-[12px] text-faint">{issue.project.name}</span>
+                      <span className="mt-0.5 block text-[12px] text-faint">
+                        {issue.project.name}
+                        {issue.cycle ? ` · ${issue.cycle.name}` : ''}
+                      </span>
                     </span>
                     <span className="flex flex-wrap items-center gap-3">
                       {issue.blocked ? <BlockedMark /> : null}

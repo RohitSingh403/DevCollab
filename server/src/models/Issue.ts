@@ -29,6 +29,9 @@ const issueSchema = new Schema(
     blockedBy: [{ type: Schema.Types.ObjectId, ref: 'Issue' }],
     blocked: { type: Boolean, default: false },
     checklist: { type: [checklistItemSchema], default: [] },
+    cycle: { type: Schema.Types.ObjectId, ref: 'Cycle', default: null },
+    dueAlertKind: { type: String, enum: ['today', 'overdue', null], default: null },
+    dueAlertFor: { type: Date, default: null },
   },
   { timestamps: true },
 );
@@ -39,6 +42,7 @@ issueSchema.index({ workspace: 1, dueDate: 1 });
 issueSchema.index({ assignees: 1 });
 issueSchema.index({ watchers: 1 });
 issueSchema.index({ blockedBy: 1 });
+issueSchema.index({ cycle: 1 });
 
 issueSchema.pre('save', function setRank() {
   this.priorityRank = PRIORITY_RANK[this.priority as Priority] ?? PRIORITY_RANK.medium;

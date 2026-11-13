@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { ApiError, isDuplicateKey } from '../errors';
 import { Comment } from '../models/Comment';
+import { Cycle } from '../models/Cycle';
 import { SavedView } from '../models/SavedView';
 import { Issue } from '../models/Issue';
 import { Project } from '../models/Project';
@@ -131,6 +132,7 @@ export async function deleteProject(projectId: string, actor: { id: string; name
   await Comment.deleteMany({ project: project._id });
   await Issue.deleteMany({ project: project._id });
   await SavedView.deleteMany({ project: project._id });
+  await Cycle.deleteMany({ project: project._id });
   const workspaceId = String(project.workspace);
   const label = `${project.key} ${project.name}`;
   await project.deleteOne();

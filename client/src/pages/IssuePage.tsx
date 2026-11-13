@@ -24,6 +24,11 @@ export function IssuePage() {
   const workspace = useQuery({ queryKey: ['workspace', workspaceId], queryFn: () => api.workspace(workspaceId) });
   const members = useQuery({ queryKey: ['members', workspaceId], queryFn: () => api.members(workspaceId) });
   const labels = useQuery({ queryKey: ['labels', workspaceId], queryFn: () => api.labels(workspaceId) });
+  const cycles = useQuery({
+    queryKey: ['cycles', issue.data?.project.id],
+    queryFn: () => api.cycles(issue.data?.project.id ?? ''),
+    enabled: Boolean(issue.data?.project.id),
+  });
   useDocumentTitle(issue.data ? `${issue.data.key} ${issue.data.title}` : 'Issue');
 
   const save = useMutation({
@@ -124,6 +129,12 @@ export function IssuePage() {
               onChange={(event) => save.mutate({ dueDate: event.target.value || null })}
             />
           </label>
+          <CycleField
+            cycleId={current.cycle?.id ?? null}
+            cycleName={current.cycle?.name ?? null}
+            active={(cycles.data ?? []).find((item) => item.status === 'active') ?? null}
+            onChange={(cycleId) => save.mutate({ cycleId })}
+          />
           <fieldset className="px-4 py-3">
             <legend className="text-[12px] text-muted">Assignees</legend>
             <div className="mt-2 space-y-2">
@@ -221,6 +232,33 @@ export function IssuePage() {
           </ul>
         </section>
       </aside>
+    </div>
+  );
+}
+
+function CycleField({
+  cycleId,
+  cycleName,
+  active,
+  onChange,
+}: {
+  cycleId: string | null;
+  cycleName: string | null;
+  active: { id: string; name: string } | null;
+  onChange: (cycleId: string | null) => void;
+}) {
+  if (!active && !cycleName) return null;
+  const inActive = Boolean(active && cycleId === active.id);
+  return (
+    <div className="px-4 py-3">
+      <p className="text-[12px] text-muted">Cycle</p>
+      {active ? (
+        <label className="mt-2 flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={inActive} onChange={() => onChange(inActive ? null : active.id)} />
+          In {active.name}
+        </label>
+      ) : null}
+      {cycleName && !inActive ? <p className="mt-2 text-[12px] text-faint">On {cycleName}.</p> : null}
     </div>
   );
 }

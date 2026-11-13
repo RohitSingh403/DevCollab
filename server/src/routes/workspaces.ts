@@ -199,7 +199,7 @@ workspaceRouter.get(
   asyncHandler(async (req, res) => {
     const workspaceId = req.params.workspaceId;
     res.json({
-      analytics: await buildAnalytics({ workspace: workspaceId }, { workspace: workspaceId }),
+      analytics: { ...(await buildAnalytics({ workspace: workspaceId }, { workspace: workspaceId })), cycle: null },
     });
   }),
 );
