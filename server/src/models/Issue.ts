@@ -19,6 +19,7 @@ const issueSchema = new Schema(
     status: { type: String, enum: STATUSES, default: 'backlog', index: true },
     priority: { type: String, enum: PRIORITIES, default: 'medium' },
     priorityRank: { type: Number, default: PRIORITY_RANK.medium },
+    estimate: { type: Number, enum: [1, 2, 3, 5, 8, null], default: null },
     labels: [{ type: Schema.Types.ObjectId, ref: 'Label' }],
     assignees: [{ type: Schema.Types.ObjectId, ref: 'User' }],
     watchers: [{ type: Schema.Types.ObjectId, ref: 'User' }],
