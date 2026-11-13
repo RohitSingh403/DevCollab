@@ -1,12 +1,14 @@
 # DevCollab
 
-DevCollab is a multi-user workspace for software teams. People create a workspace, invite teammates, organize work into projects, and track issues through discussion, assignments, and an activity history. Live updates and in-app notifications use Socket.IO. Analytics on the overview are aggregated from the database, not from sample charts.
+DevCollab is a multi-user workspace for software teams. A workspace has members, projects, and numbered issues. People assign work, comment, mention teammates, follow issues, and mark blockers. The overview reads live counts from MongoDB. Updates and the inbox travel over Socket.IO.
 
-It is a team system: shared data, roles, and authorization. It is not a personal timer or habit tracker.
+It is a team system with shared data, roles, and authorization. It is not a personal timer or habit tracker.
 
 ## Preview
 
-A new account opens on a workspace that already has a project, a board, and activity. The seeded team is `maya@devcollab.dev` / `Password123!`.
+A new account opens on a starter workspace that already has a project, a board, and activity. The seeded team below is a second workspace, Northwind Labs, with two projects (`API` and `WEB`), blockers, a follower, and a markdown comment.
+
+Sign in as `maya@devcollab.dev` / `Password123!`. Jonah Patel (`jonah@devcollab.dev`) is an admin and Priya Nair (`priya@devcollab.dev`) is a member. The same password works for all three. These accounts are demo data, not production credentials.
 
 ![Workspace overview with open, overdue, and done counts](docs/screenshots/overview.png)
 
@@ -28,24 +30,48 @@ A new account opens on a workspace that already has a project, a board, and acti
 
 ## Features
 
+Accounts and access:
+
 - Email and password accounts, bcrypt hashing, and an httpOnly JWT cookie
 - Workspaces with owner, admin, and member roles
 - Email invites for people who already have an account, and one-time links for everyone else
+- A starter workspace on signup, so the first session is not an empty board
+
+Work:
+
 - Projects with short keys (`API-12`) and per-project issue numbers
 - Issues with status, priority, labels, assignees, due dates, comments, and history
-- A starter workspace on signup, with a project and sample issues so the first session is not an empty board
-- @mentions in comments, which notify that person in their inbox and over the live connection
-- Comment markdown for bold, lists, and links. HTML is shown as text, and only http and https links are clickable
-- Filters, text search, and pagination
-- A command menu, opened with Ctrl K or ⌘K, that jumps to a page, a project, or an issue key such as `API-12`
-- Saved project views, private or shared. A view assigned to “me” shows each person their own work
-- My work, a personal queue of open issues assigned to you: overdue, due this week, due later, and no due date
-- Blockers between issues in the same workspace. The issue, the board, and My work show when work is still blocked, and that mark clears when the blocker is done
-- Watchers. Any member can follow an issue and get the comment, status, and blocker alerts that the reporter and assignees already get
 - A board you can drag between columns, plus a list view
+- Filters, text search, and pagination
+- Saved project views, private or shared. A view assigned to “me” follows whoever opens it
+- My work, the open issues assigned to you: overdue, due this week, due later, and no due date
+- Blockers inside one workspace. The issue, the board, and My work show the mark while a blocker is open, and clear it when that blocker is done
+- A command menu, opened with Ctrl K or ⌘K, that jumps to a page, a project, or an issue key
+
+Discussion:
+
+- @mentions in comments, which notify that person in their inbox and over the live connection
+- Comment markdown for bold, lists, and links. The rules are in the next section
+- Watchers. Any member can follow an issue and get the comment, status, and blocker alerts that the reporter and assignees already get
+
+Workspace:
+
 - Workspace and project analytics: open work, overdue issues, completions this week, status mix, and 14 days of activity
-- Real-time issue, comment, and notification events for other members
-- API integration tests, authorization tests, and a small frontend suite
+- Real-time issue, comment, view, and notification events for other members
+- API integration tests, authorization tests, and a frontend suite
+
+## Comment formatting
+
+A comment is stored as text. The browser renders a small subset and never inserts the comment as HTML.
+
+| You write | What people see |
+| --- | --- |
+| `**Secure**` or `__Secure__` | Bold text |
+| A line starting with `- ` or `* ` | A bullet |
+| A line starting with `1. ` | A numbered item |
+| `[the guide](https://example.com)` | A link that opens in a new tab |
+
+Only `http` and `https` addresses become links. HTML, `javascript:` URLs, and other markup stay as text. `@Priya Nair` still mentions a workspace member, including inside bold text or a link label. An unknown `@name` is left as text.
 
 ## Architecture
 
@@ -134,7 +160,7 @@ npm run dev
 - UI: http://localhost:5173
 - API: http://localhost:4000/api/health
 
-With `SEED=true`, sign in as `maya@devcollab.dev` / `Password123!`. Jonah Patel (`jonah@devcollab.dev`) is an admin and Priya Nair (`priya@devcollab.dev`) is a member. The same password works for all three. This account is demo data, not a production credential.
+With `SEED=true`, the Northwind accounts from the preview are available alongside the starter workspace created for any new registration.
 
 To seed a persistent database instead:
 
@@ -169,26 +195,36 @@ Authenticated routes expect the session cookie. Collection responses are paginat
 | POST | `/api/workspaces/:id/invites` | Add a user or mint an invite link |
 | POST | `/api/invites/:token/accept` | Accept an invite |
 | GET, POST | `/api/workspaces/:id/projects` | Projects in a workspace |
+| GET, PATCH, DELETE | `/api/projects/:id` | Read, update, or delete a project |
 | GET, POST | `/api/projects/:id/issues` | Filtered, paginated issues. `assignee=me` means the signed-in user |
-| GET, POST, DELETE | `/api/projects/:id/views` | Saved filters for a project. Private views stay with their author; shared views are visible to the project |
+| GET | `/api/issues/:id` | One issue, including blockers and whether you follow it |
 | PATCH, DELETE | `/api/issues/:id` | Update or delete an issue |
 | POST | `/api/issues/:id/blockers` | Block this issue on another issue in the same workspace |
 | DELETE | `/api/issues/:id/blockers/:blockerId` | Remove that blocker |
 | POST, DELETE | `/api/issues/:id/watch` | Follow or unfollow an issue |
-| GET, POST | `/api/issues/:id/comments` | Discussion |
+| GET, POST | `/api/issues/:id/comments` | Discussion. The body is plain text; the client renders the markdown subset |
+| PATCH, DELETE | `/api/comments/:id` | Edit your comment, or delete it when you are the author or an admin |
+| GET, POST, DELETE | `/api/projects/:id/views` | Saved filters for a project. Private views stay with their author; shared views are visible to the project |
 | GET | `/api/workspaces/:id/my-work` | Open issues assigned to the signed-in user |
+| GET | `/api/workspaces/:id/search?q=` | Issues by title, or by key such as `API-12` |
+| GET, POST, DELETE | `/api/workspaces/:id/labels` | Workspace labels. Deleting one requires an admin |
+| GET | `/api/workspaces/:id/activity` | Workspace history |
+| GET | `/api/projects/:id/activity` | Project history |
+| GET | `/api/issues/:id/activity` | Issue history |
 | GET | `/api/workspaces/:id/analytics` | Workspace totals |
 | GET | `/api/projects/:id/analytics` | Project totals |
 | GET | `/api/notifications` | Inbox |
+| POST | `/api/notifications/read-all` | Mark the inbox read |
+| PATCH | `/api/notifications/:id/read` | Mark one notification read |
 | GET | `/api/health` | Process and database status |
 
 Issue list filters: `status`, `priority`, `assignee`, `label`, `q`, `overdue`, `page`, `limit`, `sort` (`updated`, `created`, `due`, `priority`).
 
-Socket.IO authenticates with the same cookie. Clients emit `workspace:join` with a workspace id. The server checks membership before joining `workspace:{id}`. Each connection also joins `user:{id}` for notifications. Events: `issue:created`, `issue:updated`, `issue:deleted`, `comment:created`, `comment:deleted`, `activity:created`, `notification:created`.
+Socket.IO authenticates with the same cookie. Clients emit `workspace:join` with a workspace id. The server checks membership before joining `workspace:{id}`. Each connection also joins `user:{id}` for notifications. Events: `issue:created`, `issue:updated`, `issue:deleted`, `comment:created`, `comment:updated`, `comment:deleted`, `view:saved`, `view:deleted`, `activity:created`, `notification:created`.
 
 ## Tests
 
-Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, blockers, watchers, notifications, analytics, and a Socket.IO broadcast. They boot MongoDB in memory, so they do not need a local database.
+Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, blockers, watchers, notifications, analytics, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
 
 ```bash
 npm test
@@ -226,6 +262,8 @@ COOKIE_SAMESITE=none
 - `completedAt` is set when an issue moves to Done and cleared if it is reopened. "Done this week" uses that field.
 - `commentCount` is stored on the issue and updated when comments are added or removed.
 - `blocked` stays true while any linked blocker is still open. Adding, removing, completing, reopening, or deleting a blocker updates it.
+- Followers are stored on the issue. Removing someone from the workspace also removes their follows. The reporter and assignees are notified without having to follow.
+- Comment markdown is not stored as HTML. The client parses a fixed subset and renders React elements.
 - Analytics use aggregation pipelines. Day buckets are UTC.
 - List endpoints are paginated. The board requests up to 100 issues and says when the filter still has more.
 
