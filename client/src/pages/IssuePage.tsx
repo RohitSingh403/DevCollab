@@ -5,7 +5,8 @@ import { Blockers } from '../components/Blockers';
 import { Avatar, useDocumentTitle } from '../components/ui';
 import { api, errorMessage } from '../lib/api';
 import { timeAgo, toDateInput } from '../lib/format';
-import { commentSegments, insertMention, matchingMembers, mentionAtCursor } from '../lib/mentions';
+import { MarkdownText } from '../components/Markdown';
+import { insertMention, matchingMembers, mentionAtCursor } from '../lib/mentions';
 import { PRIORITIES, PRIORITY_LABEL, STATUSES, STATUS_LABEL, type IssueStatus, type Priority, type Role } from '../lib/types';
 import { useAuthStore } from '../stores/authStore';
 import { useUiStore } from '../stores/uiStore';
@@ -286,7 +287,7 @@ function CommentComposer({ issueId, members }: { issueId: string; members: { id:
       }}
     >
       <MentionField label="Add a comment" value={body} onChange={setBody} members={members} />
-      <p className="text-[12px] text-muted">Type @ to mention a teammate. They get an inbox alert.</p>
+      <p className="text-[12px] text-muted">Type @ to mention a teammate. Bold, lists, and links work. HTML is shown as text.</p>
       <button className="btn-primary" type="submit" disabled={!body.trim() || add.isPending}>
         Comment
       </button>
@@ -396,19 +397,7 @@ function MentionField({
 }
 
 function CommentBody({ body, names }: { body: string; names: string[] }) {
-  return (
-    <p className="mt-3 whitespace-pre-wrap text-sm leading-6">
-      {commentSegments(body, names).map((part, index) =>
-        part.mention ? (
-          <span key={index} className="rounded bg-brand-soft px-0.5 font-medium text-brand">
-            {part.text}
-          </span>
-        ) : (
-          <span key={index}>{part.text}</span>
-        ),
-      )}
-    </p>
-  );
+  return <MarkdownText body={body} names={names} />;
 }
 
 function CommentCard({

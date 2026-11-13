@@ -20,26 +20,31 @@ export function matchingMembers<T extends { name: string }>(members: T[], query:
     .slice(0, 6);
 }
 
-export function commentSegments(body: string, names: string[]) {
+export function readMention(body: string, index: number, names: string[]) {
+  if (body[index] !== '@' || (index > 0 && !/\s/.test(body[index - 1] ?? ''))) return null;
+  const after = body.slice(index + 1);
   const sorted = names
     .map((name) => name.trim())
     .filter((name) => name.length >= 2)
     .sort((left, right) => right.length - left.length);
+  return (
+    sorted.find((name) => {
+      if (after.slice(0, name.length).toLowerCase() !== name.toLowerCase()) return false;
+      const next = after[name.length];
+      return !next || BOUNDARY.test(next);
+    }) ?? null
+  );
+}
+
+export function commentSegments(body: string, names: string[]) {
   const segments: { text: string; mention: boolean }[] = [];
   let index = 0;
   while (index < body.length) {
-    if (body[index] === '@' && (index === 0 || /\s/.test(body[index - 1] ?? ''))) {
-      const after = body.slice(index + 1);
-      const hit = sorted.find((name) => {
-        if (after.slice(0, name.length).toLowerCase() !== name.toLowerCase()) return false;
-        const next = after[name.length];
-        return !next || BOUNDARY.test(next);
-      });
-      if (hit) {
-        segments.push({ text: body.slice(index, index + 1 + hit.length), mention: true });
-        index += 1 + hit.length;
-        continue;
-      }
+    const hit = readMention(body, index, names);
+    if (hit) {
+      segments.push({ text: body.slice(index, index + 1 + hit.length), mention: true });
+      index += 1 + hit.length;
+      continue;
     }
     const nextAt = body.indexOf('@', index + 1);
     const end = nextAt === -1 ? body.length : nextAt;
