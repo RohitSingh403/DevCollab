@@ -130,6 +130,7 @@ export const updateIssueSchema = z
     assigneeIds: z.array(objectId).max(12).optional(),
     labelIds: z.array(objectId).max(12).optional(),
     dueDate,
+    cycleId: objectId.nullable().optional(),
   })
   .strict();
 
@@ -143,7 +144,19 @@ export const listIssueSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   sort: z.enum(['updated', 'created', 'due', 'priority']).optional().default('updated'),
+  cycle: z.union([z.literal('active'), objectId]).optional(),
 });
+
+const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+
+export const startCycleSchema = z
+  .object({
+    name: z.string().trim().min(2).max(40),
+    startsAt: day,
+    endsAt: day,
+    carryOpen: z.boolean().optional().default(true),
+  })
+  .strict();
 
 export const paginationSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),

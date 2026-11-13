@@ -116,6 +116,7 @@ export interface Issue {
   commentCount: number;
   blocked: boolean;
   checklist: ChecklistItem[];
+  cycle: { id: string; name: string } | null;
   blockedBy?: IssueLink[];
   blocking?: IssueLink[];
   completedAt: string | null;
@@ -195,6 +196,16 @@ export interface Invite {
   createdAt: string;
 }
 
+export interface Cycle {
+  id: string;
+  name: string;
+  status: 'active' | 'completed';
+  startsAt: string;
+  endsAt: string;
+  total: number;
+  done: number;
+}
+
 export interface Analytics {
   totals: {
     issues: number;
@@ -209,6 +220,7 @@ export interface Analytics {
   byPriority: { priority: Priority; count: number }[];
   activityByDay: { date: string; count: number }[];
   assigneeLoad: { count: number; user: User }[];
+  cycle: Cycle | null;
 }
 
 export interface InvitePreview {

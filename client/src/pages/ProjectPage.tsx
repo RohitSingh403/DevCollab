@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { CycleBar } from '../components/CycleBar';
 import { IssueBoard } from '../components/IssueBoard';
 import { IssueForm } from '../components/IssueForm';
 import { StatGrid } from '../components/AnalyticsPanels';
@@ -29,11 +30,13 @@ export function ProjectPage() {
   const assignee = params.get('assignee') ?? '';
   const q = params.get('q') ?? '';
   const overdue = params.get('overdue') ?? '';
+  const cycleFilter = params.get('cycle') === 'active';
   if (status) query.set('status', status);
   if (priority) query.set('priority', priority);
   if (assignee) query.set('assignee', assignee);
   if (q) query.set('q', q);
   if (overdue) query.set('overdue', overdue);
+  if (cycleFilter) query.set('cycle', 'active');
   query.set('limit', view === 'board' ? '100' : '20');
   query.set('page', params.get('page') ?? '1');
   const issues = useQuery({
@@ -42,6 +45,7 @@ export function ProjectPage() {
   });
   const members = useQuery({ queryKey: ['members', workspaceId], queryFn: () => api.members(workspaceId) });
   const views = useQuery({ queryKey: ['views', projectId], queryFn: () => api.views(projectId) });
+  const cycles = useQuery({ queryKey: ['cycles', projectId], queryFn: () => api.cycles(projectId) });
   const [creating, setCreating] = useState(false);
   const [savingView, setSavingView] = useState(false);
   const navigate = useNavigate();
@@ -109,8 +113,29 @@ export function ProjectPage() {
     if (nextFilters.overdue) next.set('overdue', 'true');
     if (nextFilters.q) next.set('q', nextFilters.q);
     if (nextFilters.layout === 'list') next.set('view', 'list');
+    if (params.get('cycle') === 'active') next.set('cycle', 'active');
     setParams(next);
   }
+
+  function toggleCycle() {
+    const next = new URLSearchParams(params);
+    if (next.get('cycle') === 'active') next.delete('cycle');
+    else next.set('cycle', 'active');
+    next.delete('page');
+    setParams(next);
+  }
+
+  const startCycle = useMutation({
+    mutationFn: (input: { name: string; startsAt: string; endsAt: string }) => api.startCycle(projectId, input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['cycles', projectId] });
+      void queryClient.invalidateQueries({ queryKey: ['issues', projectId] });
+      void queryClient.invalidateQueries({ queryKey: ['analytics', 'project', projectId] });
+      void queryClient.invalidateQueries({ queryKey: ['my-work', workspaceId] });
+      void queryClient.invalidateQueries({ queryKey: ['activity'] });
+    },
+    onError: (error) => pushToast(errorMessage(error)),
+  });
 
   const removeView = useMutation({
     mutationFn: (viewId: string) => api.deleteView(projectId, viewId),
@@ -156,6 +181,13 @@ export function ProjectPage() {
         }
       />
       {analytics.data ? <StatGrid analytics={analytics.data} /> : null}
+      <CycleBar
+        cycle={(cycles.data ?? []).find((item) => item.status === 'active') ?? analytics.data?.cycle ?? null}
+        filtered={cycleFilter}
+        pending={startCycle.isPending}
+        onToggle={toggleCycle}
+        onStart={(input) => startCycle.mutate(input)}
+      />
       <div className="panel">
         <div className="flex flex-wrap items-center gap-1.5 border-b border-line px-2 py-2">
           <FilterChip active={allActive} onClick={() => applyFilters({ status: '', priority: '', assignee: '', overdue: false, q: '', layout: filters.layout })}>
@@ -275,6 +307,7 @@ export function ProjectPage() {
                     <Link to={`/w/${workspaceId}/issues/${issue.id}`} className="mt-0.5 block font-medium hover:text-brand">
                       {issue.title}
                     </Link>
+                    {issue.cycle ? <span className="mt-1 block text-[12px] text-faint">{issue.cycle.name}</span> : null}
                     {issue.blocked || issue.checklist?.length ? (
                       <span className="mt-1 inline-flex items-center gap-1.5">
                         {issue.blocked ? <BlockedMark /> : null}

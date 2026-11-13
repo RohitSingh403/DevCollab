@@ -2,8 +2,9 @@ import { Router } from 'express';
 import { asyncHandler } from '../asyncHandler';
 import { requireAuth } from '../middleware/auth';
 import { requireProject, requireWorkspace } from '../middleware/access';
-import { createProjectSchema, createViewSchema, paginationSchema, updateProjectSchema } from '../schemas';
+import { createProjectSchema, createViewSchema, paginationSchema, startCycleSchema, updateProjectSchema } from '../schemas';
 import { buildAnalytics } from '../services/analytics';
+import { activeCycleProgress, listCycles, startCycle } from '../services/cycles';
 import { listActivity } from '../services/feed';
 import { createProject, deleteProject, getProject, listProjects, updateProject } from '../services/projects';
 import { createView, deleteView, listViews } from '../services/views';
@@ -67,9 +68,29 @@ projectRouter.get(
   '/:projectId/analytics',
   requireProject(),
   asyncHandler(async (req, res) => {
-    res.json({
-      analytics: await buildAnalytics({ project: req.params.projectId }, { project: req.params.projectId }),
-    });
+    const analytics = await buildAnalytics({ project: req.params.projectId }, { project: req.params.projectId });
+    res.json({ analytics: { ...analytics, cycle: await activeCycleProgress(req.params.projectId) } });
+  }),
+);
+
+projectRouter.get(
+  '/:projectId/cycles',
+  requireProject(),
+  asyncHandler(async (req, res) => {
+    res.json({ cycles: await listCycles(req.params.projectId) });
+  }),
+);
+
+projectRouter.post(
+  '/:projectId/cycles',
+  requireProject(),
+  asyncHandler(async (req, res) => {
+    const input = parseBody<ReturnType<typeof startCycleSchema.parse>>(startCycleSchema, req.body);
+    const cycle = await startCycle(
+      { projectId: req.params.projectId, actor: req.authUser!, ...input },
+      realtimeFrom(ioFromApp(req.app)),
+    );
+    res.status(201).json({ cycle });
   }),
 );
 
