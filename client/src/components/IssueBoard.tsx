@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { checklistProgress } from '../lib/checklist';
 import { dueLabel, groupIssues } from '../lib/format';
 import { STATUSES, STATUS_LABEL, type Issue, type IssueStatus } from '../lib/types';
-import { Avatar, BlockedMark, ChecklistCount, PriorityMark, StatusDot } from './ui';
+import { Avatar, BlockedMark, ChecklistCount, EstimateMark, PriorityMark, StatusDot } from './ui';
 
 export function IssueBoard({
   workspaceId,
@@ -54,7 +54,10 @@ export function IssueBoard({
                     {issue.blocked ? <BlockedMark /> : null}
                     <ChecklistCount {...checklistProgress(issue.checklist)} />
                   </span>
-                  <PriorityMark priority={issue.priority} />
+                  <span className="inline-flex items-center gap-1.5">
+                    <EstimateMark estimate={issue.estimate} />
+                    <PriorityMark priority={issue.priority} />
+                  </span>
                 </div>
                 <Link to={`/w/${workspaceId}/issues/${issue.id}`} className="mt-1.5 block text-[13px] font-medium leading-5 text-ink hover:underline">
                   {issue.title}

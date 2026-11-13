@@ -219,6 +219,7 @@ export async function createIssue(
     assigneeIds: string[];
     labelIds: string[];
     dueDate?: string | null;
+    estimate?: number | null;
   },
   rt?: Realtime,
 ) {
@@ -240,6 +241,7 @@ export async function createIssue(
     status: input.status,
     priority: input.priority,
     priorityRank: PRIORITY_RANK[input.priority],
+    estimate: input.estimate ?? null,
     assignees: assigneeIds,
     labels: labelIds,
     reporter: input.actor.id,
@@ -286,6 +288,7 @@ export async function updateIssue(
     assigneeIds?: string[];
     labelIds?: string[];
     dueDate?: string | null;
+    estimate?: number | null;
     cycleId?: string | null;
   },
   rt?: Realtime,
@@ -329,6 +332,10 @@ export async function updateIssue(
       issue.dueAlertFor = null;
       parts.push('due date');
     }
+  }
+  if (input.estimate !== undefined && input.estimate !== (issue.estimate ?? null)) {
+    issue.estimate = input.estimate;
+    parts.push('estimate');
   }
   if (input.cycleId !== undefined) {
     const next = input.cycleId ? await assertProjectCycle(String(issue.project), input.cycleId) : null;
