@@ -20,6 +20,12 @@ export interface ProjectRef {
   key: string;
 }
 
+export interface ChecklistItemDto {
+  id: string;
+  text: string;
+  done: boolean;
+}
+
 export interface IssueDto {
   id: string;
   number: number;
@@ -38,6 +44,7 @@ export interface IssueDto {
   overdue: boolean;
   commentCount: number;
   blocked: boolean;
+  checklist: ChecklistItemDto[];
   completedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -89,6 +96,7 @@ export function serializeIssue(issue: {
   dueDate?: Date | string | null;
   commentCount?: number;
   blocked?: boolean;
+  checklist?: { _id?: unknown; id?: unknown; text?: string; done?: boolean }[];
   completedAt?: Date | string | null;
   createdAt: Date | string;
   updatedAt: Date | string;
@@ -114,6 +122,11 @@ export function serializeIssue(issue: {
     overdue: Boolean(dueDate && status !== 'done' && new Date(dueDate).getTime() < Date.now()),
     commentCount: issue.commentCount ?? 0,
     blocked: Boolean(issue.blocked),
+    checklist: (issue.checklist ?? []).map((item) => ({
+      id: asId(item),
+      text: item.text ?? '',
+      done: Boolean(item.done),
+    })),
     completedAt: iso(issue.completedAt),
     createdAt: iso(issue.createdAt) ?? new Date(0).toISOString(),
     updatedAt: iso(issue.updatedAt) ?? new Date(0).toISOString(),

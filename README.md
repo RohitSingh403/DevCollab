@@ -18,6 +18,8 @@ Sign in as `maya@devcollab.dev` / `Password123!`. Jonah Patel (`jonah@devcollab.
 
 ![Issue detail with status, priority, assignees, and comments](docs/screenshots/issue.png)
 
+![A checklist with two of four steps done](docs/screenshots/checklist.png)
+
 ![An issue blocked by another issue in the workspace](docs/screenshots/blockers.png)
 
 ![Jonah following an issue from the watchers panel](docs/screenshots/watchers.png)
@@ -46,6 +48,7 @@ Work:
 - Saved project views, private or shared. A view assigned to “me” follows whoever opens it
 - My work, the open issues assigned to you: overdue, due this week, due later, and no due date
 - Blockers inside one workspace. The issue, the board, and My work show the mark while a blocker is open, and clear it when that blocker is done
+- A checklist on an issue. Steps can be renamed, checked, and removed, and the board, list, and My work show how many are done
 - A command menu, opened with Ctrl K or ⌘K, that jumps to a page, a project, or an issue key
 
 Discussion:
@@ -202,6 +205,9 @@ Authenticated routes expect the session cookie. Collection responses are paginat
 | POST | `/api/issues/:id/blockers` | Block this issue on another issue in the same workspace |
 | DELETE | `/api/issues/:id/blockers/:blockerId` | Remove that blocker |
 | POST, DELETE | `/api/issues/:id/watch` | Follow or unfollow an issue |
+| POST | `/api/issues/:id/checklist` | Add a step. An issue holds at most 30 |
+| PATCH | `/api/issues/:id/checklist/:itemId` | Rename a step or mark it done |
+| DELETE | `/api/issues/:id/checklist/:itemId` | Remove a step |
 | GET, POST | `/api/issues/:id/comments` | Discussion. The body is plain text; the client renders the markdown subset |
 | PATCH, DELETE | `/api/comments/:id` | Edit your comment, or delete it when you are the author or an admin |
 | GET, POST, DELETE | `/api/projects/:id/views` | Saved filters for a project. Private views stay with their author; shared views are visible to the project |
@@ -224,7 +230,7 @@ Socket.IO authenticates with the same cookie. Clients emit `workspace:join` with
 
 ## Tests
 
-Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, blockers, watchers, notifications, analytics, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
+Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, blockers, watchers, checklists, notifications, analytics, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
 
 ```bash
 npm test
@@ -263,6 +269,7 @@ COOKIE_SAMESITE=none
 - `commentCount` is stored on the issue and updated when comments are added or removed.
 - `blocked` stays true while any linked blocker is still open. Adding, removing, completing, reopening, or deleting a blocker updates it.
 - Followers are stored on the issue. Removing someone from the workspace also removes their follows. The reporter and assignees are notified without having to follow.
+- Checklist steps are stored on the issue in the order they were added. Checking a step does not change the issue status. The activity log records adds, checks, renames, and removals.
 - Comment markdown is not stored as HTML. The client parses a fixed subset and renders React elements.
 - Analytics use aggregation pipelines. Day buckets are UTC.
 - List endpoints are paginated. The board requests up to 100 issues and says when the filter still has more.
