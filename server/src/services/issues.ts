@@ -290,6 +290,7 @@ export async function updateIssue(
     dueDate?: string | null;
     estimate?: number | null;
     cycleId?: string | null;
+    projectId?: string;
   },
   rt?: Realtime,
 ) {
@@ -298,6 +299,7 @@ export async function updateIssue(
   const workspaceId = String(issue.workspace);
   const parts: string[] = [];
   let statusChanged = false;
+  let movedFrom: string | null = null;
 
   if (input.title !== undefined && input.title !== issue.title) {
     issue.title = input.title;
@@ -337,6 +339,19 @@ export async function updateIssue(
     issue.estimate = input.estimate;
     parts.push('estimate');
   }
+  if (input.projectId && input.projectId !== String(issue.project)) {
+    const destination = await Project.findOne({ _id: input.projectId, workspace: issue.workspace });
+    if (!destination) throw new ApiError(400, 'That project is not in this workspace', 'invalid_project');
+    const source = await Project.findById(issue.project).select('key');
+    const numbered = await Project.findOneAndUpdate({ _id: destination._id }, { $inc: { nextIssueNumber: 1 } }, { new: true });
+    if (!numbered) throw new ApiError(404, 'Project not found', 'not_found');
+    movedFrom = `${source?.key ?? 'ISSUE'}-${issue.number}`;
+    issue.project = destination._id as unknown as typeof issue.project;
+    issue.number = numbered.nextIssueNumber;
+    issue.cycle = null;
+    await Comment.updateMany({ issue: issue._id }, { project: destination._id });
+    parts.push(`project to ${destination.name}`);
+  }
   if (input.cycleId !== undefined) {
     const next = input.cycleId ? await assertProjectCycle(String(issue.project), input.cycleId) : null;
     const current = issue.cycle ? String(issue.cycle) : null;
@@ -370,14 +385,18 @@ export async function updateIssue(
   await issue.save();
   if (statusChanged) await syncDependents(String(issue._id), input.actor, rt);
   const dto = await presentIssue(String(issue._id), input.actor.id);
+  const detail = parts.filter((part) => !part.startsWith('project to '));
+  const message = movedFrom
+    ? `${input.actor.name} moved ${movedFrom} to ${dto.key}${detail.length ? ` and updated ${detail.join(', ')}` : ''}`
+    : `${input.actor.name} updated ${dto.key}: ${parts.join(', ')}`;
   await recordActivity(
     {
       workspaceId,
       projectId: String(issue.project),
       issueId: dto.id,
       actorId: input.actor.id,
-      type: 'issue.updated',
-      message: `${input.actor.name} updated ${dto.key}: ${parts.join(', ')}`,
+      type: movedFrom ? 'issue.moved' : 'issue.updated',
+      message,
     },
     rt,
   );
