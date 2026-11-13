@@ -5,7 +5,7 @@ import { CycleBar } from '../components/CycleBar';
 import { IssueBoard } from '../components/IssueBoard';
 import { IssueForm } from '../components/IssueForm';
 import { StatGrid } from '../components/AnalyticsPanels';
-import { Avatar, BlockedMark, ChecklistCount, EmptyState, Modal, PageHeader, PriorityMark, StatusBadge, useDocumentTitle } from '../components/ui';
+import { Avatar, BlockedMark, ChecklistCount, EmptyState, EstimateMark, Modal, PageHeader, PriorityMark, StatusBadge, useDocumentTitle } from '../components/ui';
 import { checklistProgress } from '../lib/checklist';
 import { api, errorMessage } from '../lib/api';
 import { dueLabel } from '../lib/format';
@@ -319,7 +319,10 @@ export function ProjectPage() {
                     <StatusBadge status={issue.status} />
                   </td>
                   <td className="px-4 py-3">
-                    <PriorityMark priority={issue.priority} />
+                    <span className="inline-flex items-center gap-2">
+                      <EstimateMark estimate={issue.estimate} />
+                      <PriorityMark priority={issue.priority} />
+                    </span>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex -space-x-1">

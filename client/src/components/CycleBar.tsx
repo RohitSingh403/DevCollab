@@ -33,6 +33,9 @@ export function CycleBar({
   const [open, setOpen] = useState(false);
   const done = cycle?.done ?? 0;
   const total = cycle?.total ?? 0;
+  const points = cycle?.points ?? 0;
+  const pointsDone = cycle?.pointsDone ?? 0;
+  const progress = points > 0 ? pointsDone / points : total > 0 ? done / total : 0;
   return (
     <section className="panel flex flex-wrap items-center gap-3 px-4 py-3">
       <div className="min-w-0 flex-1">
@@ -46,9 +49,10 @@ export function CycleBar({
             </p>
             <p className="mt-1 text-[12px] text-muted">
               {done} of {total} done
+              {points > 0 ? ` · ${pointsDone} of ${points} points` : ''}
             </p>
             <div className="mt-2 h-1 max-w-xs overflow-hidden rounded-full bg-slate-100" aria-hidden="true">
-              <div className="h-full bg-ink" style={{ width: total ? `${(done / total) * 100}%` : '0%' }} />
+              <div className="h-full bg-ink" style={{ width: `${progress * 100}%` }} />
             </div>
           </>
         ) : (

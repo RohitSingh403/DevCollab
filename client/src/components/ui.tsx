@@ -125,6 +125,11 @@ export function ChecklistCount({ done, total }: { done: number; total: number })
   );
 }
 
+export function EstimateMark({ estimate }: { estimate: number | null | undefined }) {
+  if (!estimate) return null;
+  return <span className="inline-flex items-center rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-ink">{estimate}</span>;
+}
+
 export function BlockedMark() {
   return <span className="inline-flex items-center rounded-full bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-danger">Blocked</span>;
 }

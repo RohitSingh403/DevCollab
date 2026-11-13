@@ -63,6 +63,7 @@ export interface IssueInput {
   assigneeIds?: string[];
   labelIds?: string[];
   dueDate?: string | null;
+  estimate?: number | null;
   cycleId?: string | null;
 }
 

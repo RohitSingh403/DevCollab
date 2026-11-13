@@ -9,19 +9,29 @@ import { recordActivity } from './activity';
 export async function listCycles(projectId: string) {
   const cycles = await Cycle.find({ project: projectId }).sort({ createdAt: -1 });
   if (!cycles.length) return [];
-  const counts = await Issue.aggregate<{ _id: { cycle: unknown; status: string }; count: number }>([
+  const counts = await Issue.aggregate<{ _id: { cycle: unknown; status: string }; count: number; points: number }>([
     { $match: { project: cycles[0].project, cycle: { $ne: null } } },
-    { $group: { _id: { cycle: '$cycle', status: '$status' }, count: { $sum: 1 } } },
+    {
+      $group: {
+        _id: { cycle: '$cycle', status: '$status' },
+        count: { $sum: 1 },
+        points: { $sum: { $ifNull: ['$estimate', 0] } },
+      },
+    },
   ]);
-  const byCycle = new Map<string, { total: number; done: number }>();
+  const byCycle = new Map<string, { total: number; done: number; points: number; pointsDone: number }>();
   for (const row of counts) {
     const id = String(row._id.cycle);
-    const current = byCycle.get(id) ?? { total: 0, done: 0 };
+    const current = byCycle.get(id) ?? { total: 0, done: 0, points: 0, pointsDone: 0 };
     current.total += row.count;
-    if (row._id.status === 'done') current.done += row.count;
+    current.points += row.points;
+    if (row._id.status === 'done') {
+      current.done += row.count;
+      current.pointsDone += row.points;
+    }
     byCycle.set(id, current);
   }
-  return cycles.map((cycle) => serializeCycle(cycle, byCycle.get(String(cycle._id)) ?? { total: 0, done: 0 }));
+  return cycles.map((cycle) => serializeCycle(cycle, byCycle.get(String(cycle._id)) ?? { total: 0, done: 0, points: 0, pointsDone: 0 }));
 }
 
 export async function activeCycleProgress(projectId: string) {
@@ -102,7 +112,7 @@ export async function closeFinishedCycles(now = new Date()) {
 
 function serializeCycle(
   cycle: { _id: unknown; name: string; status: 'active' | 'completed'; startsAt: Date; endsAt: Date },
-  counts: { total: number; done: number },
+  counts: { total: number; done: number; points: number; pointsDone: number },
 ) {
   return {
     id: String(cycle._id),
@@ -112,5 +122,7 @@ function serializeCycle(
     endsAt: dayKey(cycle.endsAt),
     total: counts.total,
     done: counts.done,
+    points: counts.points,
+    pointsDone: counts.pointsDone,
   };
 }
