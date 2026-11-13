@@ -24,6 +24,7 @@ export function IssuePage() {
   const workspace = useQuery({ queryKey: ['workspace', workspaceId], queryFn: () => api.workspace(workspaceId) });
   const members = useQuery({ queryKey: ['members', workspaceId], queryFn: () => api.members(workspaceId) });
   const labels = useQuery({ queryKey: ['labels', workspaceId], queryFn: () => api.labels(workspaceId) });
+  const projects = useQuery({ queryKey: ['projects', workspaceId], queryFn: () => api.projects(workspaceId) });
   const cycles = useQuery({
     queryKey: ['cycles', issue.data?.project.id],
     queryFn: () => api.cycles(issue.data?.project.id ?? ''),
@@ -36,6 +37,9 @@ export function IssuePage() {
     onSuccess: (next) => {
       queryClient.setQueryData(['issue', issueId], next);
       void queryClient.invalidateQueries({ queryKey: ['issues'] });
+      void queryClient.invalidateQueries({ queryKey: ['projects'] });
+      void queryClient.invalidateQueries({ queryKey: ['cycles'] });
+      void queryClient.invalidateQueries({ queryKey: ['my-work'] });
       void queryClient.invalidateQueries({ queryKey: ['activity'] });
       void queryClient.invalidateQueries({ queryKey: ['analytics'] });
     },
@@ -99,6 +103,33 @@ export function IssuePage() {
       </div>
       <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
         <section className="panel divide-y divide-line">
+          <label className="grid grid-cols-[88px_1fr] items-center gap-3 px-4 py-3">
+            <span className="text-[12px] text-muted">Project</span>
+            <select
+              className="field"
+              aria-label="Project"
+              value={current.project.id}
+              onChange={(event) => {
+                const projectId = event.target.value;
+                if (projectId === current.project.id) return;
+                const name = (projects.data ?? []).find((project) => project.id === projectId)?.name ?? 'that project';
+                if (window.confirm(`Move ${current.key} to ${name}? It gets a new key and leaves its cycle.`)) {
+                  save.mutate({ projectId });
+                }
+              }}
+            >
+              {(projects.data ?? []).map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.key} {project.name}
+                </option>
+              ))}
+              {projects.data?.some((project) => project.id === current.project.id) ? null : (
+                <option value={current.project.id}>
+                  {current.project.key} {current.project.name}
+                </option>
+              )}
+            </select>
+          </label>
           <label className="grid grid-cols-[88px_1fr] items-center gap-3 px-4 py-3">
             <span className="text-[12px] text-muted">Status</span>
             <select className="field" aria-label="Status" value={current.status} onChange={(event) => save.mutate({ status: event.target.value as IssueStatus })}>
