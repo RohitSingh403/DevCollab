@@ -768,7 +768,18 @@ describe('workspaces, issues, and authorization', () => {
     const board = await owner.agent.get(`/api/projects/${projectId}/issues`).query({ cycle: 'active' });
     expect(board.body.issues.map((issue: { title: string }) => issue.title)).toEqual(['Ship the session cookie']);
     const analytics = await owner.agent.get(`/api/projects/${projectId}/analytics`);
-    expect(analytics.body.analytics.cycle).toMatchObject({ name: 'Cycle 2', total: 1, done: 0 });
+    expect(analytics.body.analytics.cycle).toMatchObject({ name: 'Cycle 2', total: 1, done: 0, points: 0, pointsDone: 0 });
+
+    const estimated = await owner.agent.patch(`/api/issues/${open.body.issue.id}`).send({ estimate: 5 });
+    expect(estimated.status).toBe(200);
+    expect(estimated.body.issue.estimate).toBe(5);
+    const rejected = await owner.agent.patch(`/api/issues/${open.body.issue.id}`).send({ estimate: 4 });
+    expect(rejected.status).toBe(400);
+    await owner.agent.patch(`/api/issues/${open.body.issue.id}`).send({ status: 'done' });
+    const scored = await owner.agent.get(`/api/projects/${projectId}/analytics`);
+    expect(scored.body.analytics.cycle).toMatchObject({ points: 5, pointsDone: 5, done: 1 });
+    const clearedEstimate = await owner.agent.patch(`/api/issues/${open.body.issue.id}`).send({ estimate: null });
+    expect(clearedEstimate.body.issue.estimate).toBeNull();
 
     await owner.agent.patch(`/api/issues/${open.body.issue.id}`).send({ cycleId: null });
     const cleared = await owner.agent.get(`/api/projects/${projectId}/issues`).query({ cycle: 'active' });

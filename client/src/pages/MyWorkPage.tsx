@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
-import { BlockedMark, ChecklistCount, EmptyState, PageHeader, PriorityMark, StatusBadge, useDocumentTitle } from '../components/ui';
+import { BlockedMark, ChecklistCount, EmptyState, EstimateMark, PageHeader, PriorityMark, StatusBadge, useDocumentTitle } from '../components/ui';
 import { api, errorMessage } from '../lib/api';
 import { checklistProgress } from '../lib/checklist';
 import { dueLabel } from '../lib/format';
@@ -69,6 +69,7 @@ export function MyWorkPage() {
                       {issue.blocked ? <BlockedMark /> : null}
                       <ChecklistCount {...checklistProgress(issue.checklist)} />
                       <StatusBadge status={issue.status} />
+                      <EstimateMark estimate={issue.estimate} />
                       <PriorityMark priority={issue.priority} />
                       <span className={`text-[12px] ${issue.overdue ? 'text-danger' : 'text-muted'}`}>{dueLabel(issue.dueDate, issue.overdue) ?? 'No due date'}</span>
                     </span>

@@ -8,7 +8,7 @@ import { api, errorMessage } from '../lib/api';
 import { timeAgo, toDateInput } from '../lib/format';
 import { MarkdownText } from '../components/Markdown';
 import { insertMention, matchingMembers, mentionAtCursor } from '../lib/mentions';
-import { PRIORITIES, PRIORITY_LABEL, STATUSES, STATUS_LABEL, type IssueStatus, type Priority, type Role } from '../lib/types';
+import { ESTIMATES, PRIORITIES, PRIORITY_LABEL, STATUSES, STATUS_LABEL, type IssueStatus, type Priority, type Role } from '../lib/types';
 import { useAuthStore } from '../stores/authStore';
 import { useUiStore } from '../stores/uiStore';
 
@@ -115,6 +115,22 @@ export function IssuePage() {
               {PRIORITIES.map((priority) => (
                 <option key={priority} value={priority}>
                   {PRIORITY_LABEL[priority]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="grid grid-cols-[88px_1fr] items-center gap-3 px-4 py-3">
+            <span className="text-[12px] text-muted">Estimate</span>
+            <select
+              className="field"
+              aria-label="Estimate"
+              value={current.estimate ?? ''}
+              onChange={(event) => save.mutate({ estimate: event.target.value ? Number(event.target.value) : null })}
+            >
+              <option value="">No estimate</option>
+              {ESTIMATES.map((estimate) => (
+                <option key={estimate} value={estimate}>
+                  {estimate}
                 </option>
               ))}
             </select>

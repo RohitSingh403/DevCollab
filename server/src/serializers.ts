@@ -36,6 +36,7 @@ export interface IssueDto {
   status: IssueStatus;
   statusLabel: string;
   priority: Priority;
+  estimate: number | null;
   labels: LabelDto[];
   assignees: UserDto[];
   reporter: UserDto;
@@ -97,6 +98,7 @@ export function serializeIssue(issue: {
   description?: string;
   status: IssueStatus;
   priority: Priority;
+  estimate?: number | null;
   labels?: unknown[];
   assignees?: unknown[];
   reporter: unknown;
@@ -123,6 +125,7 @@ export function serializeIssue(issue: {
     status,
     statusLabel: STATUS_LABEL[status],
     priority: issue.priority,
+    estimate: typeof issue.estimate === 'number' ? issue.estimate : null,
     labels: (issue.labels ?? []).map((label) => serializeLabel(label as Ref)),
     assignees: (issue.assignees ?? []).map((user) => serializeUser(user as Ref)),
     reporter: serializeUser(issue.reporter as Ref),

@@ -7,6 +7,9 @@ export type InviteRole = (typeof INVITE_ROLES)[number];
 export const STATUSES = ['backlog', 'todo', 'in_progress', 'in_review', 'done'] as const;
 export type IssueStatus = (typeof STATUSES)[number];
 
+export const ESTIMATES = [1, 2, 3, 5, 8] as const;
+export type Estimate = (typeof ESTIMATES)[number];
+
 export const PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const;
 export type Priority = (typeof PRIORITIES)[number];
 

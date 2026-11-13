@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { INVITE_ROLES, PRIORITIES, ROLES, STATUSES } from './constants';
+import { ESTIMATES, INVITE_ROLES, PRIORITIES, ROLES, STATUSES } from './constants';
 
 const objectId = z.string().regex(/^[a-f\d]{24}$/i, 'Expected an id');
 
@@ -82,6 +82,8 @@ export const createLabelSchema = z
   })
   .strict();
 
+const estimate = z.union([z.literal(ESTIMATES[0]), z.literal(ESTIMATES[1]), z.literal(ESTIMATES[2]), z.literal(ESTIMATES[3]), z.literal(ESTIMATES[4]), z.null()]).optional();
+
 const dueDate = z
   .string()
   .datetime({ offset: true })
@@ -98,6 +100,7 @@ export const createIssueSchema = z
     assigneeIds: z.array(objectId).max(12).optional().default([]),
     labelIds: z.array(objectId).max(12).optional().default([]),
     dueDate,
+    estimate,
   })
   .strict();
 
@@ -130,6 +133,7 @@ export const updateIssueSchema = z
     assigneeIds: z.array(objectId).max(12).optional(),
     labelIds: z.array(objectId).max(12).optional(),
     dueDate,
+    estimate,
     cycleId: objectId.nullable().optional(),
   })
   .strict();
