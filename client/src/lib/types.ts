@@ -81,6 +81,12 @@ export interface Label {
   color: string;
 }
 
+export interface ChecklistItem {
+  id: string;
+  text: string;
+  done: boolean;
+}
+
 export interface IssueLink {
   id: string;
   key: string;
@@ -109,6 +115,7 @@ export interface Issue {
   overdue: boolean;
   commentCount: number;
   blocked: boolean;
+  checklist: ChecklistItem[];
   blockedBy?: IssueLink[];
   blocking?: IssueLink[];
   completedAt: string | null;

@@ -115,6 +115,16 @@ export function StatusBadge({ status }: { status: IssueStatus }) {
   );
 }
 
+export function ChecklistCount({ done, total }: { done: number; total: number }) {
+  if (!total) return null;
+  const complete = done === total;
+  return (
+    <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums ${complete ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-muted'}`}>
+      {done}/{total}
+    </span>
+  );
+}
+
 export function BlockedMark() {
   return <span className="inline-flex items-center rounded-full bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-danger">Blocked</span>;
 }

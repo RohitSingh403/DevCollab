@@ -1,6 +1,14 @@
 import { Schema, model, models, type InferSchemaType, type Model } from 'mongoose';
 import { PRIORITIES, PRIORITY_RANK, STATUSES, type Priority } from '../constants';
 
+const checklistItemSchema = new Schema(
+  {
+    text: { type: String, required: true, trim: true, maxlength: 140 },
+    done: { type: Boolean, default: false },
+  },
+  { _id: true },
+);
+
 const issueSchema = new Schema(
   {
     workspace: { type: Schema.Types.ObjectId, ref: 'Workspace', required: true, index: true },
@@ -20,6 +28,7 @@ const issueSchema = new Schema(
     commentCount: { type: Number, default: 0 },
     blockedBy: [{ type: Schema.Types.ObjectId, ref: 'Issue' }],
     blocked: { type: Boolean, default: false },
+    checklist: { type: [checklistItemSchema], default: [] },
   },
   { timestamps: true },
 );
