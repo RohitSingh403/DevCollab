@@ -600,4 +600,68 @@ describe('workspaces, issues, and authorization', () => {
     const cleared = await owner.agent.get(`/api/issues/${issueId}`);
     expect(cleared.body.issue.watchers).toEqual([]);
   });
+
+  it('keeps a checklist on the issue and reports progress in lists', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const teammate = await registerUser(authAgent(), 'Jonah Patel');
+    const outsider = await registerUser(authAgent(), 'Outsider');
+    const workspace = await createWorkspace(owner.agent, 'Checklists');
+    await owner.agent.post(`/api/workspaces/${workspace.id}/invites`).send({ email: teammate.email, role: 'member' });
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({
+      name: 'API Platform',
+      key: 'API',
+      description: 'Service layer',
+    });
+    const created = await owner.agent.post(`/api/projects/${project.body.project.id}/issues`).send({
+      title: 'Ship signed cookies',
+      assigneeIds: [owner.user.id],
+    });
+    const issueId = created.body.issue.id as string;
+    expect(created.body.issue.checklist).toEqual([]);
+
+    const hidden = await outsider.agent.post(`/api/issues/${issueId}/checklist`).send({ text: 'Set HttpOnly' });
+    expect(hidden.status).toBe(404);
+    const blank = await teammate.agent.post(`/api/issues/${issueId}/checklist`).send({ text: '   ' });
+    expect(blank.status).toBe(400);
+
+    const first = await teammate.agent.post(`/api/issues/${issueId}/checklist`).send({ text: 'Set HttpOnly' });
+    expect(first.status).toBe(201);
+    const second = await owner.agent.post(`/api/issues/${issueId}/checklist`).send({ text: 'Clear the cookie on logout' });
+    expect(second.status).toBe(201);
+    const steps = second.body.issue.checklist as { id: string; text: string; done: boolean }[];
+    expect(steps.map((item) => item.text)).toEqual(['Set HttpOnly', 'Clear the cookie on logout']);
+    expect(steps.every((item) => item.done === false)).toBe(true);
+
+    const checked = await teammate.agent.patch(`/api/issues/${issueId}/checklist/${steps[0].id}`).send({ done: true });
+    expect(checked.status).toBe(200);
+    expect(checked.body.issue.checklist[0]).toMatchObject({ text: 'Set HttpOnly', done: true });
+
+    const renamed = await owner.agent.patch(`/api/issues/${issueId}/checklist/${steps[1].id}`).send({ text: 'Expire the cookie on logout' });
+    expect(renamed.body.issue.checklist[1].text).toBe('Expire the cookie on logout');
+
+    const listed = await owner.agent.get(`/api/projects/${project.body.project.id}/issues`);
+    expect(listed.body.issues[0].checklist).toEqual([
+      { id: steps[0].id, text: 'Set HttpOnly', done: true },
+      { id: steps[1].id, text: 'Expire the cookie on logout', done: false },
+    ]);
+
+    const missing = await owner.agent.delete(`/api/issues/${issueId}/checklist/${owner.user.id}`);
+    expect(missing.status).toBe(404);
+    const removed = await owner.agent.delete(`/api/issues/${issueId}/checklist/${steps[1].id}`);
+    expect(removed.status).toBe(200);
+    expect(removed.body.issue.checklist).toEqual([{ id: steps[0].id, text: 'Set HttpOnly', done: true }]);
+
+    const history = await owner.agent.get(`/api/issues/${issueId}/activity`);
+    const messages = history.body.activities.map((item: { message: string }) => item.message) as string[];
+    expect(messages.some((message) => message.includes('added a step to API-1'))).toBe(true);
+    expect(messages.some((message) => message.includes('checked a step on API-1'))).toBe(true);
+    expect(messages.some((message) => message.includes('removed a step from API-1'))).toBe(true);
+
+    for (let index = 0; index < 29; index += 1) {
+      const added = await owner.agent.post(`/api/issues/${issueId}/checklist`).send({ text: `Step ${index + 1}` });
+      expect(added.status).toBe(201);
+    }
+    const overflow = await owner.agent.post(`/api/issues/${issueId}/checklist`).send({ text: 'One too many' });
+    expect(overflow.status).toBe(400);
+  });
 });

@@ -6,6 +6,7 @@ import { Membership } from './models/Membership';
 import { User } from './models/User';
 import { Workspace } from './models/Workspace';
 import { addBlocker } from './services/blockers';
+import { addChecklistItem, updateChecklistItem } from './services/checklist';
 import { setWatching } from './services/watchers';
 import { addComment, createIssue } from './services/issues';
 import { createProject } from './services/projects';
@@ -135,6 +136,12 @@ export async function seedDatabase() {
     labelIds: [feature.id],
     dueDate: isoDaysFromNow(1),
   });
+
+  const cookie = await addChecklistItem({ issueId: session.id, actor, text: 'Set HttpOnly on the session cookie' });
+  const step = cookie.checklist[0];
+  if (step) await updateChecklistItem({ issueId: session.id, itemId: step.id, actor, done: true });
+  await addChecklistItem({ issueId: session.id, actor, text: 'Clear the cookie on logout' });
+  await addChecklistItem({ issueId: session.id, actor, text: 'Reject a missing signature' });
 
   await addBlocker({ issueId: comments.id, blockerId: roles.id, actor });
   await setWatching(session.id, String(priya._id), true);

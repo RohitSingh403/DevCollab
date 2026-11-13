@@ -149,6 +149,16 @@ export const api = {
     request<{ issue: Issue }>(`/api/issues/${issueId}/blockers/${blockerId}`, { method: 'DELETE' }).then((data) => data.issue),
   watchIssue: (issueId: string, watching: boolean) =>
     request<{ issue: Issue }>(`/api/issues/${issueId}/watch`, { method: watching ? 'POST' : 'DELETE' }).then((data) => data.issue),
+  addChecklistItem: (issueId: string, text: string) =>
+    request<{ issue: Issue }>(`/api/issues/${issueId}/checklist`, { method: 'POST', body: JSON.stringify({ text }) }).then(
+      (data) => data.issue,
+    ),
+  updateChecklistItem: (issueId: string, itemId: string, input: { text?: string; done?: boolean }) =>
+    request<{ issue: Issue }>(`/api/issues/${issueId}/checklist/${itemId}`, { method: 'PATCH', body: JSON.stringify(input) }).then(
+      (data) => data.issue,
+    ),
+  deleteChecklistItem: (issueId: string, itemId: string) =>
+    request<{ issue: Issue }>(`/api/issues/${issueId}/checklist/${itemId}`, { method: 'DELETE' }).then((data) => data.issue),
   search: (workspaceId: string, q: string) =>
     request<{ issues: Issue[] }>(`/api/workspaces/${workspaceId}/search?q=${encodeURIComponent(q)}`).then((data) => data.issues),
 
