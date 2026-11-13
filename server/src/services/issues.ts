@@ -346,7 +346,7 @@ export async function updateIssue(
     const numbered = await Project.findOneAndUpdate({ _id: destination._id }, { $inc: { nextIssueNumber: 1 } }, { new: true });
     if (!numbered) throw new ApiError(404, 'Project not found', 'not_found');
     movedFrom = `${source?.key ?? 'ISSUE'}-${issue.number}`;
-    issue.project = destination._id;
+    issue.project = destination._id as unknown as typeof issue.project;
     issue.number = numbered.nextIssueNumber;
     issue.cycle = null;
     await Comment.updateMany({ issue: issue._id }, { project: destination._id });
