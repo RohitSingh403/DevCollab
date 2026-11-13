@@ -782,6 +782,31 @@ describe('workspaces, issues, and authorization', () => {
     expect(clearedEstimate.body.issue.estimate).toBeNull();
 
     await owner.agent.patch(`/api/issues/${open.body.issue.id}`).send({ cycleId: null });
+
+    const commented = await owner.agent.post(`/api/issues/${open.body.issue.id}/comments`).send({ body: 'Still the same discussion.' });
+    expect(commented.status).toBe(201);
+    const elsewhere = await owner.agent.post('/api/workspaces').send({ name: 'Other', description: 'Separate' });
+    const foreignProject = await owner.agent.post(`/api/workspaces/${elsewhere.body.workspace.id}/projects`).send({
+      name: 'Elsewhere',
+      key: 'ELS',
+      description: 'Outside',
+    });
+    const rejectedMove = await owner.agent.patch(`/api/issues/${open.body.issue.id}`).send({ projectId: foreignProject.body.project.id });
+    expect(rejectedMove.status).toBe(400);
+    const moved = await owner.agent.patch(`/api/issues/${open.body.issue.id}`).send({ projectId: other.body.project.id });
+    expect(moved.status).toBe(200);
+    expect(moved.body.issue.key).toBe('WEB-2');
+    expect(moved.body.issue.project.key).toBe('WEB');
+    expect(moved.body.issue.cycle).toBeNull();
+    expect(moved.body.issue.estimate).toBeNull();
+    const comments = await owner.agent.get(`/api/issues/${open.body.issue.id}/comments`);
+    expect(comments.body.comments.map((comment: { body: string }) => comment.body)).toContain('Still the same discussion.');
+    const leftBehind = await owner.agent.get(`/api/projects/${projectId}/issues`);
+    expect(leftBehind.body.issues.some((issue: { id: string }) => issue.id === open.body.issue.id)).toBe(false);
+    const arrived = await owner.agent.get(`/api/projects/${other.body.project.id}/issues`);
+    expect(arrived.body.issues.map((issue: { key: string }) => issue.key)).toContain('WEB-2');
+    const history = await owner.agent.get(`/api/issues/${open.body.issue.id}/activity`);
+    expect(history.body.activities.some((item: { message: string }) => item.message.includes('moved API-1 to WEB-2'))).toBe(true);
     const cleared = await owner.agent.get(`/api/projects/${projectId}/issues`).query({ cycle: 'active' });
     expect(cleared.body.issues).toEqual([]);
   });

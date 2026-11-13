@@ -65,6 +65,7 @@ export interface IssueInput {
   dueDate?: string | null;
   estimate?: number | null;
   cycleId?: string | null;
+  projectId?: string;
 }
 
 export const api = {
