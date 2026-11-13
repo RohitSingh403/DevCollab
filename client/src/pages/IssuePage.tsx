@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Blockers } from '../components/Blockers';
+import { Checklist } from '../components/Checklist';
 import { Avatar, useDocumentTitle } from '../components/ui';
 import { api, errorMessage } from '../lib/api';
 import { timeAgo, toDateInput } from '../lib/format';
@@ -79,6 +80,7 @@ export function IssuePage() {
           </p>
         ) : null}
         <DescriptionEditor description={current.description} onSave={(description) => save.mutate({ description })} />
+        <Checklist issue={current} />
         <Blockers workspaceId={workspaceId} issue={current} />
         <section className="mt-8">
           <h2 className="text-sm font-semibold">Comments</h2>

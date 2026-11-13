@@ -2,9 +2,10 @@ import { Router } from 'express';
 import { asyncHandler } from '../asyncHandler';
 import { requireAuth } from '../middleware/auth';
 import { requireIssue, requireProject } from '../middleware/access';
-import { blockerSchema, commentSchema, createIssueSchema, listIssueSchema, paginationSchema, updateIssueSchema } from '../schemas';
+import { blockerSchema, checklistSchema, commentSchema, createIssueSchema, listIssueSchema, paginationSchema, updateChecklistSchema, updateIssueSchema } from '../schemas';
 import { listActivity } from '../services/feed';
 import { addBlocker, removeBlocker } from '../services/blockers';
+import { addChecklistItem, deleteChecklistItem, updateChecklistItem } from '../services/checklist';
 import { setWatching } from '../services/watchers';
 import {
   addComment,
@@ -100,6 +101,44 @@ issueRouter.delete(
       realtimeFrom(ioFromApp(req.app)),
     );
     res.json({ issue: await getIssue(req.params.issueId, req.authUser!.id) });
+  }),
+);
+
+issueRouter.post(
+  '/:issueId/checklist',
+  requireIssue(),
+  asyncHandler(async (req, res) => {
+    const input = parseBody<ReturnType<typeof checklistSchema.parse>>(checklistSchema, req.body);
+    const issue = await addChecklistItem(
+      { issueId: req.params.issueId, actor: req.authUser!, text: input.text },
+      realtimeFrom(ioFromApp(req.app)),
+    );
+    res.status(201).json({ issue });
+  }),
+);
+
+issueRouter.patch(
+  '/:issueId/checklist/:itemId',
+  requireIssue(),
+  asyncHandler(async (req, res) => {
+    const input = parseBody<ReturnType<typeof updateChecklistSchema.parse>>(updateChecklistSchema, req.body);
+    const issue = await updateChecklistItem(
+      { issueId: req.params.issueId, itemId: req.params.itemId, actor: req.authUser!, text: input.text, done: input.done },
+      realtimeFrom(ioFromApp(req.app)),
+    );
+    res.json({ issue });
+  }),
+);
+
+issueRouter.delete(
+  '/:issueId/checklist/:itemId',
+  requireIssue(),
+  asyncHandler(async (req, res) => {
+    const issue = await deleteChecklistItem(
+      { issueId: req.params.issueId, itemId: req.params.itemId, actor: req.authUser! },
+      realtimeFrom(ioFromApp(req.app)),
+    );
+    res.json({ issue });
   }),
 );
 

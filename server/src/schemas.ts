@@ -101,6 +101,20 @@ export const createIssueSchema = z
   })
   .strict();
 
+export const checklistSchema = z
+  .object({
+    text: z.string().trim().min(1).max(140),
+  })
+  .strict();
+
+export const updateChecklistSchema = z
+  .object({
+    text: z.string().trim().min(1).max(140).optional(),
+    done: z.boolean().optional(),
+  })
+  .strict()
+  .refine((value) => value.text !== undefined || value.done !== undefined, { message: 'Nothing to update' });
+
 export const blockerSchema = z
   .object({
     blockerId: objectId,
