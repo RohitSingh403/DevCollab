@@ -8,7 +8,8 @@ import { Workspace } from './models/Workspace';
 import { addBlocker } from './services/blockers';
 import { addChecklistItem, updateChecklistItem } from './services/checklist';
 import { setWatching } from './services/watchers';
-import { addComment, createIssue } from './services/issues';
+import { startCycle } from './services/cycles';
+import { addComment, createIssue, updateIssue } from './services/issues';
 import { createProject } from './services/projects';
 import { createLabel, createWorkspace } from './services/workspaces';
 import { colorFromString } from './utils';
@@ -114,7 +115,7 @@ export async function seedDatabase() {
     dueDate: isoDaysFromNow(-4),
   });
 
-  await createIssue({
+  const drag = await createIssue({
     projectId: web.id,
     actor: { id: String(jonah._id), name: jonah.name },
     title: 'Drag issues between board columns',
@@ -134,8 +135,31 @@ export async function seedDatabase() {
     priority: 'medium',
     assigneeIds: [String(maya._id), String(jonah._id)],
     labelIds: [feature.id],
-    dueDate: isoDaysFromNow(1),
+    dueDate: isoDaysFromNow(0),
   });
+
+  const apiCycle = await startCycle({
+    projectId: api.id,
+    actor,
+    name: 'Cycle 12',
+    startsAt: isoDaysFromNow(-1).slice(0, 10),
+    endsAt: isoDaysFromNow(6).slice(0, 10),
+    carryOpen: false,
+  });
+  for (const issueId of [session.id, roles.id, comments.id]) {
+    await updateIssue({ issueId, actor, cycleId: apiCycle.id });
+  }
+  const webCycle = await startCycle({
+    projectId: web.id,
+    actor,
+    name: 'Cycle 4',
+    startsAt: isoDaysFromNow(0).slice(0, 10),
+    endsAt: isoDaysFromNow(13).slice(0, 10),
+    carryOpen: false,
+  });
+  for (const issueId of [drag.id, notifications.id]) {
+    await updateIssue({ issueId, actor, cycleId: webCycle.id });
+  }
 
   const cookie = await addChecklistItem({ issueId: session.id, actor, text: 'Set HttpOnly on the session cookie' });
   const step = cookie.checklist[0];

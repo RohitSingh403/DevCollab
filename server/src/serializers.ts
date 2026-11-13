@@ -1,4 +1,5 @@
 import { STATUS_LABEL, type IssueStatus, type Priority, type Role } from './constants';
+import { isOverdue } from './dates';
 import { asId } from './utils';
 
 export interface UserDto {
@@ -45,6 +46,7 @@ export interface IssueDto {
   commentCount: number;
   blocked: boolean;
   checklist: ChecklistItemDto[];
+  cycle: { id: string; name: string } | null;
   completedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -58,6 +60,13 @@ type Ref = {
   color?: string;
   key?: string;
 };
+
+function cycleRef(value: unknown) {
+  if (!value || typeof value !== 'object' || !('name' in value)) return null;
+  const cycle = value as { name?: string };
+  if (!cycle.name) return null;
+  return { id: asId(value), name: cycle.name };
+}
 
 function iso(value: Date | string | null | undefined) {
   if (!value) return null;
@@ -97,6 +106,7 @@ export function serializeIssue(issue: {
   commentCount?: number;
   blocked?: boolean;
   checklist?: { _id?: unknown; id?: unknown; text?: string; done?: boolean }[];
+  cycle?: unknown;
   completedAt?: Date | string | null;
   createdAt: Date | string;
   updatedAt: Date | string;
@@ -119,7 +129,7 @@ export function serializeIssue(issue: {
     project,
     workspaceId: asId(issue.workspace),
     dueDate,
-    overdue: Boolean(dueDate && status !== 'done' && new Date(dueDate).getTime() < Date.now()),
+    overdue: isOverdue(dueDate ? new Date(dueDate) : null, status),
     commentCount: issue.commentCount ?? 0,
     blocked: Boolean(issue.blocked),
     checklist: (issue.checklist ?? []).map((item) => ({
@@ -127,6 +137,7 @@ export function serializeIssue(issue: {
       text: item.text ?? '',
       done: Boolean(item.done),
     })),
+    cycle: cycleRef(issue.cycle),
     completedAt: iso(issue.completedAt),
     createdAt: iso(issue.createdAt) ?? new Date(0).toISOString(),
     updatedAt: iso(issue.updatedAt) ?? new Date(0).toISOString(),

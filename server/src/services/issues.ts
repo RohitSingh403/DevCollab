@@ -7,6 +7,7 @@ import {
   type IssueStatus,
   type Priority,
 } from '../constants';
+import { utcDayStart } from '../dates';
 import { ApiError } from '../errors';
 import { Comment } from '../models/Comment';
 import { Issue } from '../models/Issue';
@@ -17,6 +18,7 @@ import { serializeComment, serializeIssue, serializeUser } from '../serializers'
 import { escapeRegex, pageMeta } from '../utils';
 import { recordActivity } from './activity';
 import { clearBlockerRefs, relationsFor, syncDependents } from './blockers';
+import { activeCycleId, assertProjectCycle } from './cycles';
 import { assertWorkspaceMembers, membershipFor } from './membership';
 import { mentionedUserIds, workspaceMembers } from './mentions';
 import { notifyUsers } from './notifications';
@@ -27,6 +29,7 @@ const ISSUE_POPULATE = [
   { path: 'reporter', select: 'name email avatarColor' },
   { path: 'labels', select: 'name color' },
   { path: 'project', select: 'name key' },
+  { path: 'cycle', select: 'name' },
 ];
 
 async function loadIssue(id: string) {
@@ -60,15 +63,23 @@ export async function listIssues(input: {
   page: number;
   limit: number;
   sort: 'updated' | 'created' | 'due' | 'priority';
+  cycle?: string;
 }) {
   const filter: FilterQuery<unknown> = { project: input.projectId };
+  if (input.cycle === 'active') {
+    const cycleId = await activeCycleId(input.projectId);
+    if (!cycleId) return { issues: [], ...pageMeta(input.page, input.limit, 0) };
+    filter.cycle = cycleId;
+  } else if (input.cycle) {
+    filter.cycle = input.cycle;
+  }
   if (input.status) filter.status = input.status;
   if (input.priority) filter.priority = input.priority;
   if (input.assignee) filter.assignees = input.assignee;
   if (input.label) filter.labels = input.label;
   if (input.q) filter.title = { $regex: escapeRegex(input.q), $options: 'i' };
   if (input.overdue === 'true') {
-    filter.dueDate = { $lt: new Date() };
+    filter.dueDate = { $lt: utcDayStart(new Date()) };
     if (!input.status) filter.status = { $ne: 'done' };
   }
 
@@ -97,7 +108,7 @@ const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 export function workBucket(dueDate: Date | null, now: Date) {
   if (!dueDate) return 'undated' as const;
-  if (dueDate.getTime() < now.getTime()) return 'overdue' as const;
+  if (dueDate.getTime() < utcDayStart(now).getTime()) return 'overdue' as const;
   if (dueDate.getTime() < now.getTime() + WEEK_MS) return 'dueSoon' as const;
   return 'later' as const;
 }
@@ -275,6 +286,7 @@ export async function updateIssue(
     assigneeIds?: string[];
     labelIds?: string[];
     dueDate?: string | null;
+    cycleId?: string | null;
   },
   rt?: Realtime,
 ) {
@@ -294,7 +306,11 @@ export async function updateIssue(
   }
   if (input.status && input.status !== issue.status) {
     if (input.status === 'done' && issue.status !== 'done') issue.completedAt = new Date();
-    if (input.status !== 'done' && issue.status === 'done') issue.completedAt = null;
+    if (input.status !== 'done' && issue.status === 'done') {
+      issue.completedAt = null;
+      issue.dueAlertKind = null;
+      issue.dueAlertFor = null;
+    }
     parts.push(`status to ${STATUS_LABEL[input.status]}`);
     issue.status = input.status;
     statusChanged = true;
@@ -309,7 +325,17 @@ export async function updateIssue(
     const current = issue.dueDate ? issue.dueDate.toISOString() : null;
     if (next !== current) {
       issue.dueDate = next ? new Date(next) : null;
+      issue.dueAlertKind = null;
+      issue.dueAlertFor = null;
       parts.push('due date');
+    }
+  }
+  if (input.cycleId !== undefined) {
+    const next = input.cycleId ? await assertProjectCycle(String(issue.project), input.cycleId) : null;
+    const current = issue.cycle ? String(issue.cycle) : null;
+    if (next !== current) {
+      issue.cycle = next as unknown as typeof issue.cycle;
+      parts.push('cycle');
     }
   }
 

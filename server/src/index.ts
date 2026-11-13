@@ -2,6 +2,7 @@ import { createHttpServer } from './app';
 import { env } from './config';
 import { connectDb, disconnectDb } from './db';
 import { logger } from './logger';
+import { startScheduler } from './scheduler';
 import { seedDatabase } from './seed';
 
 async function main() {
@@ -9,6 +10,7 @@ async function main() {
   if (env.seedOnBoot) {
     await seedDatabase();
   }
+  startScheduler();
   const { httpServer } = createHttpServer();
   httpServer.listen(env.port, '0.0.0.0', () => {
     logger.info(`DevCollab API listening on 0.0.0.0:${env.port}`);
