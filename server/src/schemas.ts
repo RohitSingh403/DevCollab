@@ -135,6 +135,7 @@ export const updateIssueSchema = z
     dueDate,
     estimate,
     cycleId: objectId.nullable().optional(),
+    projectId: objectId.optional(),
   })
   .strict();
 
