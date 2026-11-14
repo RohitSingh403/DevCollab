@@ -46,7 +46,7 @@ function AuthFrame({ title, subtitle, children }: { title: string; subtitle: Rea
   return (
     <div className="min-h-screen bg-canvas">
       <SiteHeader />
-      <main className="mx-auto flex max-w-md flex-col px-4 py-12">
+      <main className="mx-auto flex max-w-md flex-col px-4 py-16">
         <h1 className="text-2xl font-semibold tracking-tight text-ink">{title}</h1>
         <p className="mt-1 text-sm text-muted">{subtitle}</p>
         <div className="mt-6 rounded-lg border border-line bg-white p-5 shadow-sm">{children}</div>
@@ -93,8 +93,8 @@ export function LandingPage() {
               <span className="ml-3 text-[12px] text-faint">Northwind Labs / API Platform</span>
             </div>
             <div className="grid grid-cols-[148px_1fr]">
-              <div className="border-r border-line bg-white p-3 text-[12px] text-muted">
-                <p className="rounded-md bg-slate-100 px-2 py-1.5 font-medium text-ink">Overview</p>
+              <div className="bg-sidebar p-3 text-[12px] text-stone-400">
+                <p className="rounded-md bg-white/10 px-2 py-1.5 font-medium text-white">Overview</p>
                 <p className="px-2 py-1.5">Projects</p>
                 <p className="px-2 py-1.5">Members</p>
                 <p className="px-2 py-1.5">Activity</p>

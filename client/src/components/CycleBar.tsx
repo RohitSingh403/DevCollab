@@ -51,8 +51,8 @@ export function CycleBar({
               {done} of {total} done
               {points > 0 ? ` · ${pointsDone} of ${points} points` : ''}
             </p>
-            <div className="mt-2 h-1 max-w-xs overflow-hidden rounded-full bg-slate-100" aria-hidden="true">
-              <div className="h-full bg-ink" style={{ width: `${progress * 100}%` }} />
+            <div className="mt-2 h-1.5 max-w-xs overflow-hidden rounded-full bg-slate-100" aria-hidden="true">
+              <div className="h-full rounded-full bg-brand" style={{ width: `${progress * 100}%` }} />
             </div>
           </>
         ) : (

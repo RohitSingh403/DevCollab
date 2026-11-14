@@ -101,14 +101,14 @@ export function AppShell() {
   const unread = notifications.data?.unread ?? 0;
 
   return (
-    <div className="min-h-screen bg-canvas lg:grid lg:grid-cols-[228px_1fr]">
+    <div className="min-h-screen bg-canvas lg:grid lg:grid-cols-[240px_1fr]">
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-ink focus:px-3 focus:py-2 focus:text-white">
         Skip to content
       </a>
       {navOpen ? <button className="fixed inset-0 z-30 bg-ink/30 lg:hidden" aria-label="Close menu" onClick={() => setNavOpen(false)} /> : null}
-      <aside className={`fixed inset-y-0 left-0 z-40 flex w-[228px] flex-col border-r border-line bg-white transition lg:static ${navOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+      <aside className={`sidebar fixed inset-y-0 left-0 z-40 flex w-[240px] flex-col bg-sidebar text-stone-300 transition lg:static ${navOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         <div className="flex h-14 items-center px-4">
-          <Logo />
+          <Logo tone="light" />
         </div>
         <div className="px-3">
           <label className="block">
@@ -139,14 +139,14 @@ export function AppShell() {
               end={link.suffix === ''}
               onClick={() => setNavOpen(false)}
               className={({ isActive }) =>
-                `flex items-center gap-2.5 rounded-md px-2.5 py-[7px] text-[13px] ${isActive ? 'bg-slate-100 font-medium text-ink' : 'text-muted hover:bg-slate-50 hover:text-ink'}`
+                `flex items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-[13px] ${isActive ? 'bg-white/10 font-medium text-white' : 'text-stone-400 hover:bg-white/5 hover:text-white'}`
               }
             >
               <Icon name={link.icon} className="h-4 w-4" />
               {link.label}
               {link.suffix === '/my-work' && myWork.data && myWork.data.total > 0 ? (
                 <span
-                  className={`ml-auto rounded-full px-1.5 text-[10px] font-semibold leading-4 text-white ${myWork.data.counts.overdue > 0 ? 'bg-danger' : 'bg-ink'}`}
+                  className={`ml-auto rounded-full px-1.5 text-[10px] font-semibold leading-4 text-white ${myWork.data.counts.overdue > 0 ? 'bg-danger' : 'bg-brand'}`}
                 >
                   {myWork.data.total}
                 </span>
@@ -157,17 +157,17 @@ export function AppShell() {
             to="/notifications"
             onClick={() => setNavOpen(false)}
             className={({ isActive }) =>
-              `flex items-center gap-2.5 rounded-md px-2.5 py-[7px] text-[13px] ${isActive ? 'bg-slate-100 font-medium text-ink' : 'text-muted hover:bg-slate-50 hover:text-ink'}`
+              `flex items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-[13px] ${isActive ? 'bg-white/10 font-medium text-white' : 'text-stone-400 hover:bg-white/5 hover:text-white'}`
             }
           >
             <Icon name="bell" className="h-4 w-4" />
             Notifications
-            {unread ? <span className="ml-auto rounded-full bg-ink px-1.5 text-[10px] font-semibold leading-4 text-white">{unread}</span> : null}
+            {unread ? <span className="ml-auto rounded-full bg-brand px-1.5 text-[10px] font-semibold leading-4 text-white">{unread}</span> : null}
           </NavLink>
         </nav>
-        <div className="border-t border-line p-2">
+        <div className="border-t border-white/10 p-2">
           <button
-            className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-[13px] text-muted hover:bg-slate-50 hover:text-ink"
+            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] text-stone-400 hover:bg-white/5 hover:text-white"
             type="button"
             onClick={() => {
               setNavOpen(false);
@@ -176,23 +176,23 @@ export function AppShell() {
           >
             New workspace
           </button>
-          <button className="mt-0.5 flex w-full items-center gap-2 rounded-md px-2 py-2 text-left hover:bg-slate-50" type="button" onClick={() => setProfileOpen(true)}>
+          <button className="mt-0.5 flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left hover:bg-white/5" type="button" onClick={() => setProfileOpen(true)}>
             {user ? <Avatar name={user.name} color={user.avatarColor} size="sm" /> : null}
             <span className="min-w-0">
-              <span className="block truncate text-[13px] font-medium text-ink">{user?.name}</span>
-              <span className="block truncate text-[11px] text-faint">{user?.email}</span>
+              <span className="block truncate text-[13px] font-medium text-white">{user?.name}</span>
+              <span className="block truncate text-[11px] text-stone-400">{user?.email}</span>
             </span>
           </button>
         </div>
       </aside>
       <div className="min-w-0">
-        <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-line bg-white/90 px-4 backdrop-blur">
+        <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-line bg-canvas/90 px-4 backdrop-blur">
           <button className="icon-btn lg:hidden" type="button" aria-label="Open menu" onClick={() => setNavOpen(true)}>
             <Icon name="menu" />
           </button>
           {activeId ? (
             <button
-              className="field flex h-9 min-w-0 max-w-md flex-1 items-center gap-2 rounded-full bg-canvas pl-3 pr-2 text-left text-[13px] text-muted shadow-none"
+              className="field flex h-9 min-w-0 max-w-md flex-1 items-center gap-2 rounded-full bg-white pl-3 pr-2 text-left text-[13px] text-muted shadow-none"
               type="button"
               onClick={() => setCommandOpen(true)}
             >
@@ -216,7 +216,7 @@ export function AppShell() {
             >
               <Icon name="bell" />
               {unread ? (
-                <span className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-ink" />
+                <span className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-brand" />
               ) : null}
             </button>
             {notesOpen ? (
@@ -291,7 +291,7 @@ export function AppShell() {
             ) : null}
           </div>
         </header>
-        <main id="main" className="mx-auto w-full max-w-[1240px] px-4 py-7 sm:px-8">
+        <main id="main" className="mx-auto w-full max-w-[1280px] px-4 py-8 sm:px-8">
           <Outlet />
         </main>
       </div>
