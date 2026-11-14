@@ -22,6 +22,8 @@ Sign in as `maya@devcollab.dev` / `Password123!`. Jonah Patel (`jonah@devcollab.
 
 ![API-1 after a move to Web Client, now WEB-3, with the same checklist and comments](docs/screenshots/move.png)
 
+![Session cookie issue with three sub-issues, one of them done](docs/screenshots/sub-issues.png)
+
 ![Issue detail with status, priority, assignees, and comments](docs/screenshots/issue.png)
 
 ![A checklist with two of four steps done](docs/screenshots/checklist.png)
@@ -58,6 +60,7 @@ Work:
 - Cycles. A project has one active cycle, with a start and end date. The board can show just that cycle, My work names it, and the project totals include how much of it is done
 - Estimates of 1, 2, 3, 5, or 8 points. The cycle bar adds those up, and the board, list, and My work show the number on each issue
 - Move an issue to another project in the same workspace. It keeps its discussion, checklist, and estimate, takes the next key in the destination, and leaves its cycle
+- Sub-issues in the same workspace. A parent shows how many direct children are done, on the issue, the board, the list, and My work
 - Due reminders. Assignees get one inbox alert on the day an open issue is due, and one more after that day passes. Changing the date or reopening the issue allows a new alert
 - A command menu, opened with Ctrl K or ⌘K, that jumps to a page, a project, or an issue key
 
@@ -243,7 +246,7 @@ Socket.IO authenticates with the same cookie. Clients emit `workspace:join` with
 
 ## Tests
 
-Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, blockers, watchers, checklists, due reminders, cycles, estimates, moving an issue between projects, notifications, analytics, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
+Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, blockers, watchers, checklists, due reminders, cycles, estimates, moving an issue between projects, sub-issues, notifications, analytics, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
 
 ```bash
 npm test
@@ -286,6 +289,7 @@ COOKIE_SAMESITE=none
 - A project has one active cycle. Starting another completes the previous one. An issue keeps its cycle when that cycle ends, and open issues move when the next cycle starts.
 - An estimate is optional. The cycle point total ignores issues that have none, and points on a finished issue count as done.
 - Moving an issue gives it the next number in the destination project. The old number is not reused. Comments move with it. A cycle does not, because a cycle belongs to one project.
+- A sub-issue has one parent in the same workspace. Nesting stops at eight levels. Deleting a parent leaves its sub-issues in place, without a parent. The count on a card is its direct children.
 - Due reminders are stored on the issue as the date and kind already sent, so the hourly check does not repeat them.
 - Comment markdown is not stored as HTML. The client parses a fixed subset and renders React elements.
 - Analytics use aggregation pipelines. Day buckets are UTC.

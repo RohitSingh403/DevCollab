@@ -101,6 +101,7 @@ export const createIssueSchema = z
     labelIds: z.array(objectId).max(12).optional().default([]),
     dueDate,
     estimate,
+    parentId: objectId.optional(),
   })
   .strict();
 
@@ -136,6 +137,7 @@ export const updateIssueSchema = z
     estimate,
     cycleId: objectId.nullable().optional(),
     projectId: objectId.optional(),
+    parentId: objectId.nullable().optional(),
   })
   .strict();
 

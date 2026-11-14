@@ -71,6 +71,30 @@ export async function seedDatabase() {
     labelIds: [feature.id],
     dueDate: isoDaysFromNow(3),
   });
+  await createIssue({
+    projectId: api.id,
+    actor,
+    title: 'Store the signing key outside the process',
+    description: 'The cookie signature should not live in the app process.',
+    status: 'todo',
+    priority: 'medium',
+    assigneeIds: [],
+    labelIds: [],
+    dueDate: null,
+    parentId: session.id,
+  });
+  await createIssue({
+    projectId: api.id,
+    actor,
+    title: 'Reject cookies from the old store',
+    description: 'Sessions issued before the cutover should fail closed.',
+    status: 'done',
+    priority: 'medium',
+    assigneeIds: [],
+    labelIds: [],
+    dueDate: null,
+    parentId: session.id,
+  });
   const roles = await createIssue({
     projectId: api.id,
     actor,
