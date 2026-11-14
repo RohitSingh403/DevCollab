@@ -7,7 +7,7 @@ import { Checklist } from '../components/Checklist';
 import { Avatar, useDocumentTitle } from '../components/ui';
 import { api, errorMessage } from '../lib/api';
 import { timeAgo, toDateInput } from '../lib/format';
-import { MarkdownText } from '../components/Markdown';
+import { MarkdownPane, MarkdownText } from '../components/Markdown';
 import { insertMention, matchingMembers, mentionAtCursor } from '../lib/mentions';
 import { ESTIMATES, PRIORITIES, PRIORITY_LABEL, STATUSES, STATUS_LABEL, type IssueStatus, type Priority, type Role } from '../lib/types';
 import { useAuthStore } from '../stores/authStore';
@@ -100,7 +100,12 @@ export function IssuePage() {
             </button>
           </p>
         ) : null}
-        <DescriptionEditor description={current.description} onSave={(description) => save.mutate({ description })} />
+        <DescriptionEditor
+          description={current.description}
+          names={people.map((person) => person.name)}
+          members={people}
+          onSave={(description) => save.mutate({ description })}
+        />
         <Subissues workspaceId={workspaceId} issue={current} />
         <Checklist issue={current} />
         <Blockers workspaceId={workspaceId} issue={current} />
@@ -348,20 +353,63 @@ function TitleEditor({ title, onSave }: { title: string; onSave: (title: string)
   );
 }
 
-function DescriptionEditor({ description, onSave }: { description: string; onSave: (description: string) => void }) {
+function DescriptionEditor({
+  description,
+  names,
+  members,
+  onSave,
+}: {
+  description: string;
+  names: string[];
+  members: { id: string; name: string }[];
+  onSave: (description: string) => void;
+}) {
   const [value, setValue] = useState(description);
+  const [editing, setEditing] = useState(description.trim() === '');
   useEffect(() => setValue(description), [description]);
+
+  if (!editing) {
+    return (
+      <div className="mt-3">
+        {description.trim() ? (
+          <MarkdownText body={description} names={names} className="space-y-2 text-sm leading-6" />
+        ) : (
+          <p className="text-sm text-muted">No description yet.</p>
+        )}
+        <button type="button" className="btn-ghost mt-2" onClick={() => setEditing(true)}>
+          Edit description
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <textarea
-      className="mt-3 min-h-28 w-full resize-y rounded-md border border-transparent bg-transparent px-1 py-2 text-sm leading-6 text-ink outline-none placeholder:text-faint focus:border-line focus:bg-white focus:px-3"
-      aria-label="Issue description"
-      placeholder="Add context for the people picking this up."
-      value={value}
-      onChange={(event) => setValue(event.target.value)}
-      onBlur={() => {
-        if (value !== description) onSave(value);
-      }}
-    />
+    <div className="mt-3">
+      <MarkdownPane value={value} names={names}>
+        <MentionField
+          label="Issue description"
+          value={value}
+          onChange={setValue}
+          members={members}
+          placeholder="Add context for the people picking this up."
+          labelled={false}
+          onBlur={() => {
+            if (value !== description) onSave(value);
+          }}
+        />
+      </MarkdownPane>
+      <p className="mt-2 text-[12px] text-muted">Bold, lists, and links. Type @ to mention a teammate. HTML stays as text.</p>
+      <button
+        type="button"
+        className="btn-ghost mt-2"
+        onClick={() => {
+          if (value !== description) onSave(value);
+          setEditing(false);
+        }}
+      >
+        Done
+      </button>
+    </div>
   );
 }
 
@@ -401,12 +449,18 @@ function MentionField({
   onChange,
   members,
   minHeight = 'min-h-24',
+  placeholder,
+  labelled = true,
+  onBlur,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   members: { id: string; name: string }[];
   minHeight?: string;
+  placeholder?: string;
+  labelled?: boolean;
+  onBlur?: () => void;
 }) {
   const listId = useId();
   const field = useRef<HTMLTextAreaElement>(null);
@@ -434,7 +488,7 @@ function MentionField({
 
   return (
     <div className="relative">
-      <span className="label">{label}</span>
+      {labelled ? <span className="label">{label}</span> : null}
       {open ? (
         <div id={listId} className="absolute bottom-full z-20 mb-1 max-h-52 w-full overflow-auto rounded-lg border border-line bg-white py-1 shadow-pop" role="listbox">
           {matches.length ? (
@@ -462,6 +516,7 @@ function MentionField({
         ref={field}
         className={`field ${minHeight}`}
         aria-label={label}
+        placeholder={placeholder}
         aria-expanded={open}
         aria-controls={open ? listId : undefined}
         aria-autocomplete="list"
@@ -475,6 +530,7 @@ function MentionField({
           onChange(event.target.value);
           setCaret(event.target.selectionStart ?? event.target.value.length);
         }}
+        onBlur={onBlur}
         onKeyDown={(event) => {
           if (!open) return;
           if (event.key === 'ArrowDown') {
