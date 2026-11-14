@@ -81,6 +81,19 @@ export function ProjectPage() {
     },
   });
 
+  const archive = useMutation({
+    mutationFn: (archived: boolean) => api.updateProject(projectId, { archived }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      await queryClient.invalidateQueries({ queryKey: ['projects', workspaceId] });
+      await queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId] });
+      await queryClient.invalidateQueries({ queryKey: ['analytics'] });
+      await queryClient.invalidateQueries({ queryKey: ['my-work'] });
+      pushToast(project.data?.archived ? 'Project restored' : 'Project archived');
+    },
+    onError: (error) => pushToast(errorMessage(error)),
+  });
+
   const remove = useMutation({
     mutationFn: () => api.deleteProject(projectId),
     onSuccess: async () => {
@@ -164,6 +177,11 @@ export function ProjectPage() {
         actions={
           <>
             {canManage ? (
+              <button className="btn-ghost" type="button" disabled={archive.isPending} onClick={() => archive.mutate(!project.data?.archived)}>
+                {project.data?.archived ? 'Restore project' : 'Archive project'}
+              </button>
+            ) : null}
+            {canManage ? (
               <button
                 className="btn-danger"
                 type="button"
@@ -174,17 +192,25 @@ export function ProjectPage() {
                 Delete project
               </button>
             ) : null}
-            <button className="btn-primary" type="button" onClick={() => setCreating(true)}>
-              New issue
-            </button>
+            {project.data?.archived ? null : (
+              <button className="btn-primary" type="button" onClick={() => setCreating(true)}>
+                New issue
+              </button>
+            )}
           </>
         }
       />
+      {project.data?.archived ? (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-950">
+          This project is archived. It is left out of My work and the workspace totals. Restore it to file new issues or start a cycle.
+        </p>
+      ) : null}
       {analytics.data ? <StatGrid analytics={analytics.data} /> : null}
       <CycleBar
         cycle={(cycles.data ?? []).find((item) => item.status === 'active') ?? analytics.data?.cycle ?? null}
         filtered={cycleFilter}
         pending={startCycle.isPending}
+        canStart={!project.data?.archived}
         onToggle={toggleCycle}
         onStart={(input) => startCycle.mutate(input)}
       />

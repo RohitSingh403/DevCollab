@@ -9,8 +9,40 @@ import type { Realtime } from '../realtime';
 import { recordActivity } from './activity';
 import { clearBlockerRefs } from './blockers';
 
+function presentProject(
+  project: {
+    _id: unknown;
+    workspace: unknown;
+    name: string;
+    key: string;
+    description?: string;
+    archivedAt?: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+  },
+  tally: { total: number; open: number },
+) {
+  return {
+    id: String(project._id),
+    workspaceId: String(project.workspace),
+    name: project.name,
+    key: project.key,
+    description: project.description ?? '',
+    archived: Boolean(project.archivedAt),
+    archivedAt: project.archivedAt ? project.archivedAt.toISOString() : null,
+    issueCount: tally.total,
+    openIssueCount: tally.open,
+    createdAt: project.createdAt,
+    updatedAt: project.updatedAt,
+  };
+}
+
+export async function archivedProjectIds(workspaceId: string) {
+  return Project.find({ workspace: workspaceId, archivedAt: { $ne: null } }).distinct('_id');
+}
+
 export async function listProjects(workspaceId: string) {
-  const projects = await Project.find({ workspace: workspaceId }).sort({ name: 1 }).lean();
+  const projects = await Project.find({ workspace: workspaceId }).sort({ archivedAt: 1, name: 1 }).lean();
   const counts = await Issue.aggregate<{ _id: { project: unknown; status: string }; count: number }>([
     { $match: { workspace: new mongoose.Types.ObjectId(workspaceId) } },
     { $group: { _id: { project: '$project', status: '$status' }, count: { $sum: 1 } } },
@@ -23,20 +55,7 @@ export async function listProjects(workspaceId: string) {
     if (row._id.status !== 'done') current.open += row.count;
     byProject.set(id, current);
   }
-  return projects.map((project) => {
-    const tally = byProject.get(String(project._id)) ?? { total: 0, open: 0 };
-    return {
-      id: String(project._id),
-      workspaceId: String(project.workspace),
-      name: project.name,
-      key: project.key,
-      description: project.description ?? '',
-      issueCount: tally.total,
-      openIssueCount: tally.open,
-      createdAt: project.createdAt,
-      updatedAt: project.updatedAt,
-    };
-  });
+  return projects.map((project) => presentProject(project, byProject.get(String(project._id)) ?? { total: 0, open: 0 }));
 }
 
 export async function createProject(
@@ -63,17 +82,7 @@ export async function createProject(
       },
       rt,
     );
-    return {
-      id: String(project._id),
-      workspaceId,
-      name: project.name,
-      key: project.key,
-      description: project.description,
-      issueCount: 0,
-      openIssueCount: 0,
-      createdAt: project.createdAt,
-      updatedAt: project.updatedAt,
-    };
+    return presentProject(project, { total: 0, open: 0 });
   } catch (error) {
     if (isDuplicateKey(error)) throw new ApiError(409, 'A project with that key already exists', 'duplicate_key');
     throw error;
@@ -87,29 +96,27 @@ export async function getProject(projectId: string) {
     Issue.countDocuments({ project: projectId }),
     Issue.countDocuments({ project: projectId, status: { $ne: 'done' } }),
   ]);
-  return {
-    id: String(project._id),
-    workspaceId: String(project.workspace),
-    name: project.name,
-    key: project.key,
-    description: project.description ?? '',
-    issueCount,
-    openIssueCount,
-    createdAt: project.createdAt,
-    updatedAt: project.updatedAt,
-  };
+  return presentProject(project, { total: issueCount, open: openIssueCount });
 }
 
 export async function updateProject(
   projectId: string,
   actor: { id: string; name: string },
-  input: { name?: string; description?: string },
+  input: { name?: string; description?: string; archived?: boolean },
   rt?: Realtime,
 ) {
   const project = await Project.findById(projectId);
   if (!project) throw new ApiError(404, 'Project not found', 'not_found');
   if (input.name) project.name = input.name;
   if (input.description !== undefined) project.description = input.description;
+  let action = 'updated';
+  if (input.archived === true && !project.archivedAt) {
+    project.archivedAt = new Date();
+    action = 'archived';
+  } else if (input.archived === false && project.archivedAt) {
+    project.archivedAt = null;
+    action = 'restored';
+  }
   await project.save();
   await recordActivity(
     {
@@ -117,7 +124,7 @@ export async function updateProject(
       projectId,
       actorId: actor.id,
       type: 'project.updated',
-      message: `${actor.name} updated project ${project.key}`,
+      message: `${actor.name} ${action} project ${project.key}`,
     },
     rt,
   );

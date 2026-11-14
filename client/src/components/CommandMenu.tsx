@@ -37,7 +37,7 @@ export function CommandMenu({ open, workspaceId, onClose }: { open: boolean; wor
     id: `project-${project.id}`,
     group: 'Projects',
     label: project.name,
-    hint: project.key,
+    hint: project.archived ? 'Archived' : project.key,
     to: `/w/${workspaceId}/projects/${project.id}`,
   }));
   const issueItems: CommandItem[] = (issues.data ?? []).map((issue) => ({

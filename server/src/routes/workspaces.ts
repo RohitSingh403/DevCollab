@@ -14,6 +14,7 @@ import {
 import { buildAnalytics } from '../services/analytics';
 import { listActivity } from '../services/feed';
 import { listMyWork, searchWorkspaceIssues } from '../services/issues';
+import { archivedProjectIds } from '../services/projects';
 import {
   acceptInvite,
   createLabel,
@@ -198,8 +199,10 @@ workspaceRouter.get(
   requireWorkspace(),
   asyncHandler(async (req, res) => {
     const workspaceId = req.params.workspaceId;
+    const archived = await archivedProjectIds(workspaceId);
+    const issueMatch = archived.length ? { workspace: workspaceId, project: { $nin: archived } } : { workspace: workspaceId };
     res.json({
-      analytics: { ...(await buildAnalytics({ workspace: workspaceId }, { workspace: workspaceId })), cycle: null },
+      analytics: { ...(await buildAnalytics(issueMatch, { workspace: workspaceId })), cycle: null },
     });
   }),
 );

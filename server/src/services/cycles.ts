@@ -63,6 +63,7 @@ export async function startCycle(
 ) {
   const project = await Project.findById(input.projectId);
   if (!project) throw new ApiError(404, 'Project not found', 'not_found');
+  if (project.archivedAt) throw new ApiError(409, 'This project is archived', 'project_archived');
   const startsAt = parseDay(input.startsAt);
   const endsAt = parseDay(input.endsAt);
   if (!startsAt || !endsAt || startsAt.getTime() > endsAt.getTime()) {
