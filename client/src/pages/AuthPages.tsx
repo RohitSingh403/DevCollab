@@ -24,11 +24,19 @@ const registerSchema = loginSchema.extend({
 
 function SiteHeader() {
   return (
-    <header className="border-b border-line bg-white">
-      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
+    <header className="sticky top-0 z-20 border-b border-line bg-white/90 backdrop-blur">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Link to="/" aria-label="DevCollab home">
           <Logo />
         </Link>
+        <nav className="hidden items-center gap-6 text-[13px] text-muted sm:flex" aria-label="Site">
+          <a className="hover:text-ink" href="#product">
+            Product
+          </a>
+          <a className="hover:text-ink" href="#workflow">
+            Workflow
+          </a>
+        </nav>
         <div className="flex items-center gap-2">
           <Link className="btn-quiet" to="/login">
             Sign in
@@ -42,14 +50,55 @@ function SiteHeader() {
   );
 }
 
+function SiteFooter() {
+  return (
+    <footer className="border-t border-line bg-white">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-8 sm:px-6">
+        <Logo />
+        <p className="text-[13px] text-muted">A workspace for the issues a software team already has.</p>
+        <div className="flex gap-2">
+          <Link className="btn-quiet" to="/login">
+            Sign in
+          </Link>
+          <Link className="btn-primary" to="/register">
+            Create account
+          </Link>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
 function AuthFrame({ title, subtitle, children }: { title: string; subtitle: ReactNode; children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-canvas">
-      <SiteHeader />
-      <main className="mx-auto flex max-w-md flex-col px-4 py-16">
-        <h1 className="text-2xl font-semibold tracking-tight text-ink">{title}</h1>
-        <p className="mt-1 text-sm text-muted">{subtitle}</p>
-        <div className="mt-6 rounded-lg border border-line bg-white p-5 shadow-sm">{children}</div>
+    <div className="grid min-h-screen lg:grid-cols-[minmax(0,0.9fr)_minmax(420px,1fr)]">
+      <aside className="hidden flex-col justify-between bg-sidebar px-10 py-10 text-stone-300 lg:flex">
+        <Logo tone="light" />
+        <div>
+          <p className="text-[13px] font-medium uppercase tracking-[0.16em] text-stone-500">DevCollab</p>
+          <h2 className="mt-3 max-w-sm text-3xl font-semibold tracking-[-0.04em] text-white">The work, the people, and the record of what changed.</h2>
+          <ul className="mt-6 space-y-2 text-[14px] text-stone-400">
+            <li>Boards, cycles, and estimates in one project</li>
+            <li>Roles, invites, and a live inbox</li>
+            <li>Comments, checklists, blockers, and sub-issues</li>
+          </ul>
+        </div>
+        <p className="text-[12px] text-stone-500">Demo team: maya@devcollab.dev</p>
+      </aside>
+      <main className="flex flex-col bg-canvas">
+        <div className="flex items-center justify-between px-4 py-4 sm:px-8 lg:justify-end">
+          <Link to="/" className="lg:hidden" aria-label="DevCollab home">
+            <Logo />
+          </Link>
+          <Link className="text-[13px] text-muted hover:text-ink" to="/">
+            Back home
+          </Link>
+        </div>
+        <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-4 pb-16 sm:px-0">
+          <h1 className="text-[28px] font-semibold tracking-[-0.04em] text-ink">{title}</h1>
+          <p className="mt-2 text-sm text-muted">{subtitle}</p>
+          <div className="mt-6 rounded-2xl border border-line bg-white p-5 shadow-card">{children}</div>
+        </div>
       </main>
     </div>
   );
@@ -61,77 +110,95 @@ const previewIssues = [
   ['WEB-4', 'Board columns for every status', 'Todo', 'Medium'],
 ];
 
+const features = [
+  ['Boards and lists', 'Drag an issue across columns, or switch to a list when you need the whole project in one scan.'],
+  ['Cycles and estimates', 'One active cycle per project. Point totals show how much of it is done.'],
+  ['My work', 'Open issues assigned to you, grouped by what is overdue, due this week, and later.'],
+  ['Discussion', 'Comments with mentions, a short markdown set, watchers, and an inbox that updates live.'],
+  ['Checklists and sub-issues', 'Break a task into steps, or into issues that keep their own status and key.'],
+  ['Roles', 'Owners, admins, and members. Invite by email or with a one-time link.'],
+];
+
 export function LandingPage() {
   useDocumentTitle('Work together');
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-canvas">
       <SiteHeader />
       <main>
-        <section className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:py-24">
+        <section className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 sm:px-6 lg:grid-cols-[0.92fr_1.08fr] lg:py-24">
           <div>
-            <p className="text-[13px] font-medium text-muted">Team workspace for software</p>
-            <h1 className="mt-3 max-w-xl text-4xl font-semibold tracking-[-0.04em] text-ink sm:text-5xl sm:leading-[1.05]">
+            <p className="inline-flex rounded-full bg-brand-soft px-2.5 py-1 text-[12px] font-medium text-brand">Team workspace for software</p>
+            <h1 className="mt-4 max-w-xl text-4xl font-semibold tracking-[-0.045em] text-ink sm:text-5xl sm:leading-[1.05]">
               Projects, issues, and the people assigned to them.
             </h1>
-            <p className="mt-4 max-w-md text-[15px] leading-7 text-muted">
-              One place for roles, boards, comments, and the record of what changed. Built for a team that already has the work.
+            <p className="mt-4 max-w-md text-[16px] leading-7 text-muted">
+              One place for roles, boards, comments, and the record of what changed. A new account opens on a starter workspace, so the first session is not an empty board.
             </p>
             <div className="mt-7 flex flex-wrap gap-2">
-              <Link className="btn-primary" to="/register">
+              <Link className="btn-primary h-10 px-4" to="/register">
                 Create account
               </Link>
-              <Link className="btn-ghost" to="/login">
+              <Link className="btn-ghost h-10 px-4" to="/login">
                 Sign in
               </Link>
             </div>
           </div>
-          <div className="overflow-hidden rounded-2xl border border-line bg-canvas shadow-pop" aria-hidden="true">
-            <div className="flex items-center gap-1.5 border-b border-line bg-white px-4 py-3">
-              <span className="h-2.5 w-2.5 rounded-full bg-slate-200" />
-              <span className="h-2.5 w-2.5 rounded-full bg-slate-200" />
-              <span className="h-2.5 w-2.5 rounded-full bg-slate-200" />
-              <span className="ml-3 text-[12px] text-faint">Northwind Labs / API Platform</span>
+          <div className="overflow-hidden rounded-2xl border border-line bg-white shadow-pop" aria-hidden="true">
+            <div className="flex items-center gap-1.5 border-b border-line bg-canvas px-4 py-3">
+              <span className="h-2.5 w-2.5 rounded-full bg-stone-300" />
+              <span className="h-2.5 w-2.5 rounded-full bg-stone-300" />
+              <span className="h-2.5 w-2.5 rounded-full bg-stone-300" />
+              <span className="ml-3 text-[12px] text-muted">Northwind Labs / API Platform</span>
             </div>
-            <div className="grid grid-cols-[148px_1fr]">
+            <div className="grid min-h-[280px] grid-cols-[132px_1fr]">
               <div className="bg-sidebar p-3 text-[12px] text-stone-400">
                 <p className="rounded-md bg-white/10 px-2 py-1.5 font-medium text-white">Overview</p>
+                <p className="px-2 py-1.5">My work</p>
                 <p className="px-2 py-1.5">Projects</p>
                 <p className="px-2 py-1.5">Members</p>
-                <p className="px-2 py-1.5">Activity</p>
               </div>
-              <div className="p-3">
-                <table className="w-full overflow-hidden rounded-lg border border-line bg-white text-left text-[12px]">
-                  <tbody>
-                    {previewIssues.map(([key, title, status, priority]) => (
-                      <tr key={key} className="border-b border-line last:border-0">
-                        <td className="px-3 py-2.5 font-mono text-[11px] text-faint">{key}</td>
-                        <td className="px-2 py-2.5 font-medium text-ink">{title}</td>
-                        <td className="px-3 py-2.5 text-muted">{status}</td>
-                        <td className="px-3 py-2.5 text-muted">{priority}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="grid grid-cols-3 gap-2 bg-canvas p-3">
+                {previewIssues.map(([key, title, status]) => (
+                  <article key={key} className="rounded-xl bg-white p-2.5 shadow-card">
+                    <p className="font-mono text-[10px] text-faint">{key}</p>
+                    <p className="mt-1 text-[12px] font-medium leading-4 text-ink">{title}</p>
+                    <p className="mt-3 text-[10px] text-muted">{status}</p>
+                  </article>
+                ))}
               </div>
             </div>
           </div>
         </section>
-        <section className="border-t border-line bg-canvas">
-          <div className="mx-auto grid max-w-6xl gap-px bg-line px-0 py-px sm:grid-cols-3">
+        <section id="product" className="border-t border-line bg-white">
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+            <h2 className="max-w-lg text-2xl font-semibold tracking-[-0.03em] text-ink">Everything the team uses after the issue is filed.</h2>
+            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {features.map(([title, body]) => (
+                <article key={title} className="rounded-2xl border border-line bg-canvas p-5">
+                  <h3 className="text-[15px] font-semibold tracking-[-0.02em] text-ink">{title}</h3>
+                  <p className="mt-2 text-[13px] leading-6 text-muted">{body}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+        <section id="workflow" className="border-t border-line">
+          <div className="mx-auto grid max-w-6xl gap-8 px-4 py-16 sm:px-6 lg:grid-cols-3">
             {[
-              ['01', 'Workspaces and roles', 'Owners, admins, and members. Invite someone who already has an account, or send a one-time link.'],
-              ['02', 'Issues with a record', 'Status, priority, labels, assignees, due dates, comments, and a history of every change.'],
-              ['03', 'Live team activity', 'Comments and assignments show up for the rest of the workspace. Counts come from the issues themselves.'],
+              ['01', 'Open a workspace', 'Create an account and you land in a starter workspace with a project, a board, and activity.'],
+              ['02', 'File the work', 'Issues get a key, a status, assignees, a due date, and a place in the current cycle.'],
+              ['03', 'Keep the team current', 'Comments, assignments, and due reminders show up in the inbox without a refresh.'],
             ].map(([index, title, body]) => (
-              <div key={title} className="bg-white px-6 py-8">
-                <p className="font-mono text-[11px] text-faint">{index}</p>
-                <h2 className="mt-3 text-[15px] font-semibold tracking-[-0.02em] text-ink">{title}</h2>
+              <div key={title}>
+                <p className="font-mono text-[12px] text-brand">{index}</p>
+                <h2 className="mt-3 text-[16px] font-semibold tracking-[-0.02em] text-ink">{title}</h2>
                 <p className="mt-2 text-[13px] leading-6 text-muted">{body}</p>
               </div>
             ))}
           </div>
         </section>
       </main>
+      <SiteFooter />
     </div>
   );
 }

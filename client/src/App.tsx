@@ -70,9 +70,10 @@ function Guest({ children }: { children: ReactNode }) {
 function NotFound() {
   useDocumentTitle('Not found');
   return (
-    <main className="grid min-h-screen place-items-center px-4 text-center">
-      <div>
-        <h1 className="text-xl font-semibold">Page not found</h1>
+    <main className="grid min-h-screen place-items-center bg-canvas px-4 text-center">
+      <div className="panel max-w-md px-8 py-10">
+        <p className="text-[12px] font-medium uppercase tracking-[0.14em] text-brand">404</p>
+        <h1 className="mt-2 text-xl font-semibold tracking-tight">Page not found</h1>
         <p className="mt-2 text-sm text-muted">That page is not in this workspace.</p>
         <a className="btn-primary mt-6" href="/">
           Back home
