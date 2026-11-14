@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
-import { BlockedMark, ChecklistCount, EmptyState, EstimateMark, PageHeader, PriorityMark, StatusBadge, useDocumentTitle } from '../components/ui';
+import { BlockedMark, ChecklistCount, EmptyState, EstimateMark, PageHeader, PriorityMark, StatusBadge, SubissueCount, useDocumentTitle } from '../components/ui';
 import { api, errorMessage } from '../lib/api';
 import { checklistProgress } from '../lib/checklist';
 import { dueLabel } from '../lib/format';
@@ -68,6 +68,7 @@ export function MyWorkPage() {
                     <span className="flex flex-wrap items-center gap-3">
                       {issue.blocked ? <BlockedMark /> : null}
                       <ChecklistCount {...checklistProgress(issue.checklist)} />
+                      <SubissueCount done={issue.subissues?.done ?? 0} total={issue.subissues?.total ?? 0} />
                       <StatusBadge status={issue.status} />
                       <EstimateMark estimate={issue.estimate} />
                       <PriorityMark priority={issue.priority} />

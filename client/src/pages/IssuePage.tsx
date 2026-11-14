@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Blockers } from '../components/Blockers';
+import { Subissues } from '../components/Subissues';
 import { Checklist } from '../components/Checklist';
 import { Avatar, useDocumentTitle } from '../components/ui';
 import { api, errorMessage } from '../lib/api';
@@ -88,7 +89,19 @@ export function IssuePage() {
             Blocked by {(current.blockedBy ?? []).filter((item) => item.status !== 'done').map((item) => item.key).join(', ') || 'an open issue'}
           </p>
         ) : null}
+        {current.parent ? (
+          <p className="mt-3 text-[13px] text-muted">
+            Sub-issue of{' '}
+            <Link className="font-medium text-ink hover:text-brand" to={`/w/${workspaceId}/issues/${current.parent.id}`}>
+              <span className="font-mono">{current.parent.key}</span> {current.parent.title}
+            </Link>
+            <button type="button" className="btn-ghost ml-2 px-2 py-1 text-[12px]" onClick={() => save.mutate({ parentId: null })}>
+              Remove
+            </button>
+          </p>
+        ) : null}
         <DescriptionEditor description={current.description} onSave={(description) => save.mutate({ description })} />
+        <Subissues workspaceId={workspaceId} issue={current} />
         <Checklist issue={current} />
         <Blockers workspaceId={workspaceId} issue={current} />
         <section className="mt-8">

@@ -125,6 +125,16 @@ export function ChecklistCount({ done, total }: { done: number; total: number })
   );
 }
 
+export function SubissueCount({ done, total }: { done: number; total: number }) {
+  if (!total) return null;
+  const complete = done === total;
+  return (
+    <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums ${complete ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-muted'}`}>
+      {done}/{total} sub
+    </span>
+  );
+}
+
 export function EstimateMark({ estimate }: { estimate: number | null | undefined }) {
   if (!estimate) return null;
   return <span className="inline-flex items-center rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-ink">{estimate}</span>;

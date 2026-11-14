@@ -29,6 +29,7 @@ const issueSchema = new Schema(
     commentCount: { type: Number, default: 0 },
     blockedBy: [{ type: Schema.Types.ObjectId, ref: 'Issue' }],
     blocked: { type: Boolean, default: false },
+    parent: { type: Schema.Types.ObjectId, ref: 'Issue', default: null, index: true },
     checklist: { type: [checklistItemSchema], default: [] },
     cycle: { type: Schema.Types.ObjectId, ref: 'Cycle', default: null },
     dueAlertKind: { type: String, enum: ['today', 'overdue', null], default: null },

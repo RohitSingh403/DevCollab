@@ -810,4 +810,59 @@ describe('workspaces, issues, and authorization', () => {
     const cleared = await owner.agent.get(`/api/projects/${projectId}/issues`).query({ cycle: 'active' });
     expect(cleared.body.issues).toEqual([]);
   });
+
+  it('nests sub-issues in one workspace and counts direct children', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const workspace = await createWorkspace(owner.agent, 'Sub-issues');
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({
+      name: 'API Platform',
+      key: 'API',
+      description: 'Service layer',
+    });
+    const projectId = project.body.project.id as string;
+    const parent = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Replace the session store' });
+    const parentId = parent.body.issue.id as string;
+    const child = await owner.agent.post(`/api/projects/${projectId}/issues`).send({
+      title: 'Store the signing key',
+      parentId,
+    });
+    expect(child.status).toBe(201);
+    expect(child.body.issue.key).toBe('API-2');
+    expect(child.body.issue.parent.key).toBe('API-1');
+
+    const open = await owner.agent.get(`/api/issues/${parentId}`);
+    expect(open.body.issue.children.map((issue: { key: string }) => issue.key)).toEqual(['API-2']);
+    expect(open.body.issue.subissues).toEqual({ total: 1, done: 0 });
+    const parentHistory = await owner.agent.get(`/api/issues/${parentId}/activity`);
+    expect(parentHistory.body.activities.some((item: { message: string }) => item.message.includes('added API-2 under API-1'))).toBe(true);
+
+    const done = await owner.agent.patch(`/api/issues/${child.body.issue.id}`).send({ status: 'done' });
+    expect(done.status).toBe(200);
+    const listed = await owner.agent.get(`/api/projects/${projectId}/issues`);
+    const counted = listed.body.issues.find((issue: { id: string }) => issue.id === parentId);
+    expect(counted.subissues).toEqual({ total: 1, done: 1 });
+
+    const self = await owner.agent.patch(`/api/issues/${parentId}`).send({ parentId });
+    expect(self.status).toBe(400);
+    const loop = await owner.agent.patch(`/api/issues/${parentId}`).send({ parentId: child.body.issue.id });
+    expect(loop.status).toBe(400);
+
+    const elsewhere = await owner.agent.post('/api/workspaces').send({ name: 'Other', description: 'Separate' });
+    const foreign = await owner.agent.post(`/api/workspaces/${elsewhere.body.workspace.id}/projects`).send({
+      name: 'Elsewhere',
+      key: 'ELS',
+      description: 'Outside',
+    });
+    const outside = await owner.agent.post(`/api/projects/${foreign.body.project.id}/issues`).send({ title: 'Outside the workspace' });
+    const rejected = await owner.agent.patch(`/api/issues/${child.body.issue.id}`).send({ parentId: outside.body.issue.id });
+    expect(rejected.status).toBe(400);
+
+    const removed = await owner.agent.patch(`/api/issues/${child.body.issue.id}`).send({ parentId: null });
+    expect(removed.body.issue.parent).toBeNull();
+    await owner.agent.patch(`/api/issues/${child.body.issue.id}`).send({ parentId });
+    const deleted = await owner.agent.delete(`/api/issues/${parentId}`);
+    expect(deleted.status).toBe(204);
+    const orphan = await owner.agent.get(`/api/issues/${child.body.issue.id}`);
+    expect(orphan.body.issue.parent).toBeNull();
+  });
 });

@@ -5,7 +5,7 @@ import { CycleBar } from '../components/CycleBar';
 import { IssueBoard } from '../components/IssueBoard';
 import { IssueForm } from '../components/IssueForm';
 import { StatGrid } from '../components/AnalyticsPanels';
-import { Avatar, BlockedMark, ChecklistCount, EmptyState, EstimateMark, Modal, PageHeader, PriorityMark, StatusBadge, useDocumentTitle } from '../components/ui';
+import { Avatar, BlockedMark, ChecklistCount, EmptyState, EstimateMark, Modal, PageHeader, PriorityMark, StatusBadge, SubissueCount, useDocumentTitle } from '../components/ui';
 import { checklistProgress } from '../lib/checklist';
 import { api, errorMessage } from '../lib/api';
 import { dueLabel } from '../lib/format';
@@ -308,10 +308,11 @@ export function ProjectPage() {
                       {issue.title}
                     </Link>
                     {issue.cycle ? <span className="mt-1 block text-[12px] text-faint">{issue.cycle.name}</span> : null}
-                    {issue.blocked || issue.checklist?.length ? (
+                    {issue.blocked || issue.checklist?.length || issue.subissues?.total ? (
                       <span className="mt-1 inline-flex items-center gap-1.5">
                         {issue.blocked ? <BlockedMark /> : null}
                         <ChecklistCount {...checklistProgress(issue.checklist)} />
+                        <SubissueCount done={issue.subissues?.done ?? 0} total={issue.subissues?.total ?? 0} />
                       </span>
                     ) : null}
                   </td>
