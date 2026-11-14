@@ -118,7 +118,7 @@ export function OverviewPage() {
         <section>
           <h2 className="mb-2 text-sm font-semibold">Projects</h2>
           <div className="panel divide-y divide-line">
-            {(projects.data ?? []).map((project) => (
+            {(projects.data ?? []).filter((project) => !project.archived).map((project) => (
               <Link key={project.id} to={`/w/${workspaceId}/projects/${project.id}`} className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-brand-soft">
                 <span className="min-w-0">
                   <span className="rounded bg-brand-soft px-1.5 py-0.5 font-mono text-[11px] text-brand">{project.key}</span>
@@ -127,7 +127,7 @@ export function OverviewPage() {
                 <span className="shrink-0 text-sm text-muted">{project.openIssueCount} open</span>
               </Link>
             ))}
-            {!projects.data?.length ? <EmptyState title="No projects yet" body="Projects group issues by product area, with their own keys and boards." action={<Link className="btn-primary" to={`/w/${workspaceId}/projects`}>Create a project</Link>} /> : null}
+            {!(projects.data ?? []).some((project) => !project.archived) ? <EmptyState title="No active projects" body="Projects group issues by product area, with their own keys and boards. Archived projects stay on the projects page." action={<Link className="btn-primary" to={`/w/${workspaceId}/projects`}>View projects</Link>} /> : null}
           </div>
         </section>
         <section>

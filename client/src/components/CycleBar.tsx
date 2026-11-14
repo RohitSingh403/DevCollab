@@ -23,12 +23,14 @@ export function CycleBar({
   pending,
   onToggle,
   onStart,
+  canStart = true,
 }: {
   cycle: Cycle | null;
   filtered: boolean;
   pending: boolean;
   onToggle: () => void;
   onStart: (input: { name: string; startsAt: string; endsAt: string }) => void;
+  canStart?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const done = cycle?.done ?? 0;
@@ -68,9 +70,11 @@ export function CycleBar({
             {filtered ? 'Showing this cycle' : 'This cycle'}
           </button>
         ) : null}
-        <button className="btn-primary" type="button" onClick={() => setOpen(true)}>
-          {cycle ? 'Start the next cycle' : 'Start cycle'}
-        </button>
+        {canStart ? (
+          <button className="btn-primary" type="button" onClick={() => setOpen(true)}>
+            {cycle ? 'Start the next cycle' : 'Start cycle'}
+          </button>
+        ) : null}
       </div>
       <StartCycleModal
         open={open}

@@ -15,7 +15,7 @@ export function ProjectsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Projects"
-        description="Each project has a key, a board, and its own issue history."
+        description="Each project has a key, a board, and its own issue history. Archive one when the work is finished."
         actions={
           <button className="btn-primary" type="button" onClick={() => setOpen(true)}>
             New project
@@ -27,30 +27,64 @@ export function ProjectsPage() {
       {projects.data && !projects.data.length ? (
         <EmptyState title="Start with one project" body="A key like API or WEB prefixes every issue the team files." action={<button className="btn-primary" type="button" onClick={() => setOpen(true)}>New project</button>} />
       ) : (
-        <div className="grid gap-3 md:grid-cols-2">
-          {(projects.data ?? []).map((project) => {
-            const progress = project.issueCount ? Math.round(((project.issueCount - project.openIssueCount) / project.issueCount) * 100) : 0;
-            return (
-              <Link key={project.id} to={`/w/${workspaceId}/projects/${project.id}`} className="panel block p-5 transition hover:-translate-y-px hover:shadow-pop">
-                <div className="flex items-center justify-between">
-                  <span className="rounded-md bg-brand-soft px-1.5 py-0.5 font-mono text-[11px] font-medium text-brand">{project.key}</span>
-                  <span className="text-[12px] text-muted">{project.openIssueCount} open</span>
-                </div>
-                <h2 className="mt-3 text-[16px] font-semibold tracking-[-0.02em]">{project.name}</h2>
-                <p className="mt-1 line-clamp-2 min-h-10 text-[13px] leading-5 text-muted">{project.description || 'No description yet.'}</p>
-                <div className="mt-4 flex items-center gap-3">
-                  <div className="h-1 flex-1 rounded-full bg-slate-100">
-                    <div className="h-1 rounded-full bg-brand" style={{ width: `${progress}%` }} />
-                  </div>
-                  <span className="text-[11px] tabular-nums text-faint">{progress}%</span>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+        <ProjectGroups workspaceId={workspaceId} projects={projects.data ?? []} />
       )}
       <CreateProjectModal workspaceId={workspaceId} open={open} onClose={() => setOpen(false)} />
     </div>
+  );
+}
+
+function ProjectGroups({ workspaceId, projects }: { workspaceId: string; projects: { id: string; key: string; name: string; description: string; issueCount: number; openIssueCount: number; archived: boolean }[] }) {
+  const active = projects.filter((project) => !project.archived);
+  const archived = projects.filter((project) => project.archived);
+  return (
+    <div className="space-y-8">
+      {active.length ? (
+        <div className="grid gap-3 md:grid-cols-2">
+          {active.map((project) => (
+            <ProjectCard key={project.id} workspaceId={workspaceId} project={project} />
+          ))}
+        </div>
+      ) : (
+        <EmptyState title="No active projects" body="Restore an archived project, or start a new one." />
+      )}
+      {archived.length ? (
+        <section>
+          <h2 className="mb-2 text-sm font-semibold">Archived</h2>
+          <div className="grid gap-3 md:grid-cols-2">
+            {archived.map((project) => (
+              <ProjectCard key={project.id} workspaceId={workspaceId} project={project} />
+            ))}
+          </div>
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
+function ProjectCard({
+  workspaceId,
+  project,
+}: {
+  workspaceId: string;
+  project: { id: string; key: string; name: string; description: string; issueCount: number; openIssueCount: number; archived: boolean };
+}) {
+  const progress = project.issueCount ? Math.round(((project.issueCount - project.openIssueCount) / project.issueCount) * 100) : 0;
+  return (
+    <Link to={`/w/${workspaceId}/projects/${project.id}`} className="panel block p-5 transition hover:-translate-y-px hover:shadow-pop">
+      <div className="flex items-center justify-between">
+        <span className="rounded-md bg-brand-soft px-1.5 py-0.5 font-mono text-[11px] font-medium text-brand">{project.key}</span>
+        <span className="text-[12px] text-muted">{project.archived ? 'Archived' : `${project.openIssueCount} open`}</span>
+      </div>
+      <h2 className="mt-3 text-[16px] font-semibold tracking-[-0.02em]">{project.name}</h2>
+      <p className="mt-1 line-clamp-2 min-h-10 text-[13px] leading-5 text-muted">{project.description || 'No description yet.'}</p>
+      <div className="mt-4 flex items-center gap-3">
+        <div className="h-1 flex-1 rounded-full bg-slate-100">
+          <div className="h-1 rounded-full bg-brand" style={{ width: `${progress}%` }} />
+        </div>
+        <span className="text-[11px] tabular-nums text-faint">{progress}%</span>
+      </div>
+    </Link>
   );
 }
 
