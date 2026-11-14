@@ -4,15 +4,16 @@ export default {
   theme: {
     extend: {
       colors: {
-        canvas: '#f6f7f9',
-        ink: '#121417',
-        muted: '#5f6773',
-        faint: '#8b929c',
-        line: '#e6e8ec',
+        canvas: '#f4f2ee',
+        ink: '#1c1917',
+        muted: '#57534e',
+        faint: '#a8a29e',
+        line: '#e7e5e4',
+        sidebar: '#1c1917',
         brand: {
-          DEFAULT: '#1f4b99',
-          hover: '#173a78',
-          soft: '#eef3fb',
+          DEFAULT: '#1d4ed8',
+          hover: '#1e40af',
+          soft: '#e8eefc',
         },
         danger: '#b42318',
       },
@@ -21,8 +22,8 @@ export default {
         mono: ['IBM Plex Mono', 'ui-monospace', 'monospace'],
       },
       boxShadow: {
-        pop: '0 12px 32px rgba(18, 20, 23, 0.12)',
-        card: '0 1px 2px rgba(18, 20, 23, 0.04)',
+        pop: '0 16px 40px rgba(28, 25, 23, 0.16)',
+        card: '0 1px 2px rgba(28, 25, 23, 0.05), 0 8px 20px rgba(28, 25, 23, 0.04)',
       },
     },
   },

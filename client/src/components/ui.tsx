@@ -5,14 +5,16 @@ import type { IssueStatus, Priority, Role } from '../lib/types';
 import { PRIORITY_LABEL, STATUS_LABEL } from '../lib/types';
 import { useUiStore } from '../stores/uiStore';
 
-export function Logo({ compact = false }: { compact?: boolean }) {
+export function Logo({ compact = false, tone = 'dark' }: { compact?: boolean; tone?: 'dark' | 'light' }) {
   return (
     <span className="inline-flex items-center gap-2">
       <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
-        <rect width="24" height="24" rx="6" fill="#121417" />
-        <path d="M6.5 8.2h6.2M6.5 12h11M6.5 15.8h8" stroke="white" strokeWidth="1.6" strokeLinecap="round" />
+        <rect width="24" height="24" rx="7" fill="#1d4ed8" />
+        <path d="M6.5 8.2h6.2M6.5 12h11M6.5 15.8h8" stroke="white" strokeWidth="1.7" strokeLinecap="round" />
       </svg>
-      {compact ? null : <span className="text-[14px] font-semibold tracking-[-0.02em] text-ink">DevCollab</span>}
+      {compact ? null : (
+        <span className={`text-[14px] font-semibold tracking-[-0.02em] ${tone === 'light' ? 'text-white' : 'text-ink'}`}>DevCollab</span>
+      )}
     </span>
   );
 }
@@ -175,7 +177,7 @@ export function PageHeader({
   meta?: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-4">
+    <div className="flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0">
         {meta ? <div className="mb-1 text-sm text-muted">{meta}</div> : null}
         <h1 className="page-title">{title}</h1>

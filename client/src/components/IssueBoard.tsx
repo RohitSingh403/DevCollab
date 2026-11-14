@@ -4,6 +4,14 @@ import { dueLabel, groupIssues } from '../lib/format';
 import { STATUSES, STATUS_LABEL, type Issue, type IssueStatus } from '../lib/types';
 import { Avatar, BlockedMark, ChecklistCount, EstimateMark, PriorityMark, StatusDot, SubissueCount } from './ui';
 
+const columnTone: Record<IssueStatus, string> = {
+  backlog: 'bg-stone-200/70',
+  todo: 'bg-blue-100/70',
+  in_progress: 'bg-amber-100/70',
+  in_review: 'bg-violet-100/70',
+  done: 'bg-emerald-100/70',
+};
+
 export function IssueBoard({
   workspaceId,
   issues,
@@ -19,7 +27,7 @@ export function IssueBoard({
       {STATUSES.map((status) => (
         <section
           key={status}
-          className="min-w-0 rounded-xl bg-[#eef0f3] p-1.5"
+          className={`min-w-0 rounded-2xl p-1.5 ${columnTone[status]}`}
           onDragOver={(event) => event.preventDefault()}
           onDrop={(event) => {
             event.preventDefault();
@@ -33,7 +41,7 @@ export function IssueBoard({
               <StatusDot status={status} />
               {STATUS_LABEL[status]}
             </h3>
-            <span className="rounded-full bg-white px-1.5 text-[11px] tabular-nums text-muted">{grouped[status].length}</span>
+            <span className="rounded-full bg-white/80 px-1.5 text-[11px] tabular-nums text-muted">{grouped[status].length}</span>
           </header>
           <div className="space-y-1.5">
             {grouped[status].map((issue) => (
@@ -44,7 +52,7 @@ export function IssueBoard({
                   event.dataTransfer.setData('text/plain', issue.id);
                   event.dataTransfer.effectAllowed = 'move';
                 }}
-                className="cursor-grab rounded-lg border border-transparent bg-white p-3 shadow-sm transition hover:border-line active:cursor-grabbing"
+                className="cursor-grab rounded-xl border border-white bg-white p-3 shadow-card transition hover:-translate-y-px hover:shadow-pop active:cursor-grabbing"
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="inline-flex min-w-0 items-center gap-1.5">
@@ -85,7 +93,7 @@ export function IssueBoard({
                 </div>
               </article>
             ))}
-            {!grouped[status].length ? <p className="px-2 py-8 text-center text-[12px] text-faint">Empty</p> : null}
+            {!grouped[status].length ? <p className="mx-1 mb-1 rounded-xl border border-dashed border-white/80 px-2 py-8 text-center text-[12px] text-muted">Empty</p> : null}
           </div>
         </section>
       ))}
