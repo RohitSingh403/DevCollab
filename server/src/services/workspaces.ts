@@ -37,11 +37,21 @@ async function countsFor(workspaceIds: unknown[]) {
       { $group: { _id: '$workspace', count: { $sum: 1 } } },
     ]),
     Project.aggregate<{ _id: unknown; count: number }>([
-      { $match: { workspace: { $in: workspaceIds } } },
+      { $match: { workspace: { $in: workspaceIds }, archivedAt: null } },
       { $group: { _id: '$workspace', count: { $sum: 1 } } },
     ]),
     Issue.aggregate<{ _id: unknown; count: number }>([
       { $match: { workspace: { $in: workspaceIds }, status: { $ne: 'done' } } },
+      {
+        $lookup: {
+          from: 'projects',
+          localField: 'project',
+          foreignField: '_id',
+          as: 'projectDoc',
+        },
+      },
+      { $unwind: '$projectDoc' },
+      { $match: { 'projectDoc.archivedAt': null } },
       { $group: { _id: '$workspace', count: { $sum: 1 } } },
     ]),
   ]);

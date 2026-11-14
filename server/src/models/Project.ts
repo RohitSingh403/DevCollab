@@ -8,6 +8,7 @@ const projectSchema = new Schema(
     description: { type: String, default: '', maxlength: 500 },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     nextIssueNumber: { type: Number, default: 0 },
+    archivedAt: { type: Date, default: null },
   },
   { timestamps: true },
 );

@@ -126,7 +126,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(input),
     }).then((data) => data.project),
-  updateProject: (id: string, input: { name?: string; description?: string }) =>
+  updateProject: (id: string, input: { name?: string; description?: string; archived?: boolean }) =>
     request<{ project: Project }>(`/api/projects/${id}`, { method: 'PATCH', body: JSON.stringify(input) }).then((data) => data.project),
   deleteProject: (id: string) => request<void>(`/api/projects/${id}`, { method: 'DELETE' }),
   views: (projectId: string) => request<{ views: SavedView[] }>(`/api/projects/${projectId}/views`).then((data) => data.views),

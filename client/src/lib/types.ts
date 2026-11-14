@@ -72,6 +72,8 @@ export interface Project {
   name: string;
   key: string;
   description: string;
+  archived: boolean;
+  archivedAt: string | null;
   issueCount: number;
   openIssueCount: number;
   createdAt: string;

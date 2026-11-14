@@ -72,6 +72,7 @@ export const updateProjectSchema = z
   .object({
     name: z.string().trim().min(2).max(80).optional(),
     description: z.string().trim().max(500).optional(),
+    archived: z.boolean().optional(),
   })
   .strict();
 

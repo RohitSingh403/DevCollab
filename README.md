@@ -40,6 +40,8 @@ Sign in as `maya@devcollab.dev` / `Password123!`. Jonah Patel (`jonah@devcollab.
 
 ![Members with owner, admin, and member roles](docs/screenshots/members.png)
 
+![Web Client archived, with API Platform still active](docs/screenshots/archive.png)
+
 ## Features
 
 Accounts and access:
@@ -52,6 +54,7 @@ Accounts and access:
 Work:
 
 - Projects with short keys (`API-12`) and per-project issue numbers
+- Archive a finished project. It leaves My work and the workspace totals, and comes back when an owner or admin restores it
 - Issues with status, priority, labels, assignees, due dates, comments, and history
 - A board you can drag between columns, plus a list view
 - Filters, text search, and pagination

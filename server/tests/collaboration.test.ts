@@ -865,4 +865,62 @@ describe('workspaces, issues, and authorization', () => {
     const orphan = await owner.agent.get(`/api/issues/${child.body.issue.id}`);
     expect(orphan.body.issue.parent).toBeNull();
   });
+
+  it('archives a project out of active work and restores it', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const teammate = await registerUser(authAgent(), 'Jonah Patel');
+    const workspace = await createWorkspace(owner.agent, 'Archive');
+    await owner.agent.post(`/api/workspaces/${workspace.id}/invites`).send({ email: teammate.email, role: 'member' });
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({
+      name: 'Old API',
+      key: 'OLD',
+      description: 'Finished',
+    });
+    const projectId = project.body.project.id as string;
+    const issue = await owner.agent.post(`/api/projects/${projectId}/issues`).send({
+      title: 'Retire the old store',
+      assigneeIds: [teammate.user.id],
+    });
+    expect(issue.status).toBe(201);
+
+    const denied = await teammate.agent.patch(`/api/projects/${projectId}`).send({ archived: true });
+    expect(denied.status).toBe(403);
+
+    const archived = await owner.agent.patch(`/api/projects/${projectId}`).send({ archived: true });
+    expect(archived.status).toBe(200);
+    expect(archived.body.project.archived).toBe(true);
+    const listed = await owner.agent.get(`/api/workspaces/${workspace.id}/projects`);
+    expect(listed.body.projects.find((item: { id: string }) => item.id === projectId).archived).toBe(true);
+    const home = await owner.agent.get(`/api/workspaces/${workspace.id}`);
+    expect(home.body.workspace.projectCount).toBe(0);
+    expect(home.body.workspace.openIssueCount).toBe(0);
+    const mine = await teammate.agent.get(`/api/workspaces/${workspace.id}/my-work`);
+    expect(mine.body.total).toBe(0);
+    const created = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Should stay closed' });
+    expect(created.status).toBe(409);
+    const cycle = await owner.agent.post(`/api/projects/${projectId}/cycles`).send({
+      name: 'Cycle 1',
+      startsAt: '2026-11-01',
+      endsAt: '2026-11-14',
+    });
+    expect(cycle.status).toBe(409);
+
+    const other = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({
+      name: 'Web',
+      key: 'WEB',
+      description: 'Current',
+    });
+    const moved = await owner.agent.patch(`/api/issues/${issue.body.issue.id}`).send({ projectId: other.body.project.id });
+    expect(moved.status).toBe(200);
+    const back = await owner.agent.patch(`/api/issues/${issue.body.issue.id}`).send({ projectId });
+    expect(back.status).toBe(409);
+
+    const restored = await owner.agent.patch(`/api/projects/${projectId}`).send({ archived: false });
+    expect(restored.body.project.archived).toBe(false);
+    const again = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Follow-up' });
+    expect(again.status).toBe(201);
+    const history = await owner.agent.get(`/api/projects/${projectId}/activity`);
+    expect(history.body.activities.some((item: { message: string }) => item.message.includes('archived project OLD'))).toBe(true);
+    expect(history.body.activities.some((item: { message: string }) => item.message.includes('restored project OLD'))).toBe(true);
+  });
 });

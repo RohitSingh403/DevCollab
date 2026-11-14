@@ -13,6 +13,7 @@ import { Comment } from '../models/Comment';
 import { Issue } from '../models/Issue';
 import { Label } from '../models/Label';
 import { Project } from '../models/Project';
+import { archivedProjectIds } from './projects';
 import type { Realtime } from '../realtime';
 import { serializeComment, serializeIssue, serializeUser } from '../serializers';
 import { escapeRegex, pageMeta } from '../utils';
@@ -115,10 +116,12 @@ export function workBucket(dueDate: Date | null, now: Date) {
 }
 
 export async function listMyWork(workspaceId: string, userId: string, now = new Date()) {
+  const archived = await archivedProjectIds(workspaceId);
   const issues = await Issue.find({
     workspace: workspaceId,
     assignees: userId,
     status: { $ne: 'done' },
+    ...(archived.length ? { project: { $nin: archived } } : {}),
   }).populate(ISSUE_POPULATE);
 
   const groups = {
@@ -233,6 +236,7 @@ export async function createIssue(
 ) {
   const project = await Project.findById(input.projectId);
   if (!project) throw new ApiError(404, 'Project not found', 'not_found');
+  if (project.archivedAt) throw new ApiError(409, 'This project is archived', 'project_archived');
   const workspaceId = String(project.workspace);
   const assigneeIds = await assertWorkspaceMembers(workspaceId, input.assigneeIds);
   const labelIds = await assertLabels(workspaceId, input.labelIds);
@@ -370,6 +374,7 @@ export async function updateIssue(
   if (input.projectId && input.projectId !== String(issue.project)) {
     const destination = await Project.findOne({ _id: input.projectId, workspace: issue.workspace });
     if (!destination) throw new ApiError(400, 'That project is not in this workspace', 'invalid_project');
+    if (destination.archivedAt) throw new ApiError(409, 'That project is archived', 'project_archived');
     const source = await Project.findById(issue.project).select('key');
     const numbered = await Project.findOneAndUpdate({ _id: destination._id }, { $inc: { nextIssueNumber: 1 } }, { new: true });
     if (!numbered) throw new ApiError(404, 'Project not found', 'not_found');
