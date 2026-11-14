@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { MarkdownPane } from './Markdown';
 import { api, errorMessage } from '../lib/api';
 import { LABEL_COLORS, PRIORITIES, PRIORITY_LABEL, STATUSES, STATUS_LABEL, type IssueStatus, type Priority } from '../lib/types';
 
@@ -73,10 +74,18 @@ export function IssueForm({
         <span className="label">Title</span>
         <input className="field" value={title} onChange={(event) => setTitle(event.target.value)} required minLength={3} />
       </label>
-      <label className="block">
+      <div>
         <span className="label">Description</span>
-        <textarea className="field min-h-24" value={description} onChange={(event) => setDescription(event.target.value)} />
-      </label>
+        <MarkdownPane value={description} names={(members.data ?? []).map((member) => member.user.name)}>
+          <textarea
+            className="field min-h-24"
+            aria-label="Description"
+            placeholder="Add context. Bold, lists, and links work."
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+          />
+        </MarkdownPane>
+      </div>
       <div className="grid gap-3 sm:grid-cols-3">
         <label className="block">
           <span className="label">Status</span>

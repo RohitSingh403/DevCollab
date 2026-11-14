@@ -63,7 +63,7 @@ export async function seedDatabase() {
     projectId: api.id,
     actor,
     title: 'Replace the session store with signed cookies',
-    description: 'HttpOnly cookies, rotation on login, and a clear logout path.',
+    description: 'Signed cookies replace the session store.\n\n- **HttpOnly** so scripts cannot read the cookie\n- Rotate the cookie on login\n- Clear it on logout\n\nSee [the session notes](https://example.com/sessions).',
     status: 'in_progress',
     priority: 'high',
     estimate: 5,

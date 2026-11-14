@@ -38,6 +38,8 @@ Sign in as `maya@devcollab.dev` / `Password123!`. Jonah Patel (`jonah@devcollab.
 
 ![A comment with bold text, a list, and a link](docs/screenshots/comment-markdown.png)
 
+![Issue description with a bold bullet and a link](docs/screenshots/description.png)
+
 ![Members with owner, admin, and member roles](docs/screenshots/members.png)
 
 ![Web Client archived, with API Platform still active](docs/screenshots/archive.png)
@@ -72,7 +74,7 @@ Work:
 Discussion:
 
 - @mentions in comments, which notify that person in their inbox and over the live connection
-- Comment markdown for bold, lists, and links. The rules are in the next section
+- Comment and description markdown for bold, lists, and links. The rules are in the next section
 - Watchers. Any member can follow an issue and get the comment, status, and blocker alerts that the reporter and assignees already get
 
 Workspace:
@@ -81,9 +83,9 @@ Workspace:
 - Real-time issue, comment, view, and notification events for other members
 - API integration tests, authorization tests, and a frontend suite
 
-## Comment formatting
+## Writing
 
-A comment is stored as text. The browser renders a small subset and never inserts the comment as HTML.
+A comment and an issue description are stored as text. The browser renders a small subset and never inserts that text as HTML. The description has Write and Preview while you edit.
 
 | You write | What people see |
 | --- | --- |
