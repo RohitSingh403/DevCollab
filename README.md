@@ -10,6 +10,8 @@ A new account opens on a starter workspace that already has a project, a board, 
 
 Sign in as `maya@devcollab.dev` / `Password123!`. Jonah Patel (`jonah@devcollab.dev`) is an admin and Priya Nair (`priya@devcollab.dev`) is a member. The same password works for all three. These accounts are demo data, not production credentials.
 
+![Public home with the product preview and a path into sign-in](docs/screenshots/home.png)
+
 ![Workspace overview with open, overdue, and done counts](docs/screenshots/overview.png)
 
 ![My work grouped into overdue and due this week](docs/screenshots/my-work.png)

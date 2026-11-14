@@ -62,7 +62,7 @@ export function NotificationsPage() {
             <p className="mt-1 text-xs text-faint">{timeAgo(item.createdAt)}</p>
           </li>
         ))}
-        {notifications.data && !notifications.data.notifications.length ? <li className="text-sm text-muted">No notifications yet.</li> : null}
+        {notifications.data && !notifications.data.notifications.length ? <li className="px-4 py-8 text-sm text-muted">No notifications yet. Assignments, comments, and due reminders show up here.</li> : null}
       </ul>
     </div>
   );

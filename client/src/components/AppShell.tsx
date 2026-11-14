@@ -131,7 +131,8 @@ export function AppShell() {
             </select>
           </label>
         </div>
-        <nav className="mt-4 flex flex-1 flex-col gap-0.5 px-2" aria-label="Workspace">
+        <nav className="mt-5 flex flex-1 flex-col gap-0.5 px-2" aria-label="Workspace">
+          <p className="px-2.5 pb-1 text-[11px] font-medium uppercase tracking-[0.14em] text-stone-500">Workspace</p>
           {links.map((link) => (
             <NavLink
               key={link.label}

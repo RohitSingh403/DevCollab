@@ -103,6 +103,9 @@ export function OverviewPage() {
                 Settings
               </button>
             ) : null}
+            <Link className="btn-ghost" to={`/w/${workspaceId}/my-work`}>
+              My work
+            </Link>
             <Link className="btn-primary" to={`/w/${workspaceId}/projects`}>
               View projects
             </Link>
@@ -116,12 +119,12 @@ export function OverviewPage() {
           <h2 className="mb-2 text-sm font-semibold">Projects</h2>
           <div className="panel divide-y divide-line">
             {(projects.data ?? []).map((project) => (
-              <Link key={project.id} to={`/w/${workspaceId}/projects/${project.id}`} className="flex items-center justify-between px-4 py-3 hover:bg-slate-50">
-                <span>
-                  <span className="font-mono text-xs text-muted">{project.key}</span>
-                  <span className="mt-0.5 block text-sm font-medium">{project.name}</span>
+              <Link key={project.id} to={`/w/${workspaceId}/projects/${project.id}`} className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-brand-soft">
+                <span className="min-w-0">
+                  <span className="rounded bg-brand-soft px-1.5 py-0.5 font-mono text-[11px] text-brand">{project.key}</span>
+                  <span className="mt-1 block truncate text-sm font-medium">{project.name}</span>
                 </span>
-                <span className="text-sm text-muted">{project.openIssueCount} open</span>
+                <span className="shrink-0 text-sm text-muted">{project.openIssueCount} open</span>
               </Link>
             ))}
             {!projects.data?.length ? <EmptyState title="No projects yet" body="Projects group issues by product area, with their own keys and boards." action={<Link className="btn-primary" to={`/w/${workspaceId}/projects`}>Create a project</Link>} /> : null}

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { useDocumentTitle } from '../components/ui';
+import { Logo, useDocumentTitle } from '../components/ui';
 import { api, errorMessage } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
 import { useUiStore } from '../stores/uiStore';
@@ -28,6 +28,8 @@ export function InvitePage() {
   return (
     <main className="grid min-h-screen place-items-center bg-canvas px-4">
       <section className="panel w-full max-w-lg p-6">
+        <Logo />
+        <div className="mt-6">
         {invite.isPending ? <p className="text-sm text-muted">Loading invite…</p> : null}
         {invite.isError ? <p className="text-sm text-danger">{errorMessage(invite.error)}</p> : null}
         {invite.data ? (
@@ -62,6 +64,7 @@ export function InvitePage() {
             ) : null}
           </>
         ) : null}
+        </div>
       </section>
     </main>
   );
