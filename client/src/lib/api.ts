@@ -66,6 +66,7 @@ export interface IssueInput {
   estimate?: number | null;
   cycleId?: string | null;
   projectId?: string;
+  parentId?: string | null;
 }
 
 export const api = {

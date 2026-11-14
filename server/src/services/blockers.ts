@@ -23,7 +23,7 @@ async function keyFor(issue: { project: unknown; number: number }) {
   return `${project?.key ?? 'ISSUE'}-${issue.number}`;
 }
 
-function toLink(issue: { _id: unknown; number: number; title: string; status: IssueStatus; project: unknown }): IssueLink {
+export function toLink(issue: { _id: unknown; number: number; title: string; status: IssueStatus; project: unknown }): IssueLink {
   const project = issue.project as { key?: string };
   return {
     id: String(issue._id),

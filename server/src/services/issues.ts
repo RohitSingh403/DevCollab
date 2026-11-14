@@ -22,6 +22,7 @@ import { activeCycleId, assertProjectCycle } from './cycles';
 import { assertWorkspaceMembers, membershipFor } from './membership';
 import { mentionedUserIds, workspaceMembers } from './mentions';
 import { notifyUsers } from './notifications';
+import { assertParentIssue, detachChildren, familyFor, withSubissueCounts } from './subissues';
 import { notifyAudience } from './watchers';
 
 const ISSUE_POPULATE = [
@@ -101,7 +102,7 @@ export async function listIssues(input: {
       .populate(ISSUE_POPULATE),
   ]);
 
-  return { issues: issues.map((issue) => serializeIssue(issue)), ...pageMeta(input.page, input.limit, total) };
+  return { issues: await withSubissueCounts(issues, serializeIssue), ...pageMeta(input.page, input.limit, total) };
 }
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -151,11 +152,13 @@ export async function listMyWork(workspaceId: string, userId: string, now = new 
       later: groups.later.length,
       undated: groups.undated.length,
     },
-    groups: sections.map((section) => ({
-      id: section.id,
-      label: section.label,
-      issues: section.issues.map((issue) => serializeIssue(issue)),
-    })),
+    groups: await Promise.all(
+      sections.map(async (section) => ({
+        id: section.id,
+        label: section.label,
+        issues: await withSubissueCounts(section.issues, serializeIssue),
+      })),
+    ),
   };
 }
 
@@ -185,7 +188,7 @@ export async function searchWorkspaceIssues(workspaceId: string, q: string) {
     seen.add(id);
     return true;
   });
-  return merged.slice(0, 8).map((issue) => serializeIssue(issue));
+  return withSubissueCounts(merged.slice(0, 8), serializeIssue);
 }
 
 async function presentIssue(issueId: string, userId?: string) {
@@ -194,11 +197,15 @@ async function presentIssue(issueId: string, userId?: string) {
     { path: 'watchers', select: 'name email avatarColor' },
   ]);
   if (!issue) throw new ApiError(404, 'Issue not found', 'not_found');
-  const relations = await relationsFor(issueId);
-  const watchers = (issue.watchers ?? []).map((user) => serializeUser(user));
+  const [relations, family, watchers] = await Promise.all([
+    relationsFor(issueId),
+    familyFor(issueId, issue.parent),
+    Promise.resolve((issue.watchers ?? []).map((user) => serializeUser(user))),
+  ]);
   return {
     ...serializeIssue(issue),
     ...relations,
+    ...family,
     watchers,
     watching: Boolean(userId && watchers.some((user) => user.id === userId)),
   };
@@ -220,6 +227,7 @@ export async function createIssue(
     labelIds: string[];
     dueDate?: string | null;
     estimate?: number | null;
+    parentId?: string | null;
   },
   rt?: Realtime,
 ) {
@@ -228,6 +236,7 @@ export async function createIssue(
   const workspaceId = String(project.workspace);
   const assigneeIds = await assertWorkspaceMembers(workspaceId, input.assigneeIds);
   const labelIds = await assertLabels(workspaceId, input.labelIds);
+  const parent = input.parentId ? await assertParentIssue(workspaceId, input.parentId) : null;
   const numbered = await Project.findOneAndUpdate({ _id: project._id }, { $inc: { nextIssueNumber: 1 } }, { new: true });
   if (!numbered) throw new ApiError(404, 'Project not found', 'not_found');
 
@@ -247,10 +256,14 @@ export async function createIssue(
     reporter: input.actor.id,
     dueDate,
     completedAt: input.status === 'done' ? new Date() : null,
+    parent: parent?._id ?? null,
   });
 
   const dto = serializeIssue(await loadIssue(String(issue._id)));
-  const message = `${input.actor.name} opened ${dto.key} ${dto.title}`;
+  const parentLabel = parent ? `${(parent.project as { key?: string }).key ?? 'ISSUE'}-${parent.number}` : null;
+  const message = parentLabel
+    ? `${input.actor.name} opened ${dto.key} ${dto.title} under ${parentLabel}`
+    : `${input.actor.name} opened ${dto.key} ${dto.title}`;
   await recordActivity(
     {
       workspaceId,
@@ -262,6 +275,19 @@ export async function createIssue(
     },
     rt,
   );
+  if (parent && parentLabel) {
+    await recordActivity(
+      {
+        workspaceId,
+        projectId: String((parent.project as { _id?: unknown })._id ?? parent.project),
+        issueId: String(parent._id),
+        actorId: input.actor.id,
+        type: 'issue.subissue',
+        message: `${input.actor.name} added ${dto.key} under ${parentLabel}`,
+      },
+      rt,
+    );
+  }
   await notifyUsers(
     {
       userIds: assigneeIds,
@@ -274,7 +300,7 @@ export async function createIssue(
     rt,
   );
   rt?.toWorkspace(workspaceId, 'issue:created', { issueId: dto.id, projectId: String(project._id) });
-  return dto;
+  return presentIssue(dto.id, input.actor.id);
 }
 
 export async function updateIssue(
@@ -291,6 +317,7 @@ export async function updateIssue(
     estimate?: number | null;
     cycleId?: string | null;
     projectId?: string;
+    parentId?: string | null;
   },
   rt?: Realtime,
 ) {
@@ -300,6 +327,7 @@ export async function updateIssue(
   const parts: string[] = [];
   let statusChanged = false;
   let movedFrom: string | null = null;
+  let parentActivity: { issueId: string; projectId: string; message: (key: string) => string } | null = null;
 
   if (input.title !== undefined && input.title !== issue.title) {
     issue.title = input.title;
@@ -352,6 +380,30 @@ export async function updateIssue(
     await Comment.updateMany({ issue: issue._id }, { project: destination._id });
     parts.push(`project to ${destination.name}`);
   }
+  if (input.parentId !== undefined) {
+    const current = issue.parent ? String(issue.parent) : null;
+    if (input.parentId !== current) {
+      const parent = await assertParentIssue(workspaceId, input.parentId, String(issue._id));
+      const previous = current ? await Issue.findById(current).populate('project', 'key') : null;
+      issue.parent = (parent?._id ?? null) as unknown as typeof issue.parent;
+      const parentLabel = parent ? `${(parent.project as { key?: string }).key ?? 'ISSUE'}-${parent.number}` : null;
+      parts.push(parentLabel ? `parent to ${parentLabel}` : 'parent');
+      if (parent && parentLabel) {
+        parentActivity = {
+          issueId: String(parent._id),
+          projectId: String((parent.project as { _id?: unknown })._id ?? parent.project),
+          message: (key) => `${input.actor.name} added ${key} under ${parentLabel}`,
+        };
+      } else if (previous) {
+        const previousLabel = `${(previous.project as { key?: string }).key ?? 'ISSUE'}-${previous.number}`;
+        parentActivity = {
+          issueId: String(previous._id),
+          projectId: String((previous.project as { _id?: unknown })._id ?? previous.project),
+          message: (key) => `${input.actor.name} removed ${key} from ${previousLabel}`,
+        };
+      }
+    }
+  }
   if (input.cycleId !== undefined) {
     const next = input.cycleId ? await assertProjectCycle(String(issue.project), input.cycleId) : null;
     const current = issue.cycle ? String(issue.cycle) : null;
@@ -400,6 +452,19 @@ export async function updateIssue(
     },
     rt,
   );
+  if (parentActivity) {
+    await recordActivity(
+      {
+        workspaceId,
+        projectId: parentActivity.projectId,
+        issueId: parentActivity.issueId,
+        actorId: input.actor.id,
+        type: 'issue.subissue',
+        message: parentActivity.message(dto.key),
+      },
+      rt,
+    );
+  }
   if (addedAssignees.length) {
     await notifyUsers(
       {
@@ -442,6 +507,7 @@ export async function deleteIssue(issueId: string, actor: { id: string; name: st
   const workspaceId = String(issue.workspace);
   const projectId = String(project._id ?? issue.project);
   await clearBlockerRefs([issueId], rt);
+  await detachChildren(issueId);
   await Comment.deleteMany({ issue: issue._id });
   await issue.deleteOne();
   await recordActivity(
