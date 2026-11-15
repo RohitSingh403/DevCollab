@@ -208,3 +208,10 @@ export const createViewSchema = z
 export const searchSchema = z.object({
   q: z.string().trim().min(1).max(80),
 });
+
+export const favoriteSchema = z
+  .object({
+    kind: z.enum(['project', 'issue']),
+    targetId: objectId,
+  })
+  .strict();

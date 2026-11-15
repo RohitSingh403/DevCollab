@@ -923,4 +923,41 @@ describe('workspaces, issues, and authorization', () => {
     expect(history.body.activities.some((item: { message: string }) => item.message.includes('archived project OLD'))).toBe(true);
     expect(history.body.activities.some((item: { message: string }) => item.message.includes('restored project OLD'))).toBe(true);
   });
+
+  it('keeps favorites private to the member who pinned them', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const teammate = await registerUser(authAgent(), 'Jonah Patel');
+    const outsider = await registerUser(authAgent(), 'Outsider');
+    const workspace = await createWorkspace(owner.agent, 'Pins');
+    await owner.agent.post(`/api/workspaces/${workspace.id}/invites`).send({ email: teammate.email, role: 'member' });
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({
+      name: 'API Platform',
+      key: 'API',
+      description: 'Service layer',
+    });
+    const projectId = project.body.project.id as string;
+    const issue = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Pin this issue' });
+    const issueId = issue.body.issue.id as string;
+
+    const hidden = await outsider.agent.get(`/api/workspaces/${workspace.id}/favorites`);
+    expect(hidden.status).toBe(404);
+    const foreign = await owner.agent.post(`/api/workspaces/${workspace.id}/favorites`).send({
+      kind: 'issue',
+      targetId: 'aaaaaaaaaaaaaaaaaaaaaaaa',
+    });
+    expect(foreign.status).toBe(400);
+
+    const pinned = await owner.agent.post(`/api/workspaces/${workspace.id}/favorites`).send({ kind: 'project', targetId: projectId });
+    expect(pinned.status).toBe(201);
+    const again = await owner.agent.post(`/api/workspaces/${workspace.id}/favorites`).send({ kind: 'issue', targetId: issueId });
+    expect(again.body.favorites.map((item: { hint: string }) => item.hint)).toEqual(['API', 'API-1']);
+    const teammateList = await teammate.agent.get(`/api/workspaces/${workspace.id}/favorites`);
+    expect(teammateList.body.favorites).toEqual([]);
+
+    const removed = await owner.agent.delete(`/api/workspaces/${workspace.id}/favorites/project/${projectId}`);
+    expect(removed.body.favorites.map((item: { hint: string }) => item.hint)).toEqual(['API-1']);
+    await owner.agent.delete(`/api/issues/${issueId}`);
+    const afterDelete = await owner.agent.get(`/api/workspaces/${workspace.id}/favorites`);
+    expect(afterDelete.body.favorites).toEqual([]);
+  });
 });

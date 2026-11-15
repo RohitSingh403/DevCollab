@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { asyncHandler } from '../asyncHandler';
+import { ApiError } from '../errors';
 import { requireAuth } from '../middleware/auth';
 import { requireWorkspace } from '../middleware/access';
 import {
@@ -7,6 +8,7 @@ import {
   createWorkspaceSchema,
   inviteSchema,
   paginationSchema,
+  favoriteSchema,
   searchSchema,
   updateMemberSchema,
   updateWorkspaceSchema,
@@ -14,6 +16,7 @@ import {
 import { buildAnalytics } from '../services/analytics';
 import { listActivity } from '../services/feed';
 import { listMyWork, searchWorkspaceIssues } from '../services/issues';
+import { addFavorite, listFavorites, removeFavorite } from '../services/favorites';
 import { archivedProjectIds } from '../services/projects';
 import {
   acceptInvite,
@@ -212,6 +215,35 @@ workspaceRouter.get(
   requireWorkspace(),
   asyncHandler(async (req, res) => {
     res.json(await listMyWork(req.params.workspaceId, req.authUser!.id));
+  }),
+);
+
+workspaceRouter.get(
+  '/:workspaceId/favorites',
+  requireWorkspace(),
+  asyncHandler(async (req, res) => {
+    res.json({ favorites: await listFavorites(req.params.workspaceId, req.authUser!.id) });
+  }),
+);
+
+workspaceRouter.post(
+  '/:workspaceId/favorites',
+  requireWorkspace(),
+  asyncHandler(async (req, res) => {
+    const input = parseBody<ReturnType<typeof favoriteSchema.parse>>(favoriteSchema, req.body);
+    res.status(201).json({ favorites: await addFavorite(req.params.workspaceId, req.authUser!.id, input) });
+  }),
+);
+
+workspaceRouter.delete(
+  '/:workspaceId/favorites/:kind/:targetId',
+  requireWorkspace(),
+  asyncHandler(async (req, res) => {
+    const kind = req.params.kind === 'project' || req.params.kind === 'issue' ? req.params.kind : null;
+    if (!kind || !/^[a-f\d]{24}$/i.test(req.params.targetId)) {
+      throw new ApiError(400, 'That favorite is not valid', 'invalid_favorite');
+    }
+    res.json({ favorites: await removeFavorite(req.params.workspaceId, req.authUser!.id, kind, req.params.targetId) });
   }),
 );
 

@@ -18,6 +18,7 @@ import type { Realtime } from '../realtime';
 import { serializeComment, serializeIssue, serializeUser } from '../serializers';
 import { escapeRegex, pageMeta } from '../utils';
 import { recordActivity } from './activity';
+import { clearTargetFavorites } from './favorites';
 import { clearBlockerRefs, relationsFor, syncDependents } from './blockers';
 import { activeCycleId, assertProjectCycle } from './cycles';
 import { assertWorkspaceMembers, membershipFor } from './membership';
@@ -513,6 +514,7 @@ export async function deleteIssue(issueId: string, actor: { id: string; name: st
   const projectId = String(project._id ?? issue.project);
   await clearBlockerRefs([issueId], rt);
   await detachChildren(issueId);
+  await clearTargetFavorites({ issueIds: [issueId] });
   await Comment.deleteMany({ issue: issue._id });
   await issue.deleteOne();
   await recordActivity(
