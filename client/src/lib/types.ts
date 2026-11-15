@@ -80,6 +80,14 @@ export interface Project {
   updatedAt: string;
 }
 
+export interface Favorite {
+  id: string;
+  kind: 'project' | 'issue';
+  targetId: string;
+  label: string;
+  hint: string;
+}
+
 export interface Label {
   id: string;
   name: string;

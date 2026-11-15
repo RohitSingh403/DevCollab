@@ -9,6 +9,7 @@ import type {
   IssueList,
   MyWork,
   IssueStatus,
+  Favorite,
   Label,
   Member,
   Notification,
@@ -171,6 +172,17 @@ export const api = {
     ),
   deleteChecklistItem: (issueId: string, itemId: string) =>
     request<{ issue: Issue }>(`/api/issues/${issueId}/checklist/${itemId}`, { method: 'DELETE' }).then((data) => data.issue),
+  favorites: (workspaceId: string) =>
+    request<{ favorites: Favorite[] }>(`/api/workspaces/${workspaceId}/favorites`).then((data) => data.favorites),
+  addFavorite: (workspaceId: string, input: { kind: 'project' | 'issue'; targetId: string }) =>
+    request<{ favorites: Favorite[] }>(`/api/workspaces/${workspaceId}/favorites`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }).then((data) => data.favorites),
+  removeFavorite: (workspaceId: string, kind: 'project' | 'issue', targetId: string) =>
+    request<{ favorites: Favorite[] }>(`/api/workspaces/${workspaceId}/favorites/${kind}/${targetId}`, { method: 'DELETE' }).then(
+      (data) => data.favorites,
+    ),
   search: (workspaceId: string, q: string) =>
     request<{ issues: Issue[] }>(`/api/workspaces/${workspaceId}/search?q=${encodeURIComponent(q)}`).then((data) => data.issues),
 

@@ -10,6 +10,7 @@ import { addChecklistItem, updateChecklistItem } from './services/checklist';
 import { setWatching } from './services/watchers';
 import { startCycle } from './services/cycles';
 import { addComment, createIssue, updateIssue } from './services/issues';
+import { addFavorite } from './services/favorites';
 import { createProject } from './services/projects';
 import { createLabel, createWorkspace } from './services/workspaces';
 import { colorFromString } from './utils';
@@ -71,6 +72,8 @@ export async function seedDatabase() {
     labelIds: [feature.id],
     dueDate: isoDaysFromNow(3),
   });
+  await addFavorite(workspace.id, actor.id, { kind: 'project', targetId: api.id });
+  await addFavorite(workspace.id, actor.id, { kind: 'issue', targetId: session.id });
   await createIssue({
     projectId: api.id,
     actor,

@@ -7,6 +7,7 @@ import { Issue } from '../models/Issue';
 import { Project } from '../models/Project';
 import type { Realtime } from '../realtime';
 import { recordActivity } from './activity';
+import { clearTargetFavorites } from './favorites';
 import { clearBlockerRefs } from './blockers';
 
 function presentProject(
@@ -140,6 +141,7 @@ export async function deleteProject(projectId: string, actor: { id: string; name
   await Issue.deleteMany({ project: project._id });
   await SavedView.deleteMany({ project: project._id });
   await Cycle.deleteMany({ project: project._id });
+  await clearTargetFavorites({ projectId, issueIds: doomed.map((id) => String(id)) });
   const workspaceId = String(project.workspace);
   const label = `${project.key} ${project.name}`;
   await project.deleteOne();

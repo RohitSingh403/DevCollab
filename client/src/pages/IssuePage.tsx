@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Blockers } from '../components/Blockers';
+import { FavoriteButton } from '../components/FavoriteButton';
 import { Subissues } from '../components/Subissues';
 import { Checklist } from '../components/Checklist';
 import { Avatar, useDocumentTitle } from '../components/ui';
@@ -83,7 +84,10 @@ export function IssuePage() {
           <span aria-hidden="true"> / </span>
           <span className="font-mono text-[12px] text-ink">{current.key}</span>
         </p>
-        <TitleEditor title={current.title} onSave={(title) => save.mutate({ title })} />
+        <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
+          <TitleEditor title={current.title} onSave={(title) => save.mutate({ title })} />
+          <FavoriteButton workspaceId={workspaceId} kind="issue" targetId={issueId} />
+        </div>
         {current.blocked ? (
           <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-[13px] text-danger">
             Blocked by {(current.blockedBy ?? []).filter((item) => item.status !== 'done').map((item) => item.key).join(', ') || 'an open issue'}
@@ -342,7 +346,7 @@ function TitleEditor({ title, onSave }: { title: string; onSave: (title: string)
     <textarea
       ref={ref}
       rows={1}
-      className="mt-2 w-full resize-none overflow-hidden bg-transparent text-[28px] font-semibold leading-tight tracking-[-0.03em] text-ink outline-none"
+      className="mt-1 min-w-0 flex-1 resize-none overflow-hidden bg-transparent text-[28px] font-semibold leading-tight tracking-[-0.03em] text-ink outline-none"
       aria-label="Issue title"
       value={value}
       onChange={(event) => setValue(event.target.value)}

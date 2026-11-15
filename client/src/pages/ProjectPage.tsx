@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { CycleBar } from '../components/CycleBar';
+import { FavoriteButton } from '../components/FavoriteButton';
 import { IssueBoard } from '../components/IssueBoard';
 import { IssueForm } from '../components/IssueForm';
 import { StatGrid } from '../components/AnalyticsPanels';
@@ -176,6 +177,7 @@ export function ProjectPage() {
         description={project.data?.description}
         actions={
           <>
+            <FavoriteButton workspaceId={workspaceId} kind="project" targetId={projectId} />
             {canManage ? (
               <button className="btn-ghost" type="button" disabled={archive.isPending} onClick={() => archive.mutate(!project.data?.archived)}>
                 {project.data?.archived ? 'Restore project' : 'Archive project'}

@@ -34,6 +34,8 @@ Sign in as `maya@devcollab.dev` / `Password123!`. Jonah Patel (`jonah@devcollab.
 
 ![Jonah following an issue from the watchers panel](docs/screenshots/watchers.png)
 
+![Favorites in the sidebar for API Platform and API-1](docs/screenshots/favorites.png)
+
 ![Command menu finding an issue by its key](docs/screenshots/command-menu.png)
 
 ![A comment with bold text, a list, and a link](docs/screenshots/comment-markdown.png)
@@ -70,6 +72,7 @@ Work:
 - Sub-issues in the same workspace. A parent shows how many direct children are done, on the issue, the board, the list, and My work
 - Due reminders. Assignees get one inbox alert on the day an open issue is due, and one more after that day passes. Changing the date or reopening the issue allows a new alert
 - A command menu, opened with Ctrl K or ⌘K, that jumps to a page, a project, or an issue key
+- Favorites. Pin up to 12 projects and issues in a workspace. They stay in the sidebar for that person only
 
 Discussion:
 

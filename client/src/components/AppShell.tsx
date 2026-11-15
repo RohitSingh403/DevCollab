@@ -10,6 +10,33 @@ import { useUiStore } from '../stores/uiStore';
 import { useRealtime } from '../hooks/useRealtime';
 import { Avatar, Icon, Logo, Modal, type IconName } from './ui';
 
+function Favorites({ workspaceId, onNavigate }: { workspaceId?: string; onNavigate: () => void }) {
+  const favorites = useQuery({
+    queryKey: ['favorites', workspaceId],
+    queryFn: () => api.favorites(workspaceId!),
+    enabled: Boolean(workspaceId),
+  });
+  if (!workspaceId || !favorites.data?.length) return null;
+  return (
+    <div className="mt-4">
+      <p className="px-2.5 pb-1 text-[11px] font-medium uppercase tracking-[0.14em] text-stone-500">Favorites</p>
+      {favorites.data.map((item) => (
+        <NavLink
+          key={item.id}
+          to={item.kind === 'project' ? `/w/${workspaceId}/projects/${item.targetId}` : `/w/${workspaceId}/issues/${item.targetId}`}
+          onClick={onNavigate}
+          className={({ isActive }) =>
+            `flex items-center gap-2 rounded-lg px-2.5 py-[7px] text-[13px] ${isActive ? 'bg-white/10 font-medium text-white' : 'text-stone-400 hover:bg-white/5 hover:text-white'}`
+          }
+        >
+          <span className="w-10 shrink-0 font-mono text-[10px] text-stone-500">{item.hint}</span>
+          <span className="truncate">{item.label}</span>
+        </NavLink>
+      ))}
+    </div>
+  );
+}
+
 const links: { label: string; suffix: string; icon: IconName }[] = [
   { label: 'Overview', suffix: '', icon: 'overview' },
   { label: 'My work', suffix: '/my-work', icon: 'work' },
@@ -225,6 +252,7 @@ export function AppShell() {
             Notifications
             {unread ? <span className="ml-auto rounded-full bg-brand px-1.5 text-[10px] font-semibold leading-4 text-white">{unread}</span> : null}
           </NavLink>
+          <Favorites workspaceId={activeId} onNavigate={() => setNavOpen(false)} />
         </nav>
         <div className="border-t border-white/10 p-2">
           <button

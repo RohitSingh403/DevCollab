@@ -17,6 +17,7 @@ import type { Realtime } from '../realtime';
 import { serializeUser, serializeWorkspace } from '../serializers';
 import { hashInviteToken, newInviteToken, slugify } from '../utils';
 import { recordActivity } from './activity';
+import { clearMemberFavorites, clearWorkspaceFavorites } from './favorites';
 import { assertLastOwner } from './membership';
 import { notifyUsers } from './notifications';
 
@@ -145,6 +146,7 @@ export async function deleteWorkspace(workspaceId: string) {
     Notification.deleteMany({ workspace: workspaceId }),
     SavedView.deleteMany({ workspace: workspaceId }),
     Cycle.deleteMany({ workspace: workspaceId }),
+    clearWorkspaceFavorites(workspaceId),
     Project.deleteMany({ _id: { $in: projectIds } }),
     Workspace.deleteOne({ _id: workspaceId }),
   ]);
@@ -351,6 +353,7 @@ export async function removeMember(
   await assertLastOwner(workspaceId, targetUserId);
   const user = await User.findById(targetUserId).select('name');
   await target.deleteOne();
+  await clearMemberFavorites(workspaceId, targetUserId);
   await Issue.updateMany({ workspace: workspaceId, assignees: targetUserId }, { $pull: { assignees: targetUserId } });
   await Issue.updateMany({ workspace: workspaceId, watchers: targetUserId }, { $pull: { watchers: targetUserId } });
   await recordActivity(
