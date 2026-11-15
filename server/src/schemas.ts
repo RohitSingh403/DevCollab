@@ -3,16 +3,18 @@ import { ESTIMATES, INVITE_ROLES, PRIORITIES, ROLES, STATUSES } from './constant
 
 const objectId = z.string().regex(/^[a-f\d]{24}$/i, 'Expected an id');
 
+const passwordRule = z
+  .string()
+  .min(8)
+  .max(72)
+  .regex(/[A-Za-z]/, 'Password must include a letter')
+  .regex(/[0-9]/, 'Password must include a number');
+
 export const registerSchema = z
   .object({
     name: z.string().trim().min(2).max(80),
     email: z.string().trim().email().max(120).transform((value) => value.toLowerCase()),
-    password: z
-      .string()
-      .min(8)
-      .max(72)
-      .regex(/[A-Za-z]/, 'Password must include a letter')
-      .regex(/[0-9]/, 'Password must include a number'),
+    password: passwordRule,
   })
   .strict();
 
@@ -26,6 +28,13 @@ export const loginSchema = z
 export const updateProfileSchema = z
   .object({
     name: z.string().trim().min(2).max(80),
+  })
+  .strict();
+
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1).max(72),
+    newPassword: passwordRule,
   })
   .strict();
 

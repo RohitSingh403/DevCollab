@@ -48,7 +48,7 @@ Sign in as `maya@devcollab.dev` / `Password123!`. Jonah Patel (`jonah@devcollab.
 
 Accounts and access:
 
-- Email and password accounts, bcrypt hashing, and an httpOnly JWT cookie
+- Email and password accounts, bcrypt hashing, and an httpOnly JWT cookie. Account settings can change the password after checking the current one
 - Workspaces with owner, admin, and member roles
 - Email invites for people who already have an account, and one-time links for everyone else
 - A starter workspace on signup, so the first session is not an empty board

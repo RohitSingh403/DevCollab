@@ -78,6 +78,8 @@ export const api = {
   logout: () => request<void>('/api/auth/logout', { method: 'POST' }),
   updateProfile: (name: string) =>
     request<{ user: User }>('/api/auth/me', { method: 'PATCH', body: JSON.stringify({ name }) }).then((data) => data.user),
+  changePassword: (input: { currentPassword: string; newPassword: string }) =>
+    request<void>('/api/auth/password', { method: 'POST', body: JSON.stringify(input) }),
 
   workspaces: () => request<{ workspaces: Workspace[] }>('/api/workspaces').then((data) => data.workspaces),
   workspace: (id: string) => request<{ workspace: Workspace }>(`/api/workspaces/${id}`).then((data) => data.workspace),

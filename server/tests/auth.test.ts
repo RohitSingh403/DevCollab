@@ -75,6 +75,52 @@ describe('authentication', () => {
     expect(after.status).toBe(401);
   });
 
+  it('changes the password and keeps the session', async () => {
+    const agent = authAgent();
+    const { email, password } = await registerUser(agent, 'Grace Hopper');
+    const anonymous = await request(app).post('/api/auth/password').send({
+      currentPassword: password,
+      newPassword: 'Newpass123!',
+    });
+    expect(anonymous.status).toBe(401);
+
+    const wrong = await agent.post('/api/auth/password').send({
+      currentPassword: 'not-the-password',
+      newPassword: 'Newpass123!',
+    });
+    expect(wrong.status).toBe(401);
+    expect(wrong.body.error.message).toBe('Current password is incorrect');
+
+    const same = await agent.post('/api/auth/password').send({
+      currentPassword: password,
+      newPassword: password,
+    });
+    expect(same.status).toBe(400);
+    expect(same.body.error.code).toBe('same_password');
+
+    const weak = await agent.post('/api/auth/password').send({
+      currentPassword: password,
+      newPassword: 'short',
+    });
+    expect(weak.status).toBe(400);
+
+    const changed = await agent.post('/api/auth/password').send({
+      currentPassword: password,
+      newPassword: 'Newpass123!',
+    });
+    expect(changed.status).toBe(204);
+    expect(changed.body).toEqual({});
+
+    const still = await agent.get('/api/auth/me');
+    expect(still.status).toBe(200);
+
+    const oldLogin = await authAgent().post('/api/auth/login').send({ email, password });
+    expect(oldLogin.status).toBe(401);
+    const nextLogin = await authAgent().post('/api/auth/login').send({ email, password: 'Newpass123!' });
+    expect(nextLogin.status).toBe(200);
+    expect(nextLogin.body.user.passwordHash).toBeUndefined();
+  });
+
   it('reports database health', async () => {
     const response = await request(app).get('/api/health');
     expect(response.status).toBe(200);
