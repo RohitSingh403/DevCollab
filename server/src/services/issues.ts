@@ -20,6 +20,7 @@ import { escapeRegex, pageMeta } from '../utils';
 import { recordActivity } from './activity';
 import { clearTargetFavorites } from './favorites';
 import { clearBlockerRefs, relationsFor, syncDependents } from './blockers';
+import { clearRelatedRefs, relatedFor } from './related';
 import { activeCycleId, assertProjectCycle } from './cycles';
 import { assertWorkspaceMembers, membershipFor } from './membership';
 import { mentionedUserIds, workspaceMembers } from './mentions';
@@ -201,10 +202,11 @@ async function presentIssue(issueId: string, userId?: string) {
     { path: 'watchers', select: 'name email avatarColor' },
   ]);
   if (!issue) throw new ApiError(404, 'Issue not found', 'not_found');
-  const [relations, family, watchers] = await Promise.all([
+  const [relations, family, watchers, related] = await Promise.all([
     relationsFor(issueId),
     familyFor(issueId, issue.parent),
     Promise.resolve((issue.watchers ?? []).map((user) => serializeUser(user))),
+    relatedFor(issueId),
   ]);
   return {
     ...serializeIssue(issue),
@@ -212,6 +214,7 @@ async function presentIssue(issueId: string, userId?: string) {
     ...family,
     watchers,
     watching: Boolean(userId && watchers.some((user) => user.id === userId)),
+    related,
   };
 }
 
@@ -565,6 +568,7 @@ export async function deleteIssue(issueId: string, actor: { id: string; name: st
   const workspaceId = String(issue.workspace);
   const projectId = String(project._id ?? issue.project);
   await clearBlockerRefs([issueId], rt);
+  await clearRelatedRefs([issueId]);
   await detachChildren(issueId);
   await clearTargetFavorites({ issueIds: [issueId] });
   await Comment.deleteMany({ issue: issue._id });

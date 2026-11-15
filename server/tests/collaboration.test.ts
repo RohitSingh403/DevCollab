@@ -1014,4 +1014,60 @@ describe('workspaces, issues, and authorization', () => {
     const blocked = await owner.agent.post(`/api/issues/${issueId}/duplicate`);
     expect(blocked.status).toBe(409);
   });
+
+  it('links related issues on both sides and drops the link when one is deleted', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const outsider = await registerUser(authAgent(), 'Outsider');
+    const workspace = await createWorkspace(owner.agent, 'Links');
+    const otherWorkspace = await createWorkspace(owner.agent, 'Elsewhere');
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({
+      name: 'API Platform',
+      key: 'API',
+      description: 'Service layer',
+    });
+    const web = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({
+      name: 'Web Client',
+      key: 'WEB',
+      description: 'Interface',
+    });
+    const foreignProject = await owner.agent.post(`/api/workspaces/${otherWorkspace.id}/projects`).send({
+      name: 'Other',
+      key: 'OTH',
+      description: 'Separate',
+    });
+    const left = await owner.agent.post(`/api/projects/${project.body.project.id}/issues`).send({ title: 'Paginate comments' });
+    const right = await owner.agent.post(`/api/projects/${web.body.project.id}/issues`).send({ title: 'Live notification bell' });
+    const foreign = await owner.agent.post(`/api/projects/${foreignProject.body.project.id}/issues`).send({ title: 'Outside' });
+    const leftId = left.body.issue.id as string;
+    const rightId = right.body.issue.id as string;
+
+    const hidden = await outsider.agent.post(`/api/issues/${leftId}/related`).send({ issueId: rightId });
+    expect(hidden.status).toBe(404);
+    const self = await owner.agent.post(`/api/issues/${leftId}/related`).send({ issueId: leftId });
+    expect(self.status).toBe(400);
+    const outside = await owner.agent.post(`/api/issues/${leftId}/related`).send({ issueId: foreign.body.issue.id });
+    expect(outside.status).toBe(404);
+
+    const linked = await owner.agent.post(`/api/issues/${leftId}/related`).send({ issueId: rightId });
+    expect(linked.status).toBe(201);
+    expect(linked.body.issue.related.map((item: { key: string }) => item.key)).toEqual(['WEB-1']);
+    const otherSide = await owner.agent.get(`/api/issues/${rightId}`);
+    expect(otherSide.body.issue.related.map((item: { key: string }) => item.key)).toEqual(['API-1']);
+    const duplicate = await owner.agent.post(`/api/issues/${rightId}/related`).send({ issueId: leftId });
+    expect(duplicate.status).toBe(409);
+
+    const history = await owner.agent.get(`/api/issues/${rightId}/activity`);
+    expect(history.body.activities.some((item: { message: string }) => item.message.includes('related API-1 to WEB-1'))).toBe(true);
+
+    const removed = await owner.agent.delete(`/api/issues/${leftId}/related/${rightId}`);
+    expect(removed.status).toBe(200);
+    expect(removed.body.issue.related).toEqual([]);
+    const cleared = await owner.agent.get(`/api/issues/${rightId}`);
+    expect(cleared.body.issue.related).toEqual([]);
+
+    await owner.agent.post(`/api/issues/${leftId}/related`).send({ issueId: rightId });
+    await owner.agent.delete(`/api/issues/${rightId}`);
+    const afterDelete = await owner.agent.get(`/api/issues/${leftId}`);
+    expect(afterDelete.body.issue.related).toEqual([]);
+  });
 });

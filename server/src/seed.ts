@@ -6,6 +6,7 @@ import { Membership } from './models/Membership';
 import { User } from './models/User';
 import { Workspace } from './models/Workspace';
 import { addBlocker } from './services/blockers';
+import { addRelated } from './services/related';
 import { addChecklistItem, updateChecklistItem } from './services/checklist';
 import { setWatching } from './services/watchers';
 import { startCycle } from './services/cycles';
@@ -202,6 +203,7 @@ export async function seedDatabase() {
   await addChecklistItem({ issueId: session.id, actor, text: 'Reject a missing signature' });
 
   await addBlocker({ issueId: comments.id, blockerId: roles.id, actor });
+  await addRelated({ issueId: notifications.id, relatedId: comments.id, actor });
   await setWatching(session.id, String(priya._id), true);
   await addBlocker({ issueId: notifications.id, blockerId: session.id, actor });
 

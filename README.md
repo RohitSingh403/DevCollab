@@ -28,6 +28,8 @@ Sign in as `maya@devcollab.dev` / `Password123!`. Jonah Patel (`jonah@devcollab.
 
 ![API-8, a backlog copy of the session issue with a fresh checklist](docs/screenshots/duplicate.png)
 
+![WEB-2 related to API-5, separate from the blocker](docs/screenshots/related.png)
+
 ![Issue detail with status, priority, assignees, and comments](docs/screenshots/issue.png)
 
 ![A checklist with two of four steps done](docs/screenshots/checklist.png)
@@ -73,6 +75,7 @@ Work:
 - Move an issue to another project in the same workspace. It keeps its discussion, checklist, and estimate, takes the next key in the destination, and leaves its cycle
 - Sub-issues in the same workspace. A parent shows how many direct children are done, on the issue, the board, the list, and My work
 - Duplicate an issue. The copy keeps the title, description, labels, priority, estimate, and checklist steps, starts in the backlog, and leaves comments and blockers behind
+- Related issues. Link two issues in the same workspace without making one a blocker or a sub-issue. The link shows on both, and deleting either issue removes it
 - Due reminders. Assignees get one inbox alert on the day an open issue is due, and one more after that day passes. Changing the date or reopening the issue allows a new alert
 - A command menu, opened with Ctrl K or ⌘K, that jumps to a page, a project, or an issue key
 - Favorites. Pin up to 12 projects and issues in a workspace. They stay in the sidebar for that person only

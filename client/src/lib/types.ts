@@ -133,6 +133,7 @@ export interface Issue {
   cycle: { id: string; name: string } | null;
   blockedBy?: IssueLink[];
   blocking?: IssueLink[];
+  related?: IssueLink[];
   parent?: IssueLink | null;
   children?: IssueLink[];
   subissues?: { total: number; done: number };

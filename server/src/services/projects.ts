@@ -9,6 +9,7 @@ import type { Realtime } from '../realtime';
 import { recordActivity } from './activity';
 import { clearTargetFavorites } from './favorites';
 import { clearBlockerRefs } from './blockers';
+import { clearRelatedRefs } from './related';
 
 function presentProject(
   project: {
@@ -137,6 +138,7 @@ export async function deleteProject(projectId: string, actor: { id: string; name
   if (!project) throw new ApiError(404, 'Project not found', 'not_found');
   const doomed = await Issue.find({ project: project._id }).distinct('_id');
   await clearBlockerRefs(doomed.map((id) => String(id)), rt);
+  await clearRelatedRefs(doomed.map((id) => String(id)));
   await Comment.deleteMany({ project: project._id });
   await Issue.deleteMany({ project: project._id });
   await SavedView.deleteMany({ project: project._id });

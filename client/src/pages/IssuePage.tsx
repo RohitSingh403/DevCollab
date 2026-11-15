@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useId, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Blockers } from '../components/Blockers';
+import { Related } from '../components/Related';
 import { FavoriteButton } from '../components/FavoriteButton';
 import { Subissues } from '../components/Subissues';
 import { Checklist } from '../components/Checklist';
@@ -129,6 +130,7 @@ export function IssuePage() {
         <Subissues workspaceId={workspaceId} issue={current} />
         <Checklist issue={current} />
         <Blockers workspaceId={workspaceId} issue={current} />
+        <Related workspaceId={workspaceId} issue={current} />
         <section className="mt-8">
           <h2 className="text-sm font-semibold">Comments</h2>
           <ul className="mt-3 space-y-3">
