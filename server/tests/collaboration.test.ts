@@ -960,4 +960,58 @@ describe('workspaces, issues, and authorization', () => {
     const afterDelete = await owner.agent.get(`/api/workspaces/${workspace.id}/favorites`);
     expect(afterDelete.body.favorites).toEqual([]);
   });
+
+  it('duplicates an issue into the backlog without its discussion', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const outsider = await registerUser(authAgent(), 'Outsider');
+    const workspace = await createWorkspace(owner.agent, 'Copies');
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({
+      name: 'API Platform',
+      key: 'API',
+      description: 'Service layer',
+    });
+    const projectId = project.body.project.id as string;
+    const label = await owner.agent.post(`/api/workspaces/${workspace.id}/labels`).send({ name: 'bug', color: '#b42318' });
+    const issue = await owner.agent.post(`/api/projects/${projectId}/issues`).send({
+      title: 'Lock the session cookie',
+      description: 'Keep **HttpOnly** on.',
+      status: 'in_progress',
+      priority: 'high',
+      estimate: 5,
+      labelIds: [label.body.label.id],
+      assigneeIds: [owner.user.id],
+    });
+    const issueId = issue.body.issue.id as string;
+    await owner.agent.post(`/api/issues/${issueId}/checklist`).send({ text: 'Set the flag' });
+    const step = await owner.agent.get(`/api/issues/${issueId}`);
+    const itemId = step.body.issue.checklist[0].id as string;
+    await owner.agent.patch(`/api/issues/${issueId}/checklist/${itemId}`).send({ done: true });
+    await owner.agent.post(`/api/issues/${issueId}/comments`).send({ body: 'Do not copy this.' });
+
+    const hidden = await outsider.agent.post(`/api/issues/${issueId}/duplicate`);
+    expect(hidden.status).toBe(404);
+
+    const copy = await owner.agent.post(`/api/issues/${issueId}/duplicate`);
+    expect(copy.status).toBe(201);
+    expect(copy.body.issue.key).toBe('API-2');
+    expect(copy.body.issue.title).toBe('Lock the session cookie');
+    expect(copy.body.issue.description).toContain('**HttpOnly**');
+    expect(copy.body.issue.status).toBe('backlog');
+    expect(copy.body.issue.priority).toBe('high');
+    expect(copy.body.issue.estimate).toBe(5);
+    expect(copy.body.issue.labels.map((item: { name: string }) => item.name)).toEqual(['bug']);
+    expect(copy.body.issue.checklist).toEqual([{ id: expect.any(String), text: 'Set the flag', done: false }]);
+    expect(copy.body.issue.commentCount).toBe(0);
+    const comments = await owner.agent.get(`/api/issues/${copy.body.issue.id}/comments`);
+    expect(comments.body.comments).toEqual([]);
+    const original = await owner.agent.get(`/api/issues/${issueId}`);
+    expect(original.body.issue.status).toBe('in_progress');
+    expect(original.body.issue.checklist[0].done).toBe(true);
+    const history = await owner.agent.get(`/api/issues/${issueId}/activity`);
+    expect(history.body.activities.some((item: { message: string }) => item.message.includes('duplicated API-1 as API-2'))).toBe(true);
+
+    await owner.agent.patch(`/api/projects/${projectId}`).send({ archived: true });
+    const blocked = await owner.agent.post(`/api/issues/${issueId}/duplicate`);
+    expect(blocked.status).toBe(409);
+  });
 });

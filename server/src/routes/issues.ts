@@ -11,6 +11,7 @@ import {
   addComment,
   createIssue,
   deleteComment,
+  duplicateIssue,
   deleteIssue,
   getIssue,
   listComments,
@@ -57,6 +58,15 @@ issueRouter.get(
   requireIssue(),
   asyncHandler(async (req, res) => {
     res.json({ issue: await getIssue(req.params.issueId, req.authUser!.id) });
+  }),
+);
+
+issueRouter.post(
+  '/:issueId/duplicate',
+  requireIssue(),
+  asyncHandler(async (req, res) => {
+    const issue = await duplicateIssue(req.params.issueId, req.authUser!, realtimeFrom(ioFromApp(req.app)));
+    res.status(201).json({ issue });
   }),
 );
 
