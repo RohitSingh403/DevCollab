@@ -48,6 +48,17 @@ export function IssuePage() {
     onError: (error) => pushToast(errorMessage(error)),
   });
 
+  const duplicate = useMutation({
+    mutationFn: () => api.duplicateIssue(issueId),
+    onSuccess: (next) => {
+      void queryClient.invalidateQueries({ queryKey: ['issues'] });
+      void queryClient.invalidateQueries({ queryKey: ['projects'] });
+      pushToast(`Duplicated as ${next.key}`);
+      navigate(`/w/${workspaceId}/issues/${next.id}`);
+    },
+    onError: (error) => pushToast(errorMessage(error)),
+  });
+
   const follow = useMutation({
     mutationFn: (watching: boolean) => api.watchIssue(issueId, watching),
     onSuccess: (next) => queryClient.setQueryData(['issue', issueId], next),
@@ -86,7 +97,12 @@ export function IssuePage() {
         </p>
         <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
           <TitleEditor title={current.title} onSave={(title) => save.mutate({ title })} />
-          <FavoriteButton workspaceId={workspaceId} kind="issue" targetId={issueId} />
+          <div className="flex shrink-0 gap-2">
+            <button className="btn-ghost" type="button" disabled={duplicate.isPending} onClick={() => duplicate.mutate()}>
+              Duplicate
+            </button>
+            <FavoriteButton workspaceId={workspaceId} kind="issue" targetId={issueId} />
+          </div>
         </div>
         {current.blocked ? (
           <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-[13px] text-danger">

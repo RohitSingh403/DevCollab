@@ -308,6 +308,58 @@ export async function createIssue(
   return presentIssue(dto.id, input.actor.id);
 }
 
+export async function duplicateIssue(issueId: string, actor: { id: string; name: string }, rt?: Realtime) {
+  const source = await Issue.findById(issueId);
+  if (!source) throw new ApiError(404, 'Issue not found', 'not_found');
+  const project = await Project.findById(source.project).select('key');
+  if (!project) throw new ApiError(404, 'Project not found', 'not_found');
+  const sourceKey = `${project.key}-${source.number}`;
+  const copy = await createIssue(
+    {
+      projectId: String(source.project),
+      actor,
+      title: source.title,
+      description: source.description ?? '',
+      status: 'backlog',
+      priority: source.priority,
+      assigneeIds: source.assignees.map((id) => String(id)),
+      labelIds: source.labels.map((id) => String(id)),
+      estimate: source.estimate ?? null,
+    },
+    rt,
+  );
+  if (source.checklist.length) {
+    const saved = await Issue.findById(copy.id);
+    if (saved) {
+      saved.checklist = source.checklist.map((item) => ({ text: item.text, done: false })) as typeof saved.checklist;
+      await saved.save();
+    }
+  }
+  await recordActivity(
+    {
+      workspaceId: String(source.workspace),
+      projectId: String(source.project),
+      issueId: String(source._id),
+      actorId: actor.id,
+      type: 'issue.duplicated',
+      message: `${actor.name} duplicated ${sourceKey} as ${copy.key}`,
+    },
+    rt,
+  );
+  await recordActivity(
+    {
+      workspaceId: String(source.workspace),
+      projectId: String(source.project),
+      issueId: copy.id,
+      actorId: actor.id,
+      type: 'issue.duplicated',
+      message: `${actor.name} duplicated ${copy.key} from ${sourceKey}`,
+    },
+    rt,
+  );
+  return presentIssue(copy.id, actor.id);
+}
+
 export async function updateIssue(
   input: {
     issueId: string;
