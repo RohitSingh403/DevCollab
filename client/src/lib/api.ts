@@ -162,6 +162,12 @@ export const api = {
     ),
   removeBlocker: (issueId: string, blockerId: string) =>
     request<{ issue: Issue }>(`/api/issues/${issueId}/blockers/${blockerId}`, { method: 'DELETE' }).then((data) => data.issue),
+  addRelated: (issueId: string, relatedId: string) =>
+    request<{ issue: Issue }>(`/api/issues/${issueId}/related`, { method: 'POST', body: JSON.stringify({ issueId: relatedId }) }).then(
+      (data) => data.issue,
+    ),
+  removeRelated: (issueId: string, relatedId: string) =>
+    request<{ issue: Issue }>(`/api/issues/${issueId}/related/${relatedId}`, { method: 'DELETE' }).then((data) => data.issue),
   watchIssue: (issueId: string, watching: boolean) =>
     request<{ issue: Issue }>(`/api/issues/${issueId}/watch`, { method: watching ? 'POST' : 'DELETE' }).then((data) => data.issue),
   addChecklistItem: (issueId: string, text: string) =>

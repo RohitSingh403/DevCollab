@@ -29,6 +29,7 @@ const issueSchema = new Schema(
     commentCount: { type: Number, default: 0 },
     blockedBy: [{ type: Schema.Types.ObjectId, ref: 'Issue' }],
     blocked: { type: Boolean, default: false },
+    related: [{ type: Schema.Types.ObjectId, ref: 'Issue' }],
     parent: { type: Schema.Types.ObjectId, ref: 'Issue', default: null, index: true },
     checklist: { type: [checklistItemSchema], default: [] },
     cycle: { type: Schema.Types.ObjectId, ref: 'Cycle', default: null },
@@ -44,6 +45,7 @@ issueSchema.index({ workspace: 1, dueDate: 1 });
 issueSchema.index({ assignees: 1 });
 issueSchema.index({ watchers: 1 });
 issueSchema.index({ blockedBy: 1 });
+issueSchema.index({ related: 1 });
 issueSchema.index({ cycle: 1 });
 
 issueSchema.pre('save', function setRank() {

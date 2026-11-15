@@ -2,9 +2,10 @@ import { Router } from 'express';
 import { asyncHandler } from '../asyncHandler';
 import { requireAuth } from '../middleware/auth';
 import { requireIssue, requireProject } from '../middleware/access';
-import { blockerSchema, checklistSchema, commentSchema, createIssueSchema, listIssueSchema, paginationSchema, updateChecklistSchema, updateIssueSchema } from '../schemas';
+import { blockerSchema, checklistSchema, commentSchema, createIssueSchema, listIssueSchema, paginationSchema, relatedSchema, updateChecklistSchema, updateIssueSchema } from '../schemas';
 import { listActivity } from '../services/feed';
 import { addBlocker, removeBlocker } from '../services/blockers';
+import { addRelated, removeRelated } from '../services/related';
 import { addChecklistItem, deleteChecklistItem, updateChecklistItem } from '../services/checklist';
 import { setWatching } from '../services/watchers';
 import {
@@ -99,6 +100,28 @@ issueRouter.post(
     const input = parseBody<ReturnType<typeof blockerSchema.parse>>(blockerSchema, req.body);
     await addBlocker({ issueId: req.params.issueId, blockerId: input.blockerId, actor: req.authUser! }, realtimeFrom(ioFromApp(req.app)));
     res.status(201).json({ issue: await getIssue(req.params.issueId, req.authUser!.id) });
+  }),
+);
+
+issueRouter.post(
+  '/:issueId/related',
+  requireIssue(),
+  asyncHandler(async (req, res) => {
+    const input = parseBody<ReturnType<typeof relatedSchema.parse>>(relatedSchema, req.body);
+    await addRelated({ issueId: req.params.issueId, relatedId: input.issueId, actor: req.authUser! }, realtimeFrom(ioFromApp(req.app)));
+    res.status(201).json({ issue: await getIssue(req.params.issueId, req.authUser!.id) });
+  }),
+);
+
+issueRouter.delete(
+  '/:issueId/related/:relatedId',
+  requireIssue(),
+  asyncHandler(async (req, res) => {
+    await removeRelated(
+      { issueId: req.params.issueId, relatedId: req.params.relatedId, actor: req.authUser! },
+      realtimeFrom(ioFromApp(req.app)),
+    );
+    res.json({ issue: await getIssue(req.params.issueId, req.authUser!.id) });
   }),
 );
 

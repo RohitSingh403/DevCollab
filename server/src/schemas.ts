@@ -135,6 +135,12 @@ export const blockerSchema = z
   })
   .strict();
 
+export const relatedSchema = z
+  .object({
+    issueId: objectId,
+  })
+  .strict();
+
 export const updateIssueSchema = z
   .object({
     title: z.string().trim().min(3).max(140).optional(),
