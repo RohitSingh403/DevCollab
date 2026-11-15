@@ -6,7 +6,7 @@ import { asyncHandler } from '../asyncHandler';
 import { ApiError } from '../errors';
 import { requireAuth, signToken, toAuthUser } from '../middleware/auth';
 import { User } from '../models/User';
-import { loginSchema, registerSchema, updateProfileSchema } from '../schemas';
+import { changePasswordSchema, loginSchema, registerSchema, updateProfileSchema } from '../schemas';
 import { serializeUser } from '../serializers';
 import { provisionStarter } from '../services/starter';
 import { colorFromString } from '../utils';
@@ -94,5 +94,23 @@ authRouter.patch(
     const authUser = toAuthUser(user);
     req.authUser = authUser;
     res.json({ user: serializeUser(user) });
+  }),
+);
+
+authRouter.post(
+  '/password',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const input = parseBody<ReturnType<typeof changePasswordSchema.parse>>(changePasswordSchema, req.body);
+    if (input.newPassword === input.currentPassword) {
+      throw new ApiError(400, 'Choose a different password', 'same_password');
+    }
+    const user = await User.findById(req.authUser!.id).select('+passwordHash');
+    if (!user) throw new ApiError(401, 'Invalid session', 'unauthorized');
+    const matches = await bcrypt.compare(input.currentPassword, user.passwordHash);
+    if (!matches) throw new ApiError(401, 'Current password is incorrect', 'invalid_password');
+    user.passwordHash = await bcrypt.hash(input.newPassword, env.bcryptRounds);
+    await user.save();
+    res.status(204).send();
   }),
 );

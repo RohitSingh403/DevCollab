@@ -18,6 +18,66 @@ const links: { label: string; suffix: string; icon: IconName }[] = [
   { label: 'Activity', suffix: '/activity', icon: 'activity' },
 ];
 
+function PasswordForm() {
+  const pushToast = useUiStore((state) => state.pushToast);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+  const change = useMutation({
+    mutationFn: () => api.changePassword({ currentPassword, newPassword }),
+    onSuccess: () => {
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setError('');
+      pushToast('Password updated');
+    },
+    onError: (reason) => setError(errorMessage(reason)),
+  });
+
+  return (
+    <form
+      className="mt-8 space-y-4 border-t border-line pt-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (newPassword.length < 8 || !/[A-Za-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+          setError('Use at least 8 characters, with a letter and a number.');
+          return;
+        }
+        if (newPassword !== confirmPassword) {
+          setError('The new passwords do not match.');
+          return;
+        }
+        if (newPassword === currentPassword) {
+          setError('Choose a different password.');
+          return;
+        }
+        setError('');
+        change.mutate();
+      }}
+    >
+      <h3 className="text-sm font-semibold">Password</h3>
+      <label className="block">
+        <span className="label">Current password</span>
+        <input className="field" type="password" autoComplete="current-password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} required />
+      </label>
+      <label className="block">
+        <span className="label">New password</span>
+        <input className="field" type="password" autoComplete="new-password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} required />
+      </label>
+      <label className="block">
+        <span className="label">Confirm new password</span>
+        <input className="field" type="password" autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required />
+      </label>
+      {error ? <p className="text-sm text-danger" role="alert">{error}</p> : null}
+      <button className="btn-primary" type="submit" disabled={change.isPending}>
+        Update password
+      </button>
+    </form>
+  );
+}
+
 export function AppShell() {
   const { workspaceId: paramId } = useParams();
   const navigate = useNavigate();
@@ -313,6 +373,7 @@ export function AppShell() {
             Save
           </button>
         </form>
+        <PasswordForm />
       </Modal>
       {activeId ? <CommandMenu open={commandOpen} workspaceId={activeId} onClose={() => setCommandOpen(false)} /> : null}
     </div>
