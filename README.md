@@ -32,6 +32,8 @@ Sign in as `maya@devcollab.dev` / `Password123!`. Jonah Patel (`jonah@devcollab.
 
 ![API-8 filed from the Bug template, with an unchecked checklist](docs/screenshots/template.png)
 
+![API Platform filtered to the feature label and sorted by priority](docs/screenshots/label-sort.png)
+
 ![Issue detail with status, priority, assignees, and comments](docs/screenshots/issue.png)
 
 ![A checklist with two of four steps done](docs/screenshots/checklist.png)
@@ -67,7 +69,7 @@ Work:
 - Archive a finished project. It leaves My work and the workspace totals, and comes back when an owner or admin restores it
 - Issues with status, priority, labels, assignees, due dates, comments, and history
 - A board you can drag between columns, plus a list view
-- Filters, text search, and pagination
+- Filters, text search, and pagination. The board can also filter by label and sort by updated, newest, due date, or priority. A saved view keeps that choice
 - Saved project views, private or shared. A view assigned to “me” follows whoever opens it
 - My work, the open issues assigned to you: overdue, due this week, due later, and no due date
 - Blockers inside one workspace. The issue, the board, and My work show the mark while a blocker is open, and clear it when that blocker is done

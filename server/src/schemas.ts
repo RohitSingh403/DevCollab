@@ -214,6 +214,8 @@ export const viewFiltersSchema = z
     overdue: z.boolean().optional().default(false),
     q: z.string().trim().max(80).optional().default(''),
     layout: z.enum(['board', 'list']).optional().default('board'),
+    label: z.union([z.literal(''), objectId]).optional().default(''),
+    sort: z.enum(['updated', 'created', 'due', 'priority']).optional().default('updated'),
   })
   .strict();
 
