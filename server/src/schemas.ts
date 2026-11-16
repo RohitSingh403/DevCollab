@@ -112,6 +112,20 @@ export const createIssueSchema = z
     dueDate,
     estimate,
     parentId: objectId.optional(),
+    checklist: z.array(z.string().trim().min(1).max(140)).max(30).optional().default([]),
+  })
+  .strict();
+
+export const createTemplateSchema = z
+  .object({
+    name: z.string().trim().min(2).max(40),
+    title: z.string().trim().max(140).optional().default(''),
+    description: z.string().trim().max(5000).optional().default(''),
+    status: z.enum(STATUSES).optional().default('backlog'),
+    priority: z.enum(PRIORITIES).optional().default('medium'),
+    estimate,
+    labelIds: z.array(objectId).max(12).optional().default([]),
+    checklist: z.array(z.string().trim().min(1).max(140)).max(12).optional().default([]),
   })
   .strict();
 

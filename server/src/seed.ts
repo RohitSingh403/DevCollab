@@ -13,6 +13,7 @@ import { startCycle } from './services/cycles';
 import { addComment, createIssue, updateIssue } from './services/issues';
 import { addFavorite } from './services/favorites';
 import { createProject } from './services/projects';
+import { createTemplate } from './services/templates';
 import { createLabel, createWorkspace } from './services/workspaces';
 import { colorFromString } from './utils';
 
@@ -59,6 +60,16 @@ export async function seedDatabase() {
     name: 'Web Client',
     key: 'WEB',
     description: 'The workspace interface teams live in all day.',
+  });
+  await createTemplate(api.id, actor, {
+    name: 'Bug',
+    title: '',
+    description: 'What happened, and what you expected.\n\n- Steps to reproduce\n- What you saw\n- What you expected',
+    status: 'todo',
+    priority: 'high',
+    estimate: 3,
+    labelIds: [bug.id],
+    checklist: ['Reproduce the bug', 'Write a failing test', 'Confirm the fix'],
   });
 
   const session = await createIssue({
