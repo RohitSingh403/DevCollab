@@ -11,14 +11,20 @@ describe('saved view filters', () => {
       overdue: false,
       q: '',
       layout: 'list',
+      label: '',
+      sort: 'updated',
     });
+    expect(currentFilters(new URLSearchParams('label=bug&sort=priority'), 'user-1')).toMatchObject({ label: 'bug', sort: 'priority' });
+    expect(currentFilters(new URLSearchParams('sort=nope'), 'user-1').sort).toBe('updated');
     expect(currentFilters(params, 'someone-else').assignee).toBe('user-1');
   });
 
   it('knows when a filter set is worth saving', () => {
-    const empty = { status: '', priority: '', assignee: '', overdue: false, q: '', layout: 'board' as const };
+    const empty = { status: '', priority: '', assignee: '', overdue: false, q: '', layout: 'board' as const, label: '', sort: 'updated' as const };
     expect(hasViewFilter(empty)).toBe(false);
     expect(hasViewFilter({ ...empty, overdue: true })).toBe(true);
+    expect(hasViewFilter({ ...empty, label: 'bug' })).toBe(true);
+    expect(hasViewFilter({ ...empty, sort: 'priority' })).toBe(true);
     expect(sameFilters(empty, { ...empty })).toBe(true);
     expect(sameFilters(empty, { ...empty, q: 'auth' })).toBe(false);
   });

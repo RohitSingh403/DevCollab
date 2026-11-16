@@ -1133,6 +1133,45 @@ describe('workspaces, issues, and authorization', () => {
     expect(after.body.templates).toEqual([]);
   });
 
+  it('filters a project by label, sorts by priority, and saves both on a view', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const workspace = await createWorkspace(owner.agent, 'Filters');
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({
+      name: 'API Platform',
+      key: 'API',
+      description: 'Service layer',
+    });
+    const projectId = project.body.project.id as string;
+    const bug = await owner.agent.post(`/api/workspaces/${workspace.id}/labels`).send({ name: 'bug', color: '#b42318' });
+    const feature = await owner.agent.post(`/api/workspaces/${workspace.id}/labels`).send({ name: 'feature', color: '#175cd3' });
+    await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Low bug', priority: 'low', labelIds: [bug.body.label.id] });
+    await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Urgent bug', priority: 'urgent', labelIds: [bug.body.label.id] });
+    await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Feature work', priority: 'high', labelIds: [feature.body.label.id] });
+
+    const bugs = await owner.agent.get(`/api/projects/${projectId}/issues`).query({ label: bug.body.label.id, sort: 'priority' });
+    expect(bugs.body.issues.map((issue: { title: string }) => issue.title)).toEqual(['Urgent bug', 'Low bug']);
+
+    const foreign = await owner.agent.post(`/api/projects/${projectId}/views`).send({
+      name: 'Missing label',
+      filters: { label: 'aaaaaaaaaaaaaaaaaaaaaaaa' },
+    });
+    expect(foreign.status).toBe(400);
+
+    const saved = await owner.agent.post(`/api/projects/${projectId}/views`).send({
+      name: 'Bugs first',
+      shared: true,
+      filters: { label: bug.body.label.id, sort: 'priority' },
+    });
+    expect(saved.status).toBe(201);
+    expect(saved.body.view.filters.label).toBe(bug.body.label.id);
+    expect(saved.body.view.filters.sort).toBe('priority');
+
+    await owner.agent.delete(`/api/workspaces/${workspace.id}/labels/${bug.body.label.id}`);
+    const listed = await owner.agent.get(`/api/projects/${projectId}/views`);
+    expect(listed.body.views[0].filters.label).toBe('');
+    expect(listed.body.views[0].filters.sort).toBe('priority');
+  });
+
   it('renames and recolors a label without removing it from the issue', async () => {
     const owner = await registerUser(authAgent(), 'Maya Chen');
     const outsider = await registerUser(authAgent(), 'Outsider');

@@ -9,6 +9,8 @@ const filtersSchema = new Schema(
     overdue: { type: Boolean, default: false },
     q: { type: String, default: '', maxlength: 80 },
     layout: { type: String, enum: ['board', 'list'], default: 'board' },
+    label: { type: String, default: '' },
+    sort: { type: String, enum: ['updated', 'created', 'due', 'priority'], default: 'updated' },
   },
   { _id: false },
 );

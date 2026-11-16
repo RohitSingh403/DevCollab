@@ -1,7 +1,10 @@
 import type { ViewFilters } from './types';
 
+const sorts = ['created', 'due', 'priority'] as const;
+
 export function currentFilters(params: URLSearchParams, userId: string): ViewFilters {
   const assignee = params.get('assignee') ?? '';
+  const sort = params.get('sort');
   return {
     status: params.get('status') ?? '',
     priority: params.get('priority') ?? '',
@@ -9,6 +12,8 @@ export function currentFilters(params: URLSearchParams, userId: string): ViewFil
     overdue: params.get('overdue') === 'true',
     q: params.get('q') ?? '',
     layout: params.get('view') === 'list' ? 'list' : 'board',
+    label: params.get('label') ?? '',
+    sort: sorts.find((item) => item === sort) ?? 'updated',
   };
 }
 
@@ -19,10 +24,12 @@ export function sameFilters(left: ViewFilters, right: ViewFilters) {
     left.assignee === right.assignee &&
     left.overdue === right.overdue &&
     left.q === right.q &&
-    left.layout === right.layout
+    left.layout === right.layout &&
+    left.label === right.label &&
+    left.sort === right.sort
   );
 }
 
 export function hasViewFilter(filters: ViewFilters) {
-  return Boolean(filters.status || filters.priority || filters.assignee || filters.overdue || filters.q || filters.layout === 'list');
+  return Boolean(filters.status || filters.priority || filters.assignee || filters.overdue || filters.q || filters.layout === 'list' || filters.label || filters.sort !== 'updated');
 }

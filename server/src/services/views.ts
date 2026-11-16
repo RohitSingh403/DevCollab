@@ -1,5 +1,6 @@
 import { roleRank, type Role } from '../constants';
 import { ApiError, isDuplicateKey } from '../errors';
+import { Label } from '../models/Label';
 import { Project } from '../models/Project';
 import { SavedView } from '../models/SavedView';
 import type { Realtime } from '../realtime';
@@ -14,10 +15,14 @@ export interface ViewFilters {
   overdue: boolean;
   q: string;
   layout: 'board' | 'list';
+  label: string;
+  sort: 'updated' | 'created' | 'due' | 'priority';
 }
 
 function hasFilter(filters: ViewFilters) {
-  return Boolean(filters.status || filters.priority || filters.assignee || filters.overdue || filters.q || filters.layout === 'list');
+  return Boolean(
+    filters.status || filters.priority || filters.assignee || filters.overdue || filters.q || filters.layout === 'list' || filters.label || filters.sort !== 'updated',
+  );
 }
 
 function serialize(
@@ -49,6 +54,8 @@ function serialize(
       overdue: Boolean(view.filters.overdue),
       q: view.filters.q ?? '',
       layout: view.filters.layout === 'list' ? 'list' : 'board',
+      label: view.filters.label ?? '',
+      sort: view.filters.sort === 'created' || view.filters.sort === 'due' || view.filters.sort === 'priority' ? view.filters.sort : 'updated',
     },
   };
 }
@@ -84,6 +91,10 @@ export async function createView(
   const workspaceId = String(project.workspace);
   if (input.filters.assignee && input.filters.assignee !== 'me') {
     await assertWorkspaceMembers(workspaceId, [input.filters.assignee]);
+  }
+  if (input.filters.label) {
+    const known = await Label.exists({ _id: input.filters.label, workspace: workspaceId });
+    if (!known) throw new ApiError(400, 'That label is not in this workspace', 'invalid_label');
   }
   const existing = await SavedView.countDocuments({ project: projectId, createdBy: actor.id });
   if (existing >= VIEW_LIMIT) {
