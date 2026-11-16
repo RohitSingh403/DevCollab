@@ -30,6 +30,8 @@ Sign in as `maya@devcollab.dev` / `Password123!`. Jonah Patel (`jonah@devcollab.
 
 ![WEB-2 related to API-5, separate from the blocker](docs/screenshots/related.png)
 
+![API-8 filed from the Bug template, with an unchecked checklist](docs/screenshots/template.png)
+
 ![Issue detail with status, priority, assignees, and comments](docs/screenshots/issue.png)
 
 ![A checklist with two of four steps done](docs/screenshots/checklist.png)
@@ -76,6 +78,7 @@ Work:
 - Sub-issues in the same workspace. A parent shows how many direct children are done, on the issue, the board, the list, and My work
 - Duplicate an issue. The copy keeps the title, description, labels, priority, estimate, and checklist steps, starts in the backlog, and leaves comments and blockers behind
 - Related issues. Link two issues in the same workspace without making one a blocker or a sub-issue. The link shows on both, and deleting either issue removes it
+- Issue templates. A project can keep a starting title, description, priority, estimate, labels, and checklist. A new issue can begin from one, and the author or an admin can delete it
 - Due reminders. Assignees get one inbox alert on the day an open issue is due, and one more after that day passes. Changing the date or reopening the issue allows a new alert
 - A command menu, opened with Ctrl K or ⌘K, that jumps to a page, a project, or an issue key
 - Favorites. Pin up to 12 projects and issues in a workspace. They stay in the sidebar for that person only

@@ -10,6 +10,7 @@ import { Label } from '../models/Label';
 import { Membership } from '../models/Membership';
 import { Notification } from '../models/Notification';
 import { Project } from '../models/Project';
+import { IssueTemplate } from '../models/IssueTemplate';
 import { SavedView } from '../models/SavedView';
 import { User } from '../models/User';
 import { Workspace } from '../models/Workspace';
@@ -145,6 +146,7 @@ export async function deleteWorkspace(workspaceId: string) {
     Membership.deleteMany({ workspace: workspaceId }),
     Notification.deleteMany({ workspace: workspaceId }),
     SavedView.deleteMany({ workspace: workspaceId }),
+    IssueTemplate.deleteMany({ workspace: workspaceId }),
     Cycle.deleteMany({ workspace: workspaceId }),
     clearWorkspaceFavorites(workspaceId),
     Project.deleteMany({ _id: { $in: projectIds } }),
@@ -393,5 +395,6 @@ export async function deleteLabel(workspaceId: string, labelId: string) {
   const label = await Label.findOne({ _id: labelId, workspace: workspaceId });
   if (!label) throw new ApiError(404, 'Label not found', 'not_found');
   await Issue.updateMany({ workspace: workspaceId, labels: label._id }, { $pull: { labels: label._id } });
+  await IssueTemplate.updateMany({ workspace: workspaceId, labels: label._id }, { $pull: { labels: label._id } });
   await label.deleteOne();
 }

@@ -1070,4 +1070,66 @@ describe('workspaces, issues, and authorization', () => {
     const afterDelete = await owner.agent.get(`/api/issues/${leftId}`);
     expect(afterDelete.body.issue.related).toEqual([]);
   });
+
+  it('starts an issue from a project template and keeps the checklist', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const teammate = await registerUser(authAgent(), 'Jonah Patel');
+    const outsider = await registerUser(authAgent(), 'Outsider');
+    const workspace = await createWorkspace(owner.agent, 'Shapes');
+    await owner.agent.post(`/api/workspaces/${workspace.id}/invites`).send({ email: teammate.email, role: 'member' });
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({
+      name: 'API Platform',
+      key: 'API',
+      description: 'Service layer',
+    });
+    const projectId = project.body.project.id as string;
+    const label = await owner.agent.post(`/api/workspaces/${workspace.id}/labels`).send({ name: 'bug', color: '#b42318' });
+
+    const hidden = await outsider.agent.get(`/api/projects/${projectId}/templates`);
+    expect(hidden.status).toBe(404);
+    const empty = await owner.agent.post(`/api/projects/${projectId}/templates`).send({ name: 'Blank' });
+    expect(empty.status).toBe(400);
+
+    const saved = await owner.agent.post(`/api/projects/${projectId}/templates`).send({
+      name: 'Bug',
+      description: 'What happened.\n\n- Steps',
+      priority: 'high',
+      estimate: 3,
+      labelIds: [label.body.label.id],
+      checklist: ['Reproduce the bug', 'Confirm the fix'],
+    });
+    expect(saved.status).toBe(201);
+    expect(saved.body.template.checklist).toEqual(['Reproduce the bug', 'Confirm the fix']);
+    const again = await teammate.agent.post(`/api/projects/${projectId}/templates`).send({ name: 'bug', description: 'Other' });
+    expect(again.status).toBe(409);
+
+    const template = saved.body.template;
+    const issue = await teammate.agent.post(`/api/projects/${projectId}/issues`).send({
+      title: 'Login button does nothing',
+      description: template.description,
+      status: template.status,
+      priority: template.priority,
+      estimate: template.estimate,
+      labelIds: template.labels.map((item: { id: string }) => item.id),
+      checklist: template.checklist,
+    });
+    expect(issue.status).toBe(201);
+    expect(issue.body.issue.priority).toBe('high');
+    expect(issue.body.issue.estimate).toBe(3);
+    expect(issue.body.issue.labels.map((item: { name: string }) => item.name)).toEqual(['bug']);
+    expect(issue.body.issue.checklist.map((item: { text: string; done: boolean }) => ({ text: item.text, done: item.done }))).toEqual([
+      { text: 'Reproduce the bug', done: false },
+      { text: 'Confirm the fix', done: false },
+    ]);
+
+    const denied = await teammate.agent.delete(`/api/projects/${projectId}/templates/${template.id}`);
+    expect(denied.status).toBe(403);
+    await owner.agent.delete(`/api/workspaces/${workspace.id}/labels/${label.body.label.id}`);
+    const listed = await owner.agent.get(`/api/projects/${projectId}/templates`);
+    expect(listed.body.templates[0].labels).toEqual([]);
+    const removed = await owner.agent.delete(`/api/projects/${projectId}/templates/${template.id}`);
+    expect(removed.status).toBe(204);
+    const after = await owner.agent.get(`/api/projects/${projectId}/templates`);
+    expect(after.body.templates).toEqual([]);
+  });
 });

@@ -56,6 +56,21 @@ export interface ViewFilters {
   layout: 'board' | 'list';
 }
 
+export interface IssueTemplate {
+  id: string;
+  name: string;
+  title: string;
+  description: string;
+  status: IssueStatus;
+  priority: Priority;
+  estimate: number | null;
+  labels: Label[];
+  checklist: string[];
+  mine: boolean;
+  canDelete: boolean;
+  createdBy: { id: string; name: string };
+}
+
 export interface SavedView {
   id: string;
   name: string;

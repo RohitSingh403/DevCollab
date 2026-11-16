@@ -5,6 +5,7 @@ import type {
   Invite,
   InvitePreview,
   Issue,
+  IssueTemplate,
   Cycle,
   IssueList,
   MyWork,
@@ -68,6 +69,7 @@ export interface IssueInput {
   cycleId?: string | null;
   projectId?: string;
   parentId?: string | null;
+  checklist?: string[];
 }
 
 export const api = {
@@ -132,6 +134,26 @@ export const api = {
   updateProject: (id: string, input: { name?: string; description?: string; archived?: boolean }) =>
     request<{ project: Project }>(`/api/projects/${id}`, { method: 'PATCH', body: JSON.stringify(input) }).then((data) => data.project),
   deleteProject: (id: string) => request<void>(`/api/projects/${id}`, { method: 'DELETE' }),
+  templates: (projectId: string) =>
+    request<{ templates: IssueTemplate[] }>(`/api/projects/${projectId}/templates`).then((data) => data.templates),
+  createTemplate: (
+    projectId: string,
+    input: {
+      name: string;
+      title?: string;
+      description?: string;
+      status?: IssueStatus;
+      priority?: Priority;
+      estimate?: number | null;
+      labelIds?: string[];
+      checklist?: string[];
+    },
+  ) =>
+    request<{ template: IssueTemplate }>(`/api/projects/${projectId}/templates`, { method: 'POST', body: JSON.stringify(input) }).then(
+      (data) => data.template,
+    ),
+  deleteTemplate: (projectId: string, templateId: string) =>
+    request<void>(`/api/projects/${projectId}/templates/${templateId}`, { method: 'DELETE' }),
   views: (projectId: string) => request<{ views: SavedView[] }>(`/api/projects/${projectId}/views`).then((data) => data.views),
   createView: (projectId: string, input: { name: string; shared: boolean; filters: ViewFilters }) =>
     request<{ view: SavedView }>(`/api/projects/${projectId}/views`, { method: 'POST', body: JSON.stringify(input) }).then(

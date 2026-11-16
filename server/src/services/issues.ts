@@ -42,7 +42,7 @@ async function loadIssue(id: string) {
   return issue;
 }
 
-async function assertLabels(workspaceId: string, labelIds: string[]) {
+export async function assertLabels(workspaceId: string, labelIds: string[]) {
   const unique = [...new Set(labelIds)];
   if (!unique.length) return unique;
   const count = await Label.countDocuments({ workspace: workspaceId, _id: { $in: unique } });
@@ -235,6 +235,7 @@ export async function createIssue(
     dueDate?: string | null;
     estimate?: number | null;
     parentId?: string | null;
+    checklist?: string[];
   },
   rt?: Realtime,
 ) {
@@ -265,6 +266,7 @@ export async function createIssue(
     dueDate,
     completedAt: input.status === 'done' ? new Date() : null,
     parent: parent?._id ?? null,
+    checklist: (input.checklist ?? []).map((text) => ({ text, done: false })),
   });
 
   const dto = serializeIssue(await loadIssue(String(issue._id)));

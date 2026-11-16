@@ -2,11 +2,12 @@ import { Router } from 'express';
 import { asyncHandler } from '../asyncHandler';
 import { requireAuth } from '../middleware/auth';
 import { requireProject, requireWorkspace } from '../middleware/access';
-import { createProjectSchema, createViewSchema, paginationSchema, startCycleSchema, updateProjectSchema } from '../schemas';
+import { createProjectSchema, createTemplateSchema, createViewSchema, paginationSchema, startCycleSchema, updateProjectSchema } from '../schemas';
 import { buildAnalytics } from '../services/analytics';
 import { activeCycleProgress, listCycles, startCycle } from '../services/cycles';
 import { listActivity } from '../services/feed';
 import { createProject, deleteProject, getProject, listProjects, updateProject } from '../services/projects';
+import { createTemplate, deleteTemplate, listTemplates } from '../services/templates';
 import { createView, deleteView, listViews } from '../services/views';
 import { ioFromApp, realtimeFrom } from '../realtime';
 import { parseBody } from '../validate';
@@ -100,6 +101,33 @@ projectRouter.get(
   asyncHandler(async (req, res) => {
     const query = paginationSchema.parse(req.query);
     res.json(await listActivity({ project: req.params.projectId }, query.page, query.limit));
+  }),
+);
+
+projectRouter.get(
+  '/:projectId/templates',
+  requireProject(),
+  asyncHandler(async (req, res) => {
+    res.json({ templates: await listTemplates(req.params.projectId, req.authUser!.id, req.membershipRole!) });
+  }),
+);
+
+projectRouter.post(
+  '/:projectId/templates',
+  requireProject(),
+  asyncHandler(async (req, res) => {
+    const input = parseBody<ReturnType<typeof createTemplateSchema.parse>>(createTemplateSchema, req.body);
+    const template = await createTemplate(req.params.projectId, req.authUser!, input);
+    res.status(201).json({ template });
+  }),
+);
+
+projectRouter.delete(
+  '/:projectId/templates/:templateId',
+  requireProject(),
+  asyncHandler(async (req, res) => {
+    await deleteTemplate(req.params.projectId, req.params.templateId, req.authUser!.id, req.membershipRole!);
+    res.status(204).send();
   }),
 );
 
