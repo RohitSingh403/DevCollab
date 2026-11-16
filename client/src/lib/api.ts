@@ -120,6 +120,10 @@ export const api = {
     request<{ label: Label }>(`/api/workspaces/${workspaceId}/labels`, { method: 'POST', body: JSON.stringify(input) }).then(
       (data) => data.label,
     ),
+  updateLabel: (workspaceId: string, labelId: string, input: { name?: string; color?: string }) =>
+    request<{ label: Label }>(`/api/workspaces/${workspaceId}/labels/${labelId}`, { method: 'PATCH', body: JSON.stringify(input) }).then(
+      (data) => data.label,
+    ),
   deleteLabel: (workspaceId: string, labelId: string) =>
     request<void>(`/api/workspaces/${workspaceId}/labels/${labelId}`, { method: 'DELETE' }),
 

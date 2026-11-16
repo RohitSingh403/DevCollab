@@ -34,6 +34,8 @@ Sign in as `maya@devcollab.dev` / `Password123!`. Jonah Patel (`jonah@devcollab.
 
 ![API Platform filtered to the feature label and sorted by priority](docs/screenshots/label-sort.png)
 
+![API Platform after the feature label was renamed to product](docs/screenshots/labels.png)
+
 ![Issue detail with status, priority, assignees, and comments](docs/screenshots/issue.png)
 
 ![A checklist with two of four steps done](docs/screenshots/checklist.png)
@@ -68,6 +70,7 @@ Work:
 - Projects with short keys (`API-12`) and per-project issue numbers
 - Archive a finished project. It leaves My work and the workspace totals, and comes back when an owner or admin restores it
 - Issues with status, priority, labels, assignees, due dates, comments, and history
+- Rename or recolor a label. Issues and templates keep it, and the board shows the new name and color
 - A board you can drag between columns, plus a list view
 - Filters, text search, and pagination. The board can also filter by label and sort by updated, newest, due date, or priority. A saved view keeps that choice
 - Saved project views, private or shared. A view assigned to “me” follows whoever opens it

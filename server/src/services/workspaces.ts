@@ -376,7 +376,23 @@ export async function revokeInvite(workspaceId: string, inviteId: string) {
   if (!result.deletedCount) throw new ApiError(404, 'Invite not found', 'not_found');
 }
 
+function escapeName(name: string) {
+  return name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+async function labelNameTaken(workspaceId: string, name: string, exceptId?: string) {
+  const filter: { workspace: string; name: RegExp; _id?: { $ne: string } } = {
+    workspace: workspaceId,
+    name: new RegExp(`^${escapeName(name)}$`, 'i'),
+  };
+  if (exceptId) filter._id = { $ne: exceptId };
+  return Boolean(await Label.exists(filter));
+}
+
 export async function createLabel(workspaceId: string, actorId: string, name: string, color: string) {
+  if (await labelNameTaken(workspaceId, name)) {
+    throw new ApiError(409, 'A label with that name already exists', 'duplicate_label');
+  }
   try {
     const label = await Label.create({ workspace: workspaceId, name, color, createdBy: actorId });
     return { id: String(label._id), name: label.name, color: label.color };
@@ -384,6 +400,47 @@ export async function createLabel(workspaceId: string, actorId: string, name: st
     if (isDuplicateKey(error)) throw new ApiError(409, 'A label with that name already exists', 'duplicate_label');
     throw error;
   }
+}
+
+export async function updateLabel(
+  workspaceId: string,
+  actor: { id: string; name: string },
+  labelId: string,
+  input: { name?: string; color?: string },
+  rt?: Realtime,
+) {
+  const label = await Label.findOne({ _id: labelId, workspace: workspaceId });
+  if (!label) throw new ApiError(404, 'Label not found', 'not_found');
+  const nextName = input.name ?? label.name;
+  const nextColor = input.color ?? label.color;
+  if (nextName === label.name && nextColor === label.color) {
+    return { id: String(label._id), name: label.name, color: label.color };
+  }
+  if (nextName.toLowerCase() !== label.name.toLowerCase() && (await labelNameTaken(workspaceId, nextName, String(label._id)))) {
+    throw new ApiError(409, 'A label with that name already exists', 'duplicate_label');
+  }
+  const previous = label.name;
+  label.name = nextName;
+  label.color = nextColor;
+  try {
+    await label.save();
+  } catch (error) {
+    if (isDuplicateKey(error)) throw new ApiError(409, 'A label with that name already exists', 'duplicate_label');
+    throw error;
+  }
+  await recordActivity(
+    {
+      workspaceId,
+      actorId: actor.id,
+      type: 'label.updated',
+      message:
+        previous === label.name
+          ? `${actor.name} recolored the label ${label.name}`
+          : `${actor.name} renamed the label ${previous} to ${label.name}`,
+    },
+    rt,
+  );
+  return { id: String(label._id), name: label.name, color: label.color };
 }
 
 export async function listLabels(workspaceId: string) {

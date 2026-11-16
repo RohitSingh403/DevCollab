@@ -1171,4 +1171,39 @@ describe('workspaces, issues, and authorization', () => {
     expect(listed.body.views[0].filters.label).toBe('');
     expect(listed.body.views[0].filters.sort).toBe('priority');
   });
+
+  it('renames and recolors a label without removing it from the issue', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const outsider = await registerUser(authAgent(), 'Outsider');
+    const workspace = await createWorkspace(owner.agent, 'Labels');
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({
+      name: 'API Platform',
+      key: 'API',
+      description: 'Service layer',
+    });
+    const bug = await owner.agent.post(`/api/workspaces/${workspace.id}/labels`).send({ name: 'bug', color: '#b42318' });
+    const feature = await owner.agent.post(`/api/workspaces/${workspace.id}/labels`).send({ name: 'feature', color: '#175cd3' });
+    const same = await owner.agent.post(`/api/workspaces/${workspace.id}/labels`).send({ name: 'Bug', color: '#b54708' });
+    expect(same.status).toBe(409);
+    const issue = await owner.agent.post(`/api/projects/${project.body.project.id}/issues`).send({
+      title: 'Login button does nothing',
+      labelIds: [bug.body.label.id],
+    });
+
+    const hidden = await outsider.agent.patch(`/api/workspaces/${workspace.id}/labels/${bug.body.label.id}`).send({ name: 'defect' });
+    expect(hidden.status).toBe(404);
+    const empty = await owner.agent.patch(`/api/workspaces/${workspace.id}/labels/${bug.body.label.id}`).send({});
+    expect(empty.status).toBe(400);
+
+    const renamed = await owner.agent.patch(`/api/workspaces/${workspace.id}/labels/${bug.body.label.id}`).send({ name: 'defect', color: '#b54708' });
+    expect(renamed.status).toBe(200);
+    expect(renamed.body.label).toMatchObject({ name: 'defect', color: '#b54708' });
+    const loaded = await owner.agent.get(`/api/issues/${issue.body.issue.id}`);
+    expect(loaded.body.issue.labels).toEqual([{ id: bug.body.label.id, name: 'defect', color: '#b54708' }]);
+
+    const clash = await owner.agent.patch(`/api/workspaces/${workspace.id}/labels/${feature.body.label.id}`).send({ name: 'Defect' });
+    expect(clash.status).toBe(409);
+    const history = await owner.agent.get(`/api/workspaces/${workspace.id}/activity`);
+    expect(history.body.activities.some((item: { message: string }) => item.message.includes('renamed the label bug to defect'))).toBe(true);
+  });
 });

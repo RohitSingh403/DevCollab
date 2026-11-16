@@ -92,6 +92,14 @@ export const createLabelSchema = z
   })
   .strict();
 
+export const updateLabelSchema = z
+  .object({
+    name: z.string().trim().min(1).max(32).optional(),
+    color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  })
+  .strict()
+  .refine((value) => value.name !== undefined || value.color !== undefined, { message: 'Nothing to update' });
+
 const estimate = z.union([z.literal(ESTIMATES[0]), z.literal(ESTIMATES[1]), z.literal(ESTIMATES[2]), z.literal(ESTIMATES[3]), z.literal(ESTIMATES[4]), z.null()]).optional();
 
 const dueDate = z
