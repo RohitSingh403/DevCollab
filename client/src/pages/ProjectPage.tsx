@@ -5,6 +5,7 @@ import { CycleBar } from '../components/CycleBar';
 import { FavoriteButton } from '../components/FavoriteButton';
 import { IssueBoard } from '../components/IssueBoard';
 import { IssueForm } from '../components/IssueForm';
+import { LabelsDialog } from '../components/LabelsDialog';
 import { StatGrid } from '../components/AnalyticsPanels';
 import { Avatar, BlockedMark, ChecklistCount, EmptyState, EstimateMark, Modal, PageHeader, PriorityMark, StatusBadge, SubissueCount, useDocumentTitle } from '../components/ui';
 import { checklistProgress } from '../lib/checklist';
@@ -48,6 +49,7 @@ export function ProjectPage() {
   const views = useQuery({ queryKey: ['views', projectId], queryFn: () => api.views(projectId) });
   const cycles = useQuery({ queryKey: ['cycles', projectId], queryFn: () => api.cycles(projectId) });
   const [creating, setCreating] = useState(false);
+  const [labelsOpen, setLabelsOpen] = useState(false);
   const [savingView, setSavingView] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -290,6 +292,9 @@ export function ProjectPage() {
           Overdue
         </label>
         <input className="field w-48" placeholder="Filter title" value={q} aria-label="Filter by title" onChange={(event) => updateFilter('q', event.target.value)} />
+        <button className="btn-ghost" type="button" onClick={() => setLabelsOpen(true)}>
+          Labels
+        </button>
         <div className="ml-auto inline-flex rounded-md border border-line bg-white p-0.5">
           {(['board', 'list'] as const).map((item) => (
             <button
@@ -305,6 +310,7 @@ export function ProjectPage() {
         </div>
       </div>
       <SaveViewModal open={savingView} onClose={() => setSavingView(false)} projectId={projectId} filters={filters} />
+      <LabelsDialog workspaceId={workspaceId} open={labelsOpen} canDelete={canManage} onClose={() => setLabelsOpen(false)} />
       {issues.isPending ? <p className="text-sm text-muted">Loading issues…</p> : null}
       {issues.isError ? <p className="text-sm text-danger">{errorMessage(issues.error)}</p> : null}
       {issues.data && !issues.data.issues.length ? (

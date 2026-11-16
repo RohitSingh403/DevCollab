@@ -5,6 +5,7 @@ import { requireAuth } from '../middleware/auth';
 import { requireWorkspace } from '../middleware/access';
 import {
   createLabelSchema,
+  updateLabelSchema,
   createWorkspaceSchema,
   inviteSchema,
   paginationSchema,
@@ -21,6 +22,7 @@ import { archivedProjectIds } from '../services/projects';
 import {
   acceptInvite,
   createLabel,
+  updateLabel,
   createWorkspace,
   deleteLabel,
   deleteWorkspace,
@@ -176,6 +178,16 @@ workspaceRouter.post(
     const input = parseBody<ReturnType<typeof createLabelSchema.parse>>(createLabelSchema, req.body);
     const label = await createLabel(req.params.workspaceId, req.authUser!.id, input.name, input.color);
     res.status(201).json({ label });
+  }),
+);
+
+workspaceRouter.patch(
+  '/:workspaceId/labels/:labelId',
+  requireWorkspace(),
+  asyncHandler(async (req, res) => {
+    const input = parseBody<ReturnType<typeof updateLabelSchema.parse>>(updateLabelSchema, req.body);
+    const label = await updateLabel(req.params.workspaceId, req.authUser!, req.params.labelId, input, realtimeFrom(ioFromApp(req.app)));
+    res.json({ label });
   }),
 );
 
