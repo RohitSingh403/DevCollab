@@ -54,6 +54,8 @@ export interface ViewFilters {
   overdue: boolean;
   q: string;
   layout: 'board' | 'list';
+  label: string;
+  sort: 'updated' | 'created' | 'due' | 'priority';
 }
 
 export interface IssueTemplate {

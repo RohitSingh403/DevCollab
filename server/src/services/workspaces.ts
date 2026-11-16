@@ -396,5 +396,6 @@ export async function deleteLabel(workspaceId: string, labelId: string) {
   if (!label) throw new ApiError(404, 'Label not found', 'not_found');
   await Issue.updateMany({ workspace: workspaceId, labels: label._id }, { $pull: { labels: label._id } });
   await IssueTemplate.updateMany({ workspace: workspaceId, labels: label._id }, { $pull: { labels: label._id } });
+  await SavedView.updateMany({ workspace: workspaceId, 'filters.label': String(label._id) }, { $set: { 'filters.label': '' } });
   await label.deleteOne();
 }

@@ -31,12 +31,16 @@ export function ProjectPage() {
   const assignee = params.get('assignee') ?? '';
   const q = params.get('q') ?? '';
   const overdue = params.get('overdue') ?? '';
+  const label = params.get('label') ?? '';
+  const sort = params.get('sort') ?? '';
   const cycleFilter = params.get('cycle') === 'active';
   if (status) query.set('status', status);
   if (priority) query.set('priority', priority);
   if (assignee) query.set('assignee', assignee);
   if (q) query.set('q', q);
   if (overdue) query.set('overdue', overdue);
+  if (label) query.set('label', label);
+  if (sort) query.set('sort', sort);
   if (cycleFilter) query.set('cycle', 'active');
   query.set('limit', view === 'board' ? '100' : '20');
   query.set('page', params.get('page') ?? '1');
@@ -45,6 +49,7 @@ export function ProjectPage() {
     queryFn: () => api.issues(projectId, query),
   });
   const members = useQuery({ queryKey: ['members', workspaceId], queryFn: () => api.members(workspaceId) });
+  const labels = useQuery({ queryKey: ['labels', workspaceId], queryFn: () => api.labels(workspaceId) });
   const views = useQuery({ queryKey: ['views', projectId], queryFn: () => api.views(projectId) });
   const cycles = useQuery({ queryKey: ['cycles', projectId], queryFn: () => api.cycles(projectId) });
   const [creating, setCreating] = useState(false);
@@ -115,7 +120,7 @@ export function ProjectPage() {
   const canManage = workspace.data?.role === 'owner' || workspace.data?.role === 'admin';
   const filters = currentFilters(params, user?.id ?? '');
   const matchedView = (views.data ?? []).find((item) => sameFilters(item.filters, filters));
-  const otherFilters = Boolean(filters.status || filters.priority || filters.overdue || filters.q);
+  const otherFilters = Boolean(filters.status || filters.priority || filters.overdue || filters.q || filters.label || filters.sort !== 'updated');
   const allActive = !matchedView && !otherFilters && !filters.assignee;
   const mineActive = !matchedView && (filters.assignee === 'me' || filters.assignee === user?.id) && !otherFilters;
 
@@ -126,6 +131,8 @@ export function ProjectPage() {
     if (nextFilters.assignee) next.set('assignee', nextFilters.assignee);
     if (nextFilters.overdue) next.set('overdue', 'true');
     if (nextFilters.q) next.set('q', nextFilters.q);
+    if (nextFilters.label) next.set('label', nextFilters.label);
+    if (nextFilters.sort && nextFilters.sort !== 'updated') next.set('sort', nextFilters.sort);
     if (nextFilters.layout === 'list') next.set('view', 'list');
     if (params.get('cycle') === 'active') next.set('cycle', 'active');
     setParams(next);
@@ -218,12 +225,12 @@ export function ProjectPage() {
       />
       <div className="panel">
         <div className="flex flex-wrap items-center gap-1.5 border-b border-line px-2 py-2">
-          <FilterChip active={allActive} onClick={() => applyFilters({ status: '', priority: '', assignee: '', overdue: false, q: '', layout: filters.layout })}>
+          <FilterChip active={allActive} onClick={() => applyFilters({ status: '', priority: '', assignee: '', overdue: false, q: '', layout: filters.layout, label: '', sort: 'updated' })}>
             All issues
           </FilterChip>
           <FilterChip
             active={mineActive}
-            onClick={() => applyFilters({ status: '', priority: '', assignee: 'me', overdue: false, q: '', layout: filters.layout })}
+            onClick={() => applyFilters({ status: '', priority: '', assignee: 'me', overdue: false, q: '', layout: filters.layout, label: '', sort: 'updated' })}
           >
             Assigned to me
           </FilterChip>
@@ -284,6 +291,20 @@ export function ProjectPage() {
               {member.user.name}
             </option>
           ))}
+        </select>
+        <select className="field w-auto" value={label} aria-label="Filter by label" onChange={(event) => updateFilter('label', event.target.value)}>
+          <option value="">All labels</option>
+          {(labels.data ?? []).map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.name}
+            </option>
+          ))}
+        </select>
+        <select className="field w-auto" value={sort || 'updated'} aria-label="Sort issues" onChange={(event) => updateFilter('sort', event.target.value === 'updated' ? '' : event.target.value)}>
+          <option value="updated">Updated</option>
+          <option value="created">Newest</option>
+          <option value="due">Due date</option>
+          <option value="priority">Priority</option>
         </select>
         <label className="inline-flex items-center gap-2 text-sm text-muted">
           <input type="checkbox" checked={overdue === 'true'} onChange={(event) => updateFilter('overdue', event.target.checked ? 'true' : '')} />
