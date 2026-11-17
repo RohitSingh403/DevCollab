@@ -205,6 +205,11 @@ export interface MyWorkGroup {
   issues: Issue[];
 }
 
+export interface UnassignedWork {
+  total: number;
+  issues: Issue[];
+}
+
 export interface MyWork {
   total: number;
   counts: { overdue: number; dueSoon: number; later: number; undated: number };
