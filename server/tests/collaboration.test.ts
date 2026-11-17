@@ -1393,4 +1393,53 @@ describe('workspaces, issues, and authorization', () => {
     const inbox = await teammate.agent.get('/api/notifications');
     expect(inbox.body.notifications).toHaveLength(before.body.notifications.length);
   });
+
+  it('tracks milestone progress and filters the board by it', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const outsider = await registerUser(authAgent(), 'Jonah Patel');
+    const workspace = await createWorkspace(owner.agent, 'Northwind');
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'API Platform', key: 'API' });
+    const projectId = project.body.project.id;
+    const other = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'Web', key: 'WEB' });
+
+    const hidden = await outsider.agent.get(`/api/projects/${projectId}/milestones`);
+    expect(hidden.status).toBe(404);
+
+    const archived = await owner.agent.patch(`/api/projects/${projectId}`).send({ archived: true });
+    expect(archived.status).toBe(200);
+    const blocked = await owner.agent.post(`/api/projects/${projectId}/milestones`).send({ name: 'Cookie cutover' });
+    expect(blocked.status).toBe(409);
+    expect(blocked.body.error.code).toBe('project_archived');
+    await owner.agent.patch(`/api/projects/${projectId}`).send({ archived: false });
+
+    const created = await owner.agent.post(`/api/projects/${projectId}/milestones`).send({ name: 'Cookie cutover', targetDate: '2026-12-01' });
+    expect(created.status).toBe(201);
+    expect(created.body.milestone).toMatchObject({ name: 'Cookie cutover', targetDate: '2026-12-01', total: 0, done: 0, canDelete: true });
+    const duplicate = await owner.agent.post(`/api/projects/${projectId}/milestones`).send({ name: 'cookie cutover' });
+    expect(duplicate.status).toBe(409);
+    const milestoneId = created.body.milestone.id;
+
+    const first = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Sign the cookie' });
+    const second = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Expire the old session', status: 'done' });
+    const attached = await owner.agent.patch(`/api/issues/${first.body.issue.id}`).send({ milestoneId });
+    expect(attached.body.issue.milestone).toEqual({ id: milestoneId, name: 'Cookie cutover' });
+    await owner.agent.patch(`/api/issues/${second.body.issue.id}`).send({ milestoneId });
+
+    const listed = await owner.agent.get(`/api/projects/${projectId}/milestones`);
+    expect(listed.body.milestones[0]).toMatchObject({ id: milestoneId, total: 2, done: 1 });
+    const filtered = await owner.agent.get(`/api/projects/${projectId}/issues?milestone=${milestoneId}`);
+    expect(filtered.body.issues.map((item: { key: string }) => item.key).sort()).toEqual(['API-1', 'API-2']);
+
+    const foreign = await owner.agent.post(`/api/projects/${other.body.project.id}/milestones`).send({ name: 'Launch' });
+    const rejected = await owner.agent.patch(`/api/issues/${first.body.issue.id}`).send({ milestoneId: foreign.body.milestone.id });
+    expect(rejected.status).toBe(400);
+    expect(rejected.body.error.code).toBe('invalid_milestone');
+
+    const removed = await owner.agent.delete(`/api/projects/${projectId}/milestones/${milestoneId}`);
+    expect(removed.status).toBe(204);
+    const cleared = await owner.agent.get(`/api/issues/${first.body.issue.id}`);
+    expect(cleared.body.issue.milestone).toBeNull();
+    const activity = await owner.agent.get(`/api/projects/${projectId}/activity`);
+    expect(activity.body.activities.some((item: { message: string }) => item.message.includes('removed the milestone Cookie cutover'))).toBe(true);
+  });
 });

@@ -2,9 +2,10 @@ import { Router } from 'express';
 import { asyncHandler } from '../asyncHandler';
 import { requireAuth } from '../middleware/auth';
 import { requireProject, requireWorkspace } from '../middleware/access';
-import { createProjectSchema, createTemplateSchema, createViewSchema, paginationSchema, startCycleSchema, updateProjectSchema } from '../schemas';
+import { createMilestoneSchema, createProjectSchema, createTemplateSchema, createViewSchema, paginationSchema, startCycleSchema, updateMilestoneSchema, updateProjectSchema } from '../schemas';
 import { buildAnalytics } from '../services/analytics';
 import { activeCycleProgress, listCycles, startCycle } from '../services/cycles';
+import { createMilestone, deleteMilestone, listMilestones, updateMilestone } from '../services/milestones';
 import { listActivity } from '../services/feed';
 import { createProject, deleteProject, getProject, listProjects, updateProject } from '../services/projects';
 import { createTemplate, deleteTemplate, listTemplates } from '../services/templates';
@@ -92,6 +93,59 @@ projectRouter.post(
       realtimeFrom(ioFromApp(req.app)),
     );
     res.status(201).json({ cycle });
+  }),
+);
+
+projectRouter.get(
+  '/:projectId/milestones',
+  requireProject(),
+  asyncHandler(async (req, res) => {
+    res.json({
+      milestones: await listMilestones(req.params.projectId, { id: req.authUser!.id, role: req.membershipRole! }),
+    });
+  }),
+);
+
+projectRouter.post(
+  '/:projectId/milestones',
+  requireProject(),
+  asyncHandler(async (req, res) => {
+    const input = parseBody<ReturnType<typeof createMilestoneSchema.parse>>(createMilestoneSchema, req.body);
+    const milestone = await createMilestone(
+      { projectId: req.params.projectId, actor: { ...req.authUser!, role: req.membershipRole! }, ...input },
+      realtimeFrom(ioFromApp(req.app)),
+    );
+    res.status(201).json({ milestone });
+  }),
+);
+
+projectRouter.patch(
+  '/:projectId/milestones/:milestoneId',
+  requireProject(),
+  asyncHandler(async (req, res) => {
+    const input = parseBody<ReturnType<typeof updateMilestoneSchema.parse>>(updateMilestoneSchema, req.body);
+    const milestone = await updateMilestone(
+      req.params.projectId,
+      req.params.milestoneId,
+      { ...req.authUser!, role: req.membershipRole! },
+      input,
+      realtimeFrom(ioFromApp(req.app)),
+    );
+    res.json({ milestone });
+  }),
+);
+
+projectRouter.delete(
+  '/:projectId/milestones/:milestoneId',
+  requireProject(),
+  asyncHandler(async (req, res) => {
+    await deleteMilestone(
+      req.params.projectId,
+      req.params.milestoneId,
+      { ...req.authUser!, role: req.membershipRole! },
+      realtimeFrom(ioFromApp(req.app)),
+    );
+    res.status(204).send();
   }),
 );
 

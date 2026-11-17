@@ -124,6 +124,15 @@ export interface Favorite {
   hint: string;
 }
 
+export interface Milestone {
+  id: string;
+  name: string;
+  targetDate: string | null;
+  total: number;
+  done: number;
+  canDelete: boolean;
+}
+
 export interface Label {
   id: string;
   name: string;
@@ -167,6 +176,7 @@ export interface Issue {
   blocked: boolean;
   checklist: ChecklistItem[];
   cycle: { id: string; name: string } | null;
+  milestone: { id: string; name: string } | null;
   blockedBy?: IssueLink[];
   blocking?: IssueLink[];
   related?: IssueLink[];

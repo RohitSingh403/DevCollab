@@ -79,6 +79,7 @@ Work:
 - Blockers inside one workspace. The issue, the board, and My work show the mark while a blocker is open, and clear it when that blocker is done
 - A checklist on an issue. Steps can be renamed, checked, and removed, and the board, list, and My work show how many are done
 - Cycles. A project has one active cycle, with a start and end date. The board can show just that cycle, My work names it, and the project totals include how much of it is done
+- Milestones. A project can name up to 20 targets, each with an optional date. An issue belongs to one milestone, the board can show just that milestone, and the progress counts how many of its issues are done
 - Estimates of 1, 2, 3, 5, or 8 points. The cycle bar adds those up, and the board, list, and My work show the number on each issue
 - Move an issue to another project in the same workspace. It keeps its discussion, checklist, and estimate, takes the next key in the destination, and leaves its cycle
 - Sub-issues in the same workspace. A parent shows how many direct children are done, on the issue, the board, the list, and My work
@@ -265,6 +266,8 @@ Authenticated routes expect the session cookie. Collection responses are paginat
 | GET | `/api/workspaces/:id/analytics` | Workspace totals |
 | GET | `/api/projects/:id/analytics` | Project totals, including the active cycle when there is one |
 | GET, POST | `/api/projects/:id/cycles` | List cycles, or start one. Open issues from the previous cycle move forward |
+| GET, POST | `/api/projects/:id/milestones` | List milestones with done and total counts, or add one |
+| PATCH, DELETE | `/api/projects/:id/milestones/:milestoneId` | Rename a milestone, change its date, or remove it. Removing it clears the issues that used it |
 | GET | `/api/notifications` | Inbox |
 | POST | `/api/notifications/read-all` | Mark the inbox read |
 | PATCH | `/api/notifications/:id/read` | Mark one notification read |
@@ -278,7 +281,7 @@ Socket.IO authenticates with the same cookie. Clients emit `workspace:join` with
 
 ## Tests
 
-Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, blockers, watchers, checklists, due reminders, cycles, estimates, moving an issue between projects, sub-issues, bulk status and priority edits, comment reactions, pinned comments, notifications, analytics, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, issue keys, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
+Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, blockers, watchers, checklists, due reminders, cycles, milestones, estimates, moving an issue between projects, sub-issues, bulk status and priority edits, comment reactions, pinned comments, notifications, analytics, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, issue keys, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
 
 ```bash
 npm test

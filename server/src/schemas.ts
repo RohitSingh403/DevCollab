@@ -174,6 +174,7 @@ export const updateIssueSchema = z
     dueDate,
     estimate,
     cycleId: objectId.nullable().optional(),
+    milestoneId: objectId.nullable().optional(),
     projectId: objectId.optional(),
     parentId: objectId.nullable().optional(),
   })
@@ -190,6 +191,8 @@ export const bulkUpdateIssueSchema = z
     message: 'Choose a status or a priority',
   });
 
+const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+
 export const listIssueSchema = z.object({
   status: z.enum(STATUSES).optional(),
   priority: z.enum(PRIORITIES).optional(),
@@ -201,9 +204,23 @@ export const listIssueSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
   sort: z.enum(['updated', 'created', 'due', 'priority']).optional().default('updated'),
   cycle: z.union([z.literal('active'), objectId]).optional(),
+  milestone: objectId.optional(),
 });
 
-const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+export const createMilestoneSchema = z
+  .object({
+    name: z.string().trim().min(2).max(40),
+    targetDate: day.nullable().optional(),
+  })
+  .strict();
+
+export const updateMilestoneSchema = z
+  .object({
+    name: z.string().trim().min(2).max(40).optional(),
+    targetDate: day.nullable().optional(),
+  })
+  .strict()
+  .refine((value) => value.name !== undefined || value.targetDate !== undefined, { message: 'Nothing to update' });
 
 export const startCycleSchema = z
   .object({

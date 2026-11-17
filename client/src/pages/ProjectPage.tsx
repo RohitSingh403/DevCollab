@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { CycleBar } from '../components/CycleBar';
+import { Milestones } from '../components/Milestones';
 import { FavoriteButton } from '../components/FavoriteButton';
 import { IssueBoard } from '../components/IssueBoard';
 import { IssueForm } from '../components/IssueForm';
@@ -35,6 +36,7 @@ export function ProjectPage() {
   const label = params.get('label') ?? '';
   const sort = params.get('sort') ?? '';
   const cycleFilter = params.get('cycle') === 'active';
+  const milestoneId = params.get('milestone') ?? '';
   if (status) query.set('status', status);
   if (priority) query.set('priority', priority);
   if (assignee) query.set('assignee', assignee);
@@ -43,6 +45,7 @@ export function ProjectPage() {
   if (label) query.set('label', label);
   if (sort) query.set('sort', sort);
   if (cycleFilter) query.set('cycle', 'active');
+  if (milestoneId) query.set('milestone', milestoneId);
   query.set('limit', view === 'board' ? '100' : '20');
   query.set('page', params.get('page') ?? '1');
   const issues = useQuery({
@@ -53,6 +56,7 @@ export function ProjectPage() {
   const labels = useQuery({ queryKey: ['labels', workspaceId], queryFn: () => api.labels(workspaceId) });
   const views = useQuery({ queryKey: ['views', projectId], queryFn: () => api.views(projectId) });
   const cycles = useQuery({ queryKey: ['cycles', projectId], queryFn: () => api.cycles(projectId) });
+  const milestones = useQuery({ queryKey: ['milestones', projectId], queryFn: () => api.milestones(projectId) });
   const [creating, setCreating] = useState(false);
   const [labelsOpen, setLabelsOpen] = useState(false);
   const [savingView, setSavingView] = useState(false);
@@ -170,6 +174,7 @@ export function ProjectPage() {
     if (nextFilters.sort && nextFilters.sort !== 'updated') next.set('sort', nextFilters.sort);
     if (nextFilters.layout === 'list') next.set('view', 'list');
     if (params.get('cycle') === 'active') next.set('cycle', 'active');
+    if (params.get('milestone')) next.set('milestone', params.get('milestone') as string);
     setParams(next);
   }
 
@@ -180,6 +185,27 @@ export function ProjectPage() {
     next.delete('page');
     setParams(next);
   }
+
+  const createMilestone = useMutation({
+    mutationFn: (input: { name: string; targetDate: string | null }) => api.createMilestone(projectId, input),
+    onSuccess: (milestone) => {
+      void queryClient.invalidateQueries({ queryKey: ['milestones', projectId] });
+      void queryClient.invalidateQueries({ queryKey: ['activity'] });
+      updateFilter('milestone', milestone.id);
+    },
+    onError: (error) => pushToast(errorMessage(error)),
+  });
+
+  const removeMilestone = useMutation({
+    mutationFn: (milestone: string) => api.deleteMilestone(projectId, milestone),
+    onSuccess: (_data, milestone) => {
+      void queryClient.invalidateQueries({ queryKey: ['milestones', projectId] });
+      void queryClient.invalidateQueries({ queryKey: ['issues', projectId] });
+      void queryClient.invalidateQueries({ queryKey: ['activity'] });
+      if (milestoneId === milestone) updateFilter('milestone', '');
+    },
+    onError: (error) => pushToast(errorMessage(error)),
+  });
 
   const startCycle = useMutation({
     mutationFn: (input: { name: string; startsAt: string; endsAt: string }) => api.startCycle(projectId, input),
@@ -250,6 +276,15 @@ export function ProjectPage() {
         </p>
       ) : null}
       {analytics.data ? <StatGrid analytics={analytics.data} /> : null}
+      <Milestones
+        milestones={milestones.data ?? []}
+        activeId={milestoneId}
+        pending={createMilestone.isPending || removeMilestone.isPending}
+        canCreate={!project.data?.archived}
+        onSelect={(id) => updateFilter('milestone', id)}
+        onCreate={(input) => createMilestone.mutate(input)}
+        onDelete={(id) => removeMilestone.mutate(id)}
+      />
       <CycleBar
         cycle={(cycles.data ?? []).find((item) => item.status === 'active') ?? analytics.data?.cycle ?? null}
         filtered={cycleFilter}
@@ -437,6 +472,7 @@ export function ProjectPage() {
                     <Link to={`/w/${workspaceId}/issues/${issue.id}`} className="mt-0.5 block font-medium hover:text-brand">
                       {issue.title}
                     </Link>
+                    {issue.milestone ? <span className="mt-1 block text-[12px] text-faint">{issue.milestone.name}</span> : null}
                     {issue.cycle ? <span className="mt-1 block text-[12px] text-faint">{issue.cycle.name}</span> : null}
                     {issue.blocked || issue.checklist?.length || issue.subissues?.total ? (
                       <span className="mt-1 inline-flex items-center gap-1.5">

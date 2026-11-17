@@ -10,6 +10,7 @@ import { addRelated } from './services/related';
 import { addChecklistItem, updateChecklistItem } from './services/checklist';
 import { setWatching } from './services/watchers';
 import { startCycle } from './services/cycles';
+import { createMilestone } from './services/milestones';
 import { addComment, createIssue, updateIssue } from './services/issues';
 import { addFavorite } from './services/favorites';
 import { createProject } from './services/projects';
@@ -195,6 +196,13 @@ export async function seedDatabase() {
   for (const issueId of [session.id, roles.id, comments.id]) {
     await updateIssue({ issueId, actor, cycleId: apiCycle.id });
   }
+  const cookieCutover = await createMilestone({
+    projectId: api.id,
+    actor: { ...actor, role: 'owner' },
+    name: 'Cookie cutover',
+    targetDate: isoDaysFromNow(14).slice(0, 10),
+  });
+  await updateIssue({ issueId: session.id, actor, milestoneId: cookieCutover.id });
   const webCycle = await startCycle({
     projectId: web.id,
     actor,

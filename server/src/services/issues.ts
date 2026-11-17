@@ -24,6 +24,7 @@ import { clearTargetFavorites } from './favorites';
 import { clearBlockerRefs, relationsFor, syncDependents } from './blockers';
 import { clearRelatedRefs, relatedFor } from './related';
 import { activeCycleId, assertProjectCycle } from './cycles';
+import { assertProjectMilestone } from './milestones';
 import { assertWorkspaceMembers, membershipFor } from './membership';
 import { mentionedUserIds, workspaceMembers } from './mentions';
 import { notifyUsers } from './notifications';
@@ -36,6 +37,7 @@ const ISSUE_POPULATE = [
   { path: 'labels', select: 'name color' },
   { path: 'project', select: 'name key' },
   { path: 'cycle', select: 'name' },
+  { path: 'milestone', select: 'name' },
 ];
 
 async function loadIssue(id: string) {
@@ -70,6 +72,7 @@ export async function listIssues(input: {
   limit: number;
   sort: 'updated' | 'created' | 'due' | 'priority';
   cycle?: string;
+  milestone?: string;
 }) {
   const filter: FilterQuery<unknown> = { project: input.projectId };
   if (input.cycle === 'active') {
@@ -79,6 +82,7 @@ export async function listIssues(input: {
   } else if (input.cycle) {
     filter.cycle = input.cycle;
   }
+  if (input.milestone) filter.milestone = input.milestone;
   if (input.status) filter.status = input.status;
   if (input.priority) filter.priority = input.priority;
   if (input.assignee) filter.assignees = input.assignee;
@@ -411,6 +415,7 @@ export async function updateIssue(
     dueDate?: string | null;
     estimate?: number | null;
     cycleId?: string | null;
+    milestoneId?: string | null;
     projectId?: string;
     parentId?: string | null;
   },
@@ -473,6 +478,7 @@ export async function updateIssue(
     issue.project = destination._id as unknown as typeof issue.project;
     issue.number = numbered.nextIssueNumber;
     issue.cycle = null;
+    issue.milestone = null;
     await Comment.updateMany({ issue: issue._id }, { project: destination._id });
     parts.push(`project to ${destination.name}`);
   }
@@ -506,6 +512,14 @@ export async function updateIssue(
     if (next !== current) {
       issue.cycle = next as unknown as typeof issue.cycle;
       parts.push('cycle');
+    }
+  }
+  if (input.milestoneId !== undefined) {
+    const next = input.milestoneId ? await assertProjectMilestone(String(issue.project), input.milestoneId) : null;
+    const current = issue.milestone ? String(issue.milestone) : null;
+    if (next !== current) {
+      issue.milestone = next as unknown as typeof issue.milestone;
+      parts.push('milestone');
     }
   }
 
