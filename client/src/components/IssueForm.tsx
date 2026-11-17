@@ -144,11 +144,11 @@ export function IssueForm({
       </label>
       <div>
         <span className="label">Description</span>
-        <MarkdownPane value={description} names={(members.data ?? []).map((member) => member.user.name)}>
+        <MarkdownPane value={description} names={(members.data ?? []).map((member) => member.user.name)} workspaceId={workspaceId}>
           <textarea
             className="field min-h-24"
             aria-label="Description"
-            placeholder="Add context. Bold, lists, and links work."
+            placeholder="Add context. Bold, lists, links, and issue keys such as API-12 work."
             value={description}
             onChange={(event) => setDescription(event.target.value)}
           />

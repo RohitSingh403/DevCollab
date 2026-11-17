@@ -221,6 +221,11 @@ export const api = {
     ),
   search: (workspaceId: string, q: string) =>
     request<{ issues: Issue[] }>(`/api/workspaces/${workspaceId}/search?q=${encodeURIComponent(q)}`).then((data) => data.issues),
+  resolveIssueKeys: (workspaceId: string, keys: string[]) =>
+    request<{ issues: { key: string; id: string; title: string }[] }>(`/api/workspaces/${workspaceId}/issue-keys`, {
+      method: 'POST',
+      body: JSON.stringify({ keys }),
+    }).then((data) => data.issues),
 
   comments: (issueId: string) => request<{ comments: Comment[] }>(`/api/issues/${issueId}/comments`).then((data) => data.comments),
   addComment: (issueId: string, body: string) =>

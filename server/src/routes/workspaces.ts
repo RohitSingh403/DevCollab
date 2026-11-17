@@ -10,13 +10,14 @@ import {
   inviteSchema,
   paginationSchema,
   favoriteSchema,
+  resolveIssueKeysSchema,
   searchSchema,
   updateMemberSchema,
   updateWorkspaceSchema,
 } from '../schemas';
 import { buildAnalytics } from '../services/analytics';
 import { listActivity } from '../services/feed';
-import { listMyWork, searchWorkspaceIssues } from '../services/issues';
+import { listMyWork, resolveIssueKeys, searchWorkspaceIssues } from '../services/issues';
 import { addFavorite, listFavorites, removeFavorite } from '../services/favorites';
 import { archivedProjectIds } from '../services/projects';
 import {
@@ -256,6 +257,15 @@ workspaceRouter.delete(
       throw new ApiError(400, 'That favorite is not valid', 'invalid_favorite');
     }
     res.json({ favorites: await removeFavorite(req.params.workspaceId, req.authUser!.id, kind, req.params.targetId) });
+  }),
+);
+
+workspaceRouter.post(
+  '/:workspaceId/issue-keys',
+  requireWorkspace(),
+  asyncHandler(async (req, res) => {
+    const input = parseBody<ReturnType<typeof resolveIssueKeysSchema.parse>>(resolveIssueKeysSchema, req.body);
+    res.json({ issues: await resolveIssueKeys(req.params.workspaceId, input.keys) });
   }),
 );
 

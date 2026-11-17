@@ -1269,4 +1269,38 @@ describe('workspaces, issues, and authorization', () => {
     expect(messages.some((message: string) => message.includes('API-1') && message.includes('In progress') && message.includes('Urgent'))).toBe(true);
     expect(messages.some((message: string) => message.includes('API-2') && message.includes('In progress') && message.includes('Urgent'))).toBe(true);
   });
+
+  it('resolves issue keys in one workspace and skips the rest', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const outsider = await registerUser(authAgent(), 'Outsider');
+    const workspace = await createWorkspace(owner.agent, 'Keys');
+    const other = await createWorkspace(owner.agent, 'Elsewhere');
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({
+      name: 'API Platform',
+      key: 'API',
+      description: 'Service layer',
+    });
+    const first = await owner.agent.post(`/api/projects/${project.body.project.id}/issues`).send({ title: 'Signed cookies' });
+    const second = await owner.agent.post(`/api/projects/${project.body.project.id}/issues`).send({ title: 'Signing key' });
+    const foreignProject = await owner.agent.post(`/api/workspaces/${other.id}/projects`).send({
+      name: 'Other',
+      key: 'API',
+      description: 'Separate',
+    });
+    await owner.agent.post(`/api/projects/${foreignProject.body.project.id}/issues`).send({ title: 'Foreign cookie' });
+
+    const hidden = await outsider.agent.post(`/api/workspaces/${workspace.id}/issue-keys`).send({ keys: ['API-1'] });
+    expect(hidden.status).toBe(404);
+    const empty = await owner.agent.post(`/api/workspaces/${workspace.id}/issue-keys`).send({ keys: [] });
+    expect(empty.status).toBe(400);
+
+    const resolved = await owner.agent.post(`/api/workspaces/${workspace.id}/issue-keys`).send({
+      keys: ['api-1', 'API-2', 'API-2', 'API-99', 'nope', 'WEB-1'],
+    });
+    expect(resolved.status).toBe(200);
+    expect(resolved.body.issues).toEqual([
+      { key: 'API-1', id: first.body.issue.id, title: 'Signed cookies' },
+      { key: 'API-2', id: second.body.issue.id, title: 'Signing key' },
+    ]);
+  });
 });
