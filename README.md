@@ -73,7 +73,7 @@ Work:
 - Rename or recolor a label. Issues and templates keep it, and the board shows the new name and color
 - A board you can drag between columns, plus a list view
 - Filters, text search, and pagination. The board can also filter by label, by who is assigned, or by issues with nobody assigned, and sort by updated, newest, due date, or priority. A saved view keeps that choice
-- Bulk edit on the list. Select issues on the page and set their status or priority together. Each issue keeps its own history, and an archived project stays closed
+- Bulk edit on the list. Select issues on the page and set their status, priority, or assignee together. Choosing no assignee clears the people on those issues. Each issue keeps its own history, and an archived project stays closed
 - Saved project views, private or shared. A view assigned to “me” follows whoever opens it
 - My work, the open issues assigned to you: overdue, due this week, due later, and no due date. Snooze an issue until a later day to hide it from your list. The snooze is private, and the issue comes back on that day
 - Blockers inside one workspace. The issue, the board, and My work show the mark while a blocker is open, and clear it when that blocker is done
@@ -249,7 +249,7 @@ Authenticated routes expect the session cookie. Collection responses are paginat
 | GET | `/api/issues/:id` | One issue, including blockers and whether you follow it |
 | PATCH, DELETE | `/api/issues/:id` | Update or delete an issue |
 | POST, DELETE | `/api/issues/:id/snooze` | Hide an open issue from your My work until a future date, or bring it back |
-| POST | `/api/issues/bulk` | Set the status or priority of up to 25 issues in one workspace |
+| POST | `/api/issues/bulk` | Set the status, priority, or assignee of up to 25 issues in one workspace. A null assignee clears them |
 | POST | `/api/issues/:id/blockers` | Block this issue on another issue in the same workspace |
 | DELETE | `/api/issues/:id/blockers/:blockerId` | Remove that blocker |
 | POST, DELETE | `/api/issues/:id/watch` | Follow or unfollow an issue |
@@ -287,7 +287,7 @@ Socket.IO authenticates with the same cookie. Clients emit `workspace:join` with
 
 ## Tests
 
-Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, snoozing an issue, unassigned issues, blockers, watchers, checklists, due reminders, cycles, ending a cycle, milestones, the workspace roadmap, estimates, moving an issue between projects, sub-issues, bulk status and priority edits, comment reactions, pinned comments, notifications, analytics, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, issue keys, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
+Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, snoozing an issue, unassigned issues, blockers, watchers, checklists, due reminders, cycles, ending a cycle, milestones, the workspace roadmap, estimates, moving an issue between projects, sub-issues, bulk status, priority, and assignee edits, comment reactions, pinned comments, notifications, analytics, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, issue keys, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
 
 ```bash
 npm test
@@ -332,6 +332,7 @@ COOKIE_SAMESITE=none
 - The roadmap skips archived projects. A milestone is overdue when its date is before today and an issue on it is still open. It is done when it has issues and every one of them is done.
 - A snooze belongs to one person and one issue. It hides that issue from their My work until the chosen day, then it returns. Other members still see the issue.
 - Unassigned means the issue has no assignees. Finished issues and archived projects stay off the workspace list. The project filter still includes finished issues when you ask for nobody assigned.
+- A bulk assignee replaces the people on each selected issue. Sending null removes them. Status and priority are unchanged unless they are sent too.
 - Moving an issue gives it the next number in the destination project. The old number is not reused. Comments move with it. A cycle does not, because a cycle belongs to one project.
 - A sub-issue has one parent in the same workspace. Nesting stops at eight levels. Deleting a parent leaves its sub-issues in place, without a parent. The count on a card is its direct children.
 - Due reminders are stored on the issue as the date and kind already sent, so the hourly check does not repeat them.

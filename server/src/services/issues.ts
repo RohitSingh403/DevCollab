@@ -554,7 +554,7 @@ export async function updateIssue(
   }
 
   let addedAssignees: string[] = [];
-  if (input.assigneeIds) {
+  if (input.assigneeIds !== undefined) {
     const next = await assertWorkspaceMembers(workspaceId, input.assigneeIds);
     const current = issue.assignees.map((id) => String(id));
     if (!sameSet(current, next)) {
@@ -641,11 +641,12 @@ export async function bulkUpdateIssues(
     issueIds: string[];
     status?: IssueStatus;
     priority?: Priority;
+    assigneeId?: string | null;
   },
   rt?: Realtime,
 ) {
-  if (!input.status && !input.priority) {
-    throw new ApiError(400, 'Choose a status or a priority', 'empty_update');
+  if (!input.status && !input.priority && input.assigneeId === undefined) {
+    throw new ApiError(400, 'Choose a status, a priority, or an assignee', 'empty_update');
   }
   const unique = [...new Set(input.issueIds)];
   const found = await Issue.find({ _id: { $in: unique } }).select('workspace project');
@@ -661,7 +662,18 @@ export async function bulkUpdateIssues(
   }
   const issues = [];
   for (const issueId of unique) {
-    issues.push(await updateIssue({ issueId, actor: input.actor, status: input.status, priority: input.priority }, rt));
+    issues.push(
+      await updateIssue(
+        {
+          issueId,
+          actor: input.actor,
+          status: input.status,
+          priority: input.priority,
+          ...(input.assigneeId !== undefined ? { assigneeIds: input.assigneeId ? [input.assigneeId] : [] } : {}),
+        },
+        rt,
+      ),
+    );
   }
   return issues;
 }

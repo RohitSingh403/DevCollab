@@ -185,10 +185,11 @@ export const bulkUpdateIssueSchema = z
     issueIds: z.array(objectId).min(1).max(25),
     status: z.enum(STATUSES).optional(),
     priority: z.enum(PRIORITIES).optional(),
+    assigneeId: objectId.nullable().optional(),
   })
   .strict()
-  .refine((value) => value.status !== undefined || value.priority !== undefined, {
-    message: 'Choose a status or a priority',
+  .refine((value) => value.status !== undefined || value.priority !== undefined || value.assigneeId !== undefined, {
+    message: 'Choose a status, a priority, or an assignee',
   });
 
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);

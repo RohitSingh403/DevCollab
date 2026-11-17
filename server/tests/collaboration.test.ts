@@ -1618,4 +1618,39 @@ describe('workspaces, issues, and authorization', () => {
     const activity = await owner.agent.get(`/api/projects/${projectId}/activity`);
     expect(activity.body.activities.some((item: { message: string }) => item.message.includes('ended Cycle 12 on API'))).toBe(true);
   });
+
+  it('assigns or clears several issues in one workspace', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const teammate = await registerUser(authAgent(), 'Jonah Patel');
+    const workspace = await createWorkspace(owner.agent, 'Northwind');
+    await owner.agent.post(`/api/workspaces/${workspace.id}/invites`).send({ email: teammate.email, role: 'member' });
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'API Platform', key: 'API' });
+    const projectId = project.body.project.id;
+    const first = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Write the empty states' });
+    const second = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Store the signing key' });
+
+    const assigned = await owner.agent.post('/api/issues/bulk').send({
+      issueIds: [first.body.issue.id, second.body.issue.id],
+      assigneeId: teammate.user.id,
+    });
+    expect(assigned.status).toBe(200);
+    expect(assigned.body.issues.map((issue: { assignees: { id: string }[] }) => issue.assignees.map((person) => person.id))).toEqual([
+      [teammate.user.id],
+      [teammate.user.id],
+    ]);
+
+    const stranger = await owner.agent.post('/api/issues/bulk').send({
+      issueIds: [first.body.issue.id],
+      assigneeId: '507f1f77bcf86cd799439011',
+    });
+    expect(stranger.status).toBe(400);
+    expect(stranger.body.error.code).toBe('invalid_assignees');
+
+    const cleared = await owner.agent.post('/api/issues/bulk').send({
+      issueIds: [first.body.issue.id, second.body.issue.id],
+      assigneeId: null,
+    });
+    expect(cleared.status).toBe(200);
+    expect(cleared.body.issues.every((issue: { assignees: unknown[] }) => issue.assignees.length === 0)).toBe(true);
+  });
 });
