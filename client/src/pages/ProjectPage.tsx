@@ -162,6 +162,7 @@ export function ProjectPage() {
   const otherFilters = Boolean(filters.status || filters.priority || filters.overdue || filters.q || filters.label || filters.sort !== 'updated');
   const allActive = !matchedView && !otherFilters && !filters.assignee;
   const mineActive = !matchedView && (filters.assignee === 'me' || filters.assignee === user?.id) && !otherFilters;
+  const unassignedActive = !matchedView && filters.assignee === 'none' && !otherFilters;
 
   function applyFilters(nextFilters: ViewFilters) {
     const next = new URLSearchParams();
@@ -304,6 +305,12 @@ export function ProjectPage() {
           >
             Assigned to me
           </FilterChip>
+          <FilterChip
+            active={unassignedActive}
+            onClick={() => applyFilters({ status: '', priority: '', assignee: 'none', overdue: false, q: '', layout: filters.layout, label: '', sort: 'updated' })}
+          >
+            Unassigned
+          </FilterChip>
           {(views.data ?? []).map((item) => (
             <span
               key={item.id}
@@ -355,6 +362,7 @@ export function ProjectPage() {
         </select>
         <select className="field w-auto" value={assignee} aria-label="Filter by assignee" onChange={(event) => updateFilter('assignee', event.target.value)}>
           <option value="">Anyone</option>
+          <option value="none">Unassigned</option>
           <option value="me">Assigned to me</option>
           {(members.data ?? []).map((member) => (
             <option key={member.user.id} value={member.user.id}>

@@ -86,7 +86,8 @@ export async function listIssues(input: {
   if (input.milestone) filter.milestone = input.milestone;
   if (input.status) filter.status = input.status;
   if (input.priority) filter.priority = input.priority;
-  if (input.assignee) filter.assignees = input.assignee;
+  if (input.assignee === 'none') filter.assignees = { $size: 0 };
+  else if (input.assignee) filter.assignees = input.assignee;
   if (input.label) filter.labels = input.label;
   if (input.q) filter.title = { $regex: escapeRegex(input.q), $options: 'i' };
   if (input.overdue === 'true') {
@@ -122,6 +123,21 @@ export function workBucket(dueDate: Date | null, now: Date) {
   if (dueDate.getTime() < utcDayStart(now).getTime()) return 'overdue' as const;
   if (dueDate.getTime() < now.getTime() + WEEK_MS) return 'dueSoon' as const;
   return 'later' as const;
+}
+
+export async function listUnassigned(workspaceId: string) {
+  const archived = await archivedProjectIds(workspaceId);
+  const filter: FilterQuery<unknown> = {
+    workspace: workspaceId,
+    status: { $ne: 'done' },
+    assignees: { $size: 0 },
+    ...(archived.length ? { project: { $nin: archived } } : {}),
+  };
+  const [total, issues] = await Promise.all([
+    Issue.countDocuments(filter),
+    Issue.find(filter).sort({ priorityRank: -1, updatedAt: -1 }).limit(8).populate(ISSUE_POPULATE),
+  ]);
+  return { total, issues: await withSubissueCounts(issues, serializeIssue) };
 }
 
 export async function listMyWork(workspaceId: string, userId: string, now = new Date()) {

@@ -17,7 +17,7 @@ import {
 } from '../schemas';
 import { buildAnalytics } from '../services/analytics';
 import { listActivity } from '../services/feed';
-import { listMyWork, resolveIssueKeys, searchWorkspaceIssues } from '../services/issues';
+import { listMyWork, listUnassigned, resolveIssueKeys, searchWorkspaceIssues } from '../services/issues';
 import { addFavorite, listFavorites, removeFavorite } from '../services/favorites';
 import { archivedProjectIds } from '../services/projects';
 import { listRoadmap } from '../services/milestones';
@@ -229,6 +229,14 @@ workspaceRouter.get(
     res.json({
       analytics: { ...(await buildAnalytics(issueMatch, { workspace: workspaceId })), cycle: null },
     });
+  }),
+);
+
+workspaceRouter.get(
+  '/:workspaceId/unassigned',
+  requireWorkspace(),
+  asyncHandler(async (req, res) => {
+    res.json(await listUnassigned(req.params.workspaceId));
   }),
 );
 

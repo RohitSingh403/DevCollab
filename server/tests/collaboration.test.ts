@@ -1532,4 +1532,41 @@ describe('workspaces, issues, and authorization', () => {
     expect(restored.body.total).toBe(1);
     expect(restored.body.counts.dueSoon).toBe(1);
   });
+
+  it('filters a project to issues with no assignee and lists them for the workspace', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const outsider = await registerUser(authAgent(), 'Jonah Patel');
+    const workspace = await createWorkspace(owner.agent, 'Northwind');
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'API Platform', key: 'API' });
+    const projectId = project.body.project.id;
+    const archived = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'Old', key: 'OLD' });
+    const open = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Write the empty states', priority: 'low' });
+    const urgent = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Sign the cookie', priority: 'urgent' });
+    const owned = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Already owned', assigneeIds: [owner.user.id] });
+    const finished = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Shipped without an owner', status: 'done' });
+    const buried = await owner.agent.post(`/api/projects/${archived.body.project.id}/issues`).send({ title: 'Leave it' });
+    await owner.agent.patch(`/api/projects/${archived.body.project.id}`).send({ archived: true });
+
+    const filtered = await owner.agent.get(`/api/projects/${projectId}/issues?assignee=none`);
+    expect(filtered.status).toBe(200);
+    expect(filtered.body.issues.map((item: { title: string }) => item.title).sort()).toEqual(['Shipped without an owner', 'Sign the cookie', 'Write the empty states']);
+
+    const saved = await owner.agent.post(`/api/projects/${projectId}/views`).send({
+      name: 'No owner',
+      filters: { assignee: 'none' },
+    });
+    expect(saved.status).toBe(201);
+    expect(saved.body.view.filters.assignee).toBe('none');
+
+    const denied = await outsider.agent.get(`/api/workspaces/${workspace.id}/unassigned`);
+    expect(denied.status).toBe(404);
+    const listed = await owner.agent.get(`/api/workspaces/${workspace.id}/unassigned`);
+    expect(listed.body.total).toBe(2);
+    expect(listed.body.issues.map((item: { title: string }) => item.title)).toEqual(['Sign the cookie', 'Write the empty states']);
+    expect(owned.body.issue.title).toBe('Already owned');
+    expect(finished.body.issue.status).toBe('done');
+    expect(buried.body.issue.title).toBe('Leave it');
+    expect(open.body.issue.assignees).toEqual([]);
+    expect(urgent.body.issue.priority).toBe('urgent');
+  });
 });

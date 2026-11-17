@@ -89,7 +89,7 @@ export async function createView(
   }
   const project = await loadProject(projectId);
   const workspaceId = String(project.workspace);
-  if (input.filters.assignee && input.filters.assignee !== 'me') {
+  if (input.filters.assignee && input.filters.assignee !== 'me' && input.filters.assignee !== 'none') {
     await assertWorkspaceMembers(workspaceId, [input.filters.assignee]);
   }
   if (input.filters.label) {
