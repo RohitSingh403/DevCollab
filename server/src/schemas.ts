@@ -250,6 +250,12 @@ export const searchSchema = z.object({
   q: z.string().trim().min(1).max(80),
 });
 
+export const resolveIssueKeysSchema = z
+  .object({
+    keys: z.array(z.string().trim().min(1).max(16)).min(1).max(40),
+  })
+  .strict();
+
 export const favoriteSchema = z
   .object({
     kind: z.enum(['project', 'issue']),

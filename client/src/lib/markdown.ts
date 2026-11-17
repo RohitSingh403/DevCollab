@@ -4,8 +4,38 @@ export type Inline =
   | { type: 'text'; text: string }
   | { type: 'break' }
   | { type: 'mention'; text: string }
+  | { type: 'issue'; text: string }
   | { type: 'bold'; children: Inline[] }
   | { type: 'link'; href: string; children: Inline[] };
+
+const ISSUE_KEY = /^[A-Za-z][A-Za-z0-9]{1,5}-\d{1,6}(?![A-Za-z0-9])/;
+
+export function readIssueKey(input: string, index: number) {
+  if (index > 0 && /[A-Za-z0-9-]/.test(input[index - 1] ?? '')) return null;
+  const match = ISSUE_KEY.exec(input.slice(index));
+  return match ? match[0] : null;
+}
+
+export function canonicalIssueKey(value: string) {
+  const match = /^([A-Za-z][A-Za-z0-9]{1,5})-(\d{1,6})$/.exec(value);
+  if (!match) return value.toUpperCase();
+  return `${match[1].toUpperCase()}-${Number(match[2])}`;
+}
+
+export function issueKeysIn(body: string) {
+  const keys = new Set<string>();
+  let index = 0;
+  while (index < body.length) {
+    const key = readIssueKey(body, index);
+    if (key) {
+      keys.add(canonicalIssueKey(key));
+      index += key.length;
+      continue;
+    }
+    index += 1;
+  }
+  return [...keys];
+}
 
 export type Block =
   | { type: 'paragraph'; children: Inline[] }
@@ -23,7 +53,7 @@ export function safeHref(value: string) {
   }
 }
 
-function parseInlines(input: string, names: string[], breaks: boolean, allowLink = true, allowBold = true): Inline[] {
+function parseInlines(input: string, names: string[], breaks: boolean, allowLink = true, allowBold = true, allowIssue = true): Inline[] {
   const nodes: Inline[] = [];
   let text = '';
   let index = 0;
@@ -46,7 +76,7 @@ function parseInlines(input: string, names: string[], breaks: boolean, allowLink
       const close = input.indexOf(marker, index + 2);
       if (close !== -1) {
         pushText();
-        nodes.push({ type: 'bold', children: parseInlines(input.slice(index + 2, close), names, false, allowLink, false) });
+        nodes.push({ type: 'bold', children: parseInlines(input.slice(index + 2, close), names, false, allowLink, false, allowIssue) });
         index = close + 2;
         continue;
       }
@@ -63,12 +93,22 @@ function parseInlines(input: string, names: string[], breaks: boolean, allowLink
             nodes.push({
               type: 'link',
               href,
-              children: parseInlines(input.slice(index + 1, labelEnd), names, false, false, allowBold),
+              children: parseInlines(input.slice(index + 1, labelEnd), names, false, false, allowBold, false),
             });
             index = hrefEnd + 1;
             continue;
           }
         }
+      }
+    }
+
+    if (allowIssue) {
+      const issueKey = readIssueKey(input, index);
+      if (issueKey) {
+        pushText();
+        nodes.push({ type: 'issue', text: issueKey });
+        index += issueKey.length;
+        continue;
       }
     }
 

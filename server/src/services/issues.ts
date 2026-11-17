@@ -197,6 +197,37 @@ export async function searchWorkspaceIssues(workspaceId: string, q: string) {
   return withSubissueCounts(merged.slice(0, 8), serializeIssue);
 }
 
+export async function resolveIssueKeys(workspaceId: string, keys: string[]) {
+  const wanted = new Map<string, { projectKey: string; number: number }>();
+  for (const raw of keys) {
+    const match = /^([A-Za-z][A-Za-z0-9]{1,5})-(\d{1,6})$/.exec(raw.trim());
+    if (!match) continue;
+    const projectKey = match[1].toUpperCase();
+    const number = Number(match[2]);
+    wanted.set(`${projectKey}-${number}`, { projectKey, number });
+  }
+  if (!wanted.size) return [];
+  const projects = await Project.find({
+    workspace: workspaceId,
+    key: { $in: [...new Set([...wanted.values()].map((item) => item.projectKey))] },
+  }).select('key');
+  const projectIdByKey = new Map(projects.map((project) => [project.key, project._id]));
+  const clauses = [...wanted.values()].flatMap((item) => {
+    const projectId = projectIdByKey.get(item.projectKey);
+    return projectId ? [{ project: projectId, number: item.number }] : [];
+  });
+  if (!clauses.length) return [];
+  const issues = await Issue.find({ workspace: workspaceId, $or: clauses }).select('project number title');
+  const keyByProject = new Map(projects.map((project) => [String(project._id), project.key]));
+  return issues
+    .map((issue) => ({
+      key: `${keyByProject.get(String(issue.project))}-${issue.number}`,
+      id: String(issue._id),
+      title: issue.title,
+    }))
+    .sort((left, right) => left.key.localeCompare(right.key));
+}
+
 async function presentIssue(issueId: string, userId?: string) {
   const issue = await Issue.findById(issueId).populate([
     ...ISSUE_POPULATE,

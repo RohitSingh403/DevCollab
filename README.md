@@ -92,7 +92,7 @@ Work:
 Discussion:
 
 - @mentions in comments, which notify that person in their inbox and over the live connection
-- Comment and description markdown for bold, lists, and links. The rules are in the next section
+- Comment and description markdown for bold, lists, and links. An issue key such as `API-12` links to that issue when it is in the same workspace. The rules are in the next section
 - Watchers. Any member can follow an issue and get the comment, status, and blocker alerts that the reporter and assignees already get
 
 Workspace:
@@ -111,8 +111,9 @@ A comment and an issue description are stored as text. The browser renders a sma
 | A line starting with `- ` or `* ` | A bullet |
 | A line starting with `1. ` | A numbered item |
 | `[the guide](https://example.com)` | A link that opens in a new tab |
+| `API-12` | A link to that issue, when it is in this workspace |
 
-Only `http` and `https` addresses become links. HTML, `javascript:` URLs, and other markup stay as text. `@Priya Nair` still mentions a workspace member, including inside bold text or a link label. An unknown `@name` is left as text.
+Only `http` and `https` addresses become links. HTML, `javascript:` URLs, and other markup stay as text. `@Priya Nair` still mentions a workspace member, including inside bold text or a link label. An unknown `@name` is left as text. An issue key is two to six letters or digits, a hyphen, and a number, and it is not part of a longer word. `API-12` inside a link label stays in that link. A key with no matching issue, including one from another workspace, stays as text.
 
 ## Architecture
 
@@ -252,6 +253,7 @@ Authenticated routes expect the session cookie. Collection responses are paginat
 | GET, POST, DELETE | `/api/projects/:id/views` | Saved filters for a project. Private views stay with their author; shared views are visible to the project |
 | GET | `/api/workspaces/:id/my-work` | Open issues assigned to the signed-in user |
 | GET | `/api/workspaces/:id/search?q=` | Issues by title, or by key such as `API-12` |
+| POST | `/api/workspaces/:id/issue-keys` | Resolve up to 40 issue keys in that workspace. Unknown keys are omitted |
 | GET, POST, DELETE | `/api/workspaces/:id/labels` | Workspace labels. Deleting one requires an admin |
 | GET | `/api/workspaces/:id/activity` | Workspace history |
 | GET | `/api/projects/:id/activity` | Project history |
@@ -272,7 +274,7 @@ Socket.IO authenticates with the same cookie. Clients emit `workspace:join` with
 
 ## Tests
 
-Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, blockers, watchers, checklists, due reminders, cycles, estimates, moving an issue between projects, sub-issues, bulk status and priority edits, notifications, analytics, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
+Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, blockers, watchers, checklists, due reminders, cycles, estimates, moving an issue between projects, sub-issues, bulk status and priority edits, notifications, analytics, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, issue keys, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
 
 ```bash
 npm test

@@ -9,7 +9,7 @@ import { Checklist } from '../components/Checklist';
 import { Avatar, useDocumentTitle } from '../components/ui';
 import { api, errorMessage } from '../lib/api';
 import { timeAgo, toDateInput } from '../lib/format';
-import { MarkdownPane, MarkdownText } from '../components/Markdown';
+import { MarkdownPane, MarkdownText, useIssueLinks } from '../components/Markdown';
 import { insertMention, matchingMembers, mentionAtCursor } from '../lib/mentions';
 import { ESTIMATES, PRIORITIES, PRIORITY_LABEL, STATUSES, STATUS_LABEL, type IssueStatus, type Priority, type Role } from '../lib/types';
 import { useAuthStore } from '../stores/authStore';
@@ -74,6 +74,7 @@ export function IssuePage() {
     onError: (error) => pushToast(errorMessage(error)),
   });
 
+  const issueLinks = useIssueLinks(workspaceId, [issue.data?.description ?? '', ...(comments.data ?? []).map((comment) => comment.body)]);
   const role = workspace.data?.role;
   const canDelete = Boolean(user && issue.data && (issue.data.reporter.id === user.id || role === 'owner' || role === 'admin'));
   const people = (members.data ?? []).map((member) => ({ id: member.user.id, name: member.user.name }));
@@ -125,6 +126,8 @@ export function IssuePage() {
           description={current.description}
           names={people.map((person) => person.name)}
           members={people}
+          workspaceId={workspaceId}
+          links={issueLinks}
           onSave={(description) => save.mutate({ description })}
         />
         <Subissues workspaceId={workspaceId} issue={current} />
@@ -135,7 +138,7 @@ export function IssuePage() {
           <h2 className="text-sm font-semibold">Comments</h2>
           <ul className="mt-3 space-y-3">
             {(comments.data ?? []).map((comment) => (
-              <CommentCard key={comment.id} comment={comment} role={role} members={people} />
+              <CommentCard key={comment.id} comment={comment} role={role} members={people} workspaceId={workspaceId} links={issueLinks} />
             ))}
           </ul>
           <CommentComposer issueId={issueId} members={people} />
@@ -379,11 +382,15 @@ function DescriptionEditor({
   description,
   names,
   members,
+  workspaceId,
+  links,
   onSave,
 }: {
   description: string;
   names: string[];
   members: { id: string; name: string }[];
+  workspaceId: string;
+  links: ReturnType<typeof useIssueLinks>;
   onSave: (description: string) => void;
 }) {
   const [value, setValue] = useState(description);
@@ -394,7 +401,7 @@ function DescriptionEditor({
     return (
       <div className="mt-3">
         {description.trim() ? (
-          <MarkdownText body={description} names={names} className="space-y-2 text-sm leading-6" />
+          <MarkdownText body={description} names={names} className="space-y-2 text-sm leading-6" workspaceId={workspaceId} links={links} />
         ) : (
           <p className="text-sm text-muted">No description yet.</p>
         )}
@@ -407,7 +414,7 @@ function DescriptionEditor({
 
   return (
     <div className="mt-3">
-      <MarkdownPane value={value} names={names}>
+      <MarkdownPane value={value} names={names} workspaceId={workspaceId} links={links}>
         <MentionField
           label="Issue description"
           value={value}
@@ -420,7 +427,7 @@ function DescriptionEditor({
           }}
         />
       </MarkdownPane>
-      <p className="mt-2 text-[12px] text-muted">Bold, lists, and links. Type @ to mention a teammate. HTML stays as text.</p>
+      <p className="mt-2 text-[12px] text-muted">Bold, lists, links, and issue keys such as API-12. Type @ to mention a teammate. HTML stays as text.</p>
       <button
         type="button"
         className="btn-ghost mt-2"
@@ -574,18 +581,32 @@ function MentionField({
   );
 }
 
-function CommentBody({ body, names }: { body: string; names: string[] }) {
-  return <MarkdownText body={body} names={names} />;
+function CommentBody({
+  body,
+  names,
+  workspaceId,
+  links,
+}: {
+  body: string;
+  names: string[];
+  workspaceId: string;
+  links: ReturnType<typeof useIssueLinks>;
+}) {
+  return <MarkdownText body={body} names={names} workspaceId={workspaceId} links={links} />;
 }
 
 function CommentCard({
   comment,
   role,
   members,
+  workspaceId,
+  links,
 }: {
   comment: { id: string; body: string; author: { id: string; name: string; avatarColor: string }; createdAt: string; edited: boolean };
   role?: Role;
   members: { id: string; name: string }[];
+  workspaceId: string;
+  links: ReturnType<typeof useIssueLinks>;
 }) {
   const user = useAuthStore((state) => state.user);
   const queryClient = useQueryClient();
@@ -639,7 +660,7 @@ function CommentCard({
           </button>
         </form>
       ) : (
-        <CommentBody body={comment.body} names={members.map((member) => member.name)} />
+        <CommentBody body={comment.body} names={members.map((member) => member.name)} workspaceId={workspaceId} links={links} />
       )}
     </li>
   );
