@@ -63,6 +63,7 @@ export function ProjectPage() {
   const [selected, setSelected] = useState<string[]>([]);
   const [bulkStatus, setBulkStatus] = useState<'' | IssueStatus>('');
   const [bulkPriority, setBulkPriority] = useState<'' | Priority>('');
+  const [bulkAssignee, setBulkAssignee] = useState('');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const pushToast = useUiStore((state) => state.pushToast);
@@ -105,15 +106,18 @@ export function ProjectPage() {
         issueIds: selectedOnPage,
         ...(bulkStatus ? { status: bulkStatus } : {}),
         ...(bulkPriority ? { priority: bulkPriority } : {}),
+        ...(bulkAssignee === 'none' ? { assigneeId: null } : bulkAssignee ? { assigneeId: bulkAssignee } : {}),
       }),
     onSuccess: async (updated) => {
       setSelected([]);
       setBulkStatus('');
       setBulkPriority('');
+      setBulkAssignee('');
       pushToast(updated.length === 1 ? 'Updated 1 issue' : `Updated ${updated.length} issues`);
       await queryClient.invalidateQueries({ queryKey: ['issues', projectId] });
       await queryClient.invalidateQueries({ queryKey: ['analytics'] });
       await queryClient.invalidateQueries({ queryKey: ['my-work'] });
+      await queryClient.invalidateQueries({ queryKey: ['unassigned'] });
     },
     onError: (error) => pushToast(errorMessage(error)),
   });
@@ -448,7 +452,16 @@ export function ProjectPage() {
               </option>
             ))}
           </select>
-          <button className="btn-primary" type="button" disabled={(!bulkStatus && !bulkPriority) || bulk.isPending} onClick={() => bulk.mutate()}>
+          <select className="field w-auto" aria-label="Set assignee" value={bulkAssignee} onChange={(event) => setBulkAssignee(event.target.value)}>
+            <option value="">Assignee</option>
+            <option value="none">No assignee</option>
+            {(members.data ?? []).map((member) => (
+              <option key={member.user.id} value={member.user.id}>
+                {member.user.name}
+              </option>
+            ))}
+          </select>
+          <button className="btn-primary" type="button" disabled={(!bulkStatus && !bulkPriority && !bulkAssignee) || bulk.isPending} onClick={() => bulk.mutate()}>
             {bulk.isPending ? 'Updating…' : 'Update'}
           </button>
           <button className="btn-ghost" type="button" onClick={() => setSelected([])}>
