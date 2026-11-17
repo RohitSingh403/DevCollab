@@ -92,6 +92,7 @@ Work:
 Discussion:
 
 - @mentions in comments, which notify that person in their inbox and over the live connection
+- Reactions on a comment. A member can add or remove thumbs up, eyes, celebrate, check, or heart. The count is shared, and each person is counted once. Reactions do not send an inbox alert
 - A pinned comment. Any member can pin one comment on an issue. It moves to the top, and pinning another comment replaces it
 - Comment and description markdown for bold, lists, and links. An issue key such as `API-12` links to that issue when it is in the same workspace. The rules are in the next section
 - Watchers. Any member can follow an issue and get the comment, status, and blocker alerts that the reporter and assignees already get
@@ -252,6 +253,7 @@ Authenticated routes expect the session cookie. Collection responses are paginat
 | GET, POST | `/api/issues/:id/comments` | Discussion. The body is plain text; the client renders the markdown subset |
 | PATCH, DELETE | `/api/comments/:id` | Edit your comment, or delete it when you are the author or an admin |
 | POST | `/api/comments/:id/pin` | Pin or unpin a comment. An issue keeps one pinned comment |
+| POST | `/api/comments/:id/reactions` | Add or remove your reaction. `emoji` is `+1`, `eyes`, `tada`, `check`, or `heart` |
 | GET, POST, DELETE | `/api/projects/:id/views` | Saved filters for a project. Private views stay with their author; shared views are visible to the project |
 | GET | `/api/workspaces/:id/my-work` | Open issues assigned to the signed-in user |
 | GET | `/api/workspaces/:id/search?q=` | Issues by title, or by key such as `API-12` |
@@ -276,7 +278,7 @@ Socket.IO authenticates with the same cookie. Clients emit `workspace:join` with
 
 ## Tests
 
-Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, blockers, watchers, checklists, due reminders, cycles, estimates, moving an issue between projects, sub-issues, bulk status and priority edits, pinned comments, notifications, analytics, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, issue keys, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
+Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, blockers, watchers, checklists, due reminders, cycles, estimates, moving an issue between projects, sub-issues, bulk status and priority edits, comment reactions, pinned comments, notifications, analytics, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, issue keys, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
 
 ```bash
 npm test

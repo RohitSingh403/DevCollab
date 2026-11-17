@@ -6,6 +6,7 @@ import {
   roleRank,
   type IssueStatus,
   type Priority,
+  type Reaction,
 } from '../constants';
 import { utcDayStart } from '../dates';
 import { ApiError } from '../errors';
@@ -16,7 +17,7 @@ import { Membership } from '../models/Membership';
 import { Project } from '../models/Project';
 import { archivedProjectIds } from './projects';
 import type { Realtime } from '../realtime';
-import { serializeComment, serializeIssue, serializeUser } from '../serializers';
+import { serializeComment, serializeIssue, serializeReactions, serializeUser } from '../serializers';
 import { escapeRegex, pageMeta } from '../utils';
 import { recordActivity } from './activity';
 import { clearTargetFavorites } from './favorites';
@@ -652,9 +653,16 @@ export async function deleteIssue(issueId: string, actor: { id: string; name: st
   rt?.toWorkspace(workspaceId, 'issue:deleted', { issueId, projectId });
 }
 
-export async function listComments(issueId: string) {
+function presentComment(
+  comment: Parameters<typeof serializeComment>[0] & { reactions?: { emoji: string; user: unknown }[] | null },
+  userId: string,
+) {
+  return { ...serializeComment(comment), reactions: serializeReactions(comment.reactions, userId) };
+}
+
+export async function listComments(issueId: string, userId: string) {
   const comments = await Comment.find({ issue: issueId }).sort({ pinnedAt: -1, createdAt: 1 }).populate('author', 'name email avatarColor');
-  return comments.map((comment) => serializeComment(comment));
+  return comments.map((comment) => presentComment(comment, userId));
 }
 
 export async function addComment(
@@ -672,7 +680,7 @@ export async function addComment(
   });
   await Issue.updateOne({ _id: issue._id }, { $inc: { commentCount: 1 }, $set: { updatedAt: new Date() } });
   const populated = await comment.populate('author', 'name email avatarColor');
-  const dto = serializeComment(populated);
+  const dto = presentComment(populated, input.actor.id);
   const project = await Project.findById(issue.project).select('key');
   const key = `${project?.key ?? 'ISSUE'}-${issue.number}`;
   const workspaceId = String(issue.workspace);
@@ -734,7 +742,29 @@ export async function updateComment(
     });
   }
   const populated = await comment.populate('author', 'name email avatarColor');
-  return serializeComment(populated);
+  return presentComment(populated, actor.id);
+}
+
+export async function toggleReaction(
+  commentId: string,
+  actor: { id: string; name: string },
+  emoji: Reaction,
+  rt?: Realtime,
+) {
+  const comment = await Comment.findById(commentId);
+  if (!comment) throw new ApiError(404, 'Comment not found', 'not_found');
+  await membershipFor(actor.id, String(comment.workspace));
+  const mine = comment.reactions.find((row) => row.emoji === emoji && String(row.user) === actor.id);
+  if (mine) {
+    comment.reactions = comment.reactions.filter((row) => !(row.emoji === emoji && String(row.user) === actor.id)) as typeof comment.reactions;
+  } else {
+    if (comment.reactions.length >= 100) throw new ApiError(409, 'This comment has enough reactions', 'reaction_limit');
+    comment.reactions.push({ emoji, user: actor.id as unknown as (typeof comment.reactions)[number]['user'] });
+  }
+  await comment.save();
+  const populated = await comment.populate('author', 'name email avatarColor');
+  rt?.toWorkspace(String(comment.workspace), 'comment:updated', { issueId: String(comment.issue), commentId: String(comment._id) });
+  return presentComment(populated, actor.id);
 }
 
 export async function setCommentPin(

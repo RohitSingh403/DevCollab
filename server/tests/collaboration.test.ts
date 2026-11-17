@@ -1347,4 +1347,50 @@ describe('workspaces, issues, and authorization', () => {
     expect(messages.some((message: string) => message.includes('pinned a comment on API-1'))).toBe(true);
     expect(messages.some((message: string) => message.includes('unpinned a comment on API-1'))).toBe(true);
   });
+
+  it('lets members add and remove a reaction without notifying anyone', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const teammate = await registerUser(authAgent(), 'Jonah Patel');
+    const outsider = await registerUser(authAgent(), 'Outsider');
+    const workspace = await createWorkspace(owner.agent, 'Signals');
+    await owner.agent.post(`/api/workspaces/${workspace.id}/invites`).send({ email: teammate.email, role: 'member' });
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({
+      name: 'API Platform',
+      key: 'API',
+      description: 'Service layer',
+    });
+    const issue = await owner.agent.post(`/api/projects/${project.body.project.id}/issues`).send({ title: 'Signed cookies' });
+    const comment = await teammate.agent.post(`/api/issues/${issue.body.issue.id}/comments`).send({ body: 'Looks good for local dev.' });
+    const commentId = comment.body.comment.id as string;
+    const before = await teammate.agent.get('/api/notifications');
+
+    const hidden = await outsider.agent.post(`/api/comments/${commentId}/reactions`).send({ emoji: '+1' });
+    expect(hidden.status).toBe(404);
+    const invalid = await owner.agent.post(`/api/comments/${commentId}/reactions`).send({ emoji: 'rocket' });
+    expect(invalid.status).toBe(400);
+
+    const added = await owner.agent.post(`/api/comments/${commentId}/reactions`).send({ emoji: '+1' });
+    expect(added.status).toBe(200);
+    expect(added.body.comment.reactions).toEqual([{ emoji: '+1', count: 1, mine: true }]);
+    const also = await teammate.agent.post(`/api/comments/${commentId}/reactions`).send({ emoji: '+1' });
+    expect(also.body.comment.reactions).toEqual([{ emoji: '+1', count: 2, mine: true }]);
+    const heart = await owner.agent.post(`/api/comments/${commentId}/reactions`).send({ emoji: 'heart' });
+    expect(heart.body.comment.reactions).toEqual([
+      { emoji: '+1', count: 2, mine: true },
+      { emoji: 'heart', count: 1, mine: true },
+    ]);
+
+    const removed = await owner.agent.post(`/api/comments/${commentId}/reactions`).send({ emoji: '+1' });
+    expect(removed.body.comment.reactions).toEqual([
+      { emoji: '+1', count: 1, mine: false },
+      { emoji: 'heart', count: 1, mine: true },
+    ]);
+    const listed = await teammate.agent.get(`/api/issues/${issue.body.issue.id}/comments`);
+    expect(listed.body.comments[0].reactions).toEqual([
+      { emoji: '+1', count: 1, mine: true },
+      { emoji: 'heart', count: 1, mine: false },
+    ]);
+    const inbox = await teammate.agent.get('/api/notifications');
+    expect(inbox.body.notifications).toHaveLength(before.body.notifications.length);
+  });
 });

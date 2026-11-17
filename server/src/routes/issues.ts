@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { asyncHandler } from '../asyncHandler';
 import { requireAuth } from '../middleware/auth';
 import { requireIssue, requireProject } from '../middleware/access';
-import { blockerSchema, bulkUpdateIssueSchema, checklistSchema, commentSchema, createIssueSchema, listIssueSchema, paginationSchema, pinCommentSchema, relatedSchema, updateChecklistSchema, updateIssueSchema } from '../schemas';
+import { blockerSchema, bulkUpdateIssueSchema, checklistSchema, commentSchema, createIssueSchema, listIssueSchema, paginationSchema, pinCommentSchema, reactionSchema, relatedSchema, updateChecklistSchema, updateIssueSchema } from '../schemas';
 import { listActivity } from '../services/feed';
 import { addBlocker, removeBlocker } from '../services/blockers';
 import { addRelated, removeRelated } from '../services/related';
@@ -19,6 +19,7 @@ import {
   listComments,
   listIssues,
   setCommentPin,
+  toggleReaction,
   updateComment,
   updateIssue,
 } from '../services/issues';
@@ -208,7 +209,7 @@ issueRouter.get(
   '/:issueId/comments',
   requireIssue(),
   asyncHandler(async (req, res) => {
-    res.json({ comments: await listComments(req.params.issueId) });
+    res.json({ comments: await listComments(req.params.issueId, req.authUser!.id) });
   }),
 );
 
@@ -255,6 +256,15 @@ commentRouter.post(
   asyncHandler(async (req, res) => {
     const input = parseBody<ReturnType<typeof pinCommentSchema.parse>>(pinCommentSchema, req.body);
     const comment = await setCommentPin(req.params.commentId, req.authUser!, input.pinned, realtimeFrom(ioFromApp(req.app)));
+    res.json({ comment });
+  }),
+);
+
+commentRouter.post(
+  '/:commentId/reactions',
+  asyncHandler(async (req, res) => {
+    const input = parseBody<ReturnType<typeof reactionSchema.parse>>(reactionSchema, req.body);
+    const comment = await toggleReaction(req.params.commentId, req.authUser!, input.emoji, realtimeFrom(ioFromApp(req.app)));
     res.json({ comment });
   }),
 );

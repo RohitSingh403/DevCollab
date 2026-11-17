@@ -7,6 +7,25 @@ export type Estimate = (typeof ESTIMATES)[number];
 export const PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const;
 export type Priority = (typeof PRIORITIES)[number];
 
+export const REACTIONS = ['+1', 'eyes', 'tada', 'check', 'heart'] as const;
+export type Reaction = (typeof REACTIONS)[number];
+
+export const REACTION_GLYPH: Record<Reaction, string> = {
+  '+1': '👍',
+  eyes: '👀',
+  tada: '🎉',
+  check: '✅',
+  heart: '❤️',
+};
+
+export const REACTION_LABEL: Record<Reaction, string> = {
+  '+1': 'thumbs up',
+  eyes: 'eyes',
+  tada: 'celebrate',
+  check: 'check',
+  heart: 'heart',
+};
+
 export const ROLES = ['owner', 'admin', 'member'] as const;
 export type Role = (typeof ROLES)[number];
 
@@ -187,6 +206,7 @@ export interface Comment {
   updatedAt: string;
   edited: boolean;
   pinned: boolean;
+  reactions: { emoji: Reaction; count: number; mine: boolean }[];
 }
 
 export interface Activity {

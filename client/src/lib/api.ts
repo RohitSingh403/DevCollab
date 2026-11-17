@@ -10,6 +10,7 @@ import type {
   IssueList,
   MyWork,
   IssueStatus,
+  Reaction,
   Favorite,
   Label,
   Member,
@@ -236,6 +237,10 @@ export const api = {
     request<{ comment: Comment }>(`/api/comments/${id}`, { method: 'PATCH', body: JSON.stringify({ body }) }).then((data) => data.comment),
   pinComment: (id: string, pinned: boolean) =>
     request<{ comment: Comment }>(`/api/comments/${id}/pin`, { method: 'POST', body: JSON.stringify({ pinned }) }).then((data) => data.comment),
+  toggleReaction: (id: string, emoji: Reaction) =>
+    request<{ comment: Comment }>(`/api/comments/${id}/reactions`, { method: 'POST', body: JSON.stringify({ emoji }) }).then(
+      (data) => data.comment,
+    ),
   deleteComment: (id: string) => request<void>(`/api/comments/${id}`, { method: 'DELETE' }),
 
   activity: (path: string, page = 1) => request<ActivityList>(`${path}?page=${page}&limit=20`),
