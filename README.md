@@ -79,7 +79,7 @@ Work:
 - Blockers inside one workspace. The issue, the board, and My work show the mark while a blocker is open, and clear it when that blocker is done
 - A checklist on an issue. Steps can be renamed, checked, and removed, and the board, list, and My work show how many are done
 - Cycles. A project has one active cycle, with a start and end date. The board can show just that cycle, My work names it, and the project totals include how much of it is done. The active cycle can be renamed or given new dates, and its issues stay on it. Ending the cycle leaves open issues on it. Starting the next cycle while one is still active moves those open issues forward
-- Milestones. A project can name up to 20 targets, each with an optional date. An issue belongs to one milestone, the board can show just that milestone, and the progress counts how many of its issues are done
+- Milestones. A project can name up to 20 targets, each with an optional date. An issue belongs to one milestone, the board can show just that milestone, and the progress counts how many of its issues are done. The name and date can be changed later, and the issues stay on it
 - A roadmap for the workspace. It lists milestones from active projects, with overdue targets first, then upcoming dates, undated targets, and finished ones. The overview shows the next few
 - Needs an owner. The overview lists open issues in active projects that have no assignee, highest priority first. The project board can show just those issues
 - Estimates of 1, 2, 3, 5, or 8 points. The cycle bar adds those up, and the board, list, and My work show the number on each issue
@@ -288,7 +288,7 @@ Socket.IO authenticates with the same cookie. Clients emit `workspace:join` with
 
 ## Tests
 
-Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, snoozing an issue, unassigned issues, blockers, watchers, checklists, due reminders, cycles, ending a cycle, editing the active cycle, milestones, the workspace roadmap, estimates, moving an issue between projects, sub-issues, bulk status, priority, and assignee edits, comment reactions, pinned comments, notifications, analytics, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, issue keys, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
+Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, snoozing an issue, unassigned issues, blockers, watchers, checklists, due reminders, cycles, ending a cycle, editing the active cycle, milestones, editing a milestone, the workspace roadmap, estimates, moving an issue between projects, sub-issues, bulk status, priority, and assignee edits, comment reactions, pinned comments, notifications, analytics, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, issue keys, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
 
 ```bash
 npm test
@@ -331,7 +331,7 @@ COOKIE_SAMESITE=none
 - A project has one active cycle. Starting another completes the previous one and moves open issues forward. Ending the active cycle leaves those issues where they are, so the next cycle starts empty. An issue keeps its cycle when that cycle ends. Editing the active cycle changes its name or dates and leaves every issue where it is. The end date is today or later. A finished cycle stays as it was.
 
 - An estimate is optional. The cycle point total ignores issues that have none, and points on a finished issue count as done.
-- The roadmap skips archived projects. A milestone is overdue when its date is before today and an issue on it is still open. It is done when it has issues and every one of them is done.
+- The roadmap skips archived projects. A milestone is overdue when its date is before today and an issue on it is still open. It is done when it has issues and every one of them is done. Renaming a milestone or moving its date leaves the issues on it, and the roadmap uses the new date.
 - A snooze belongs to one person and one issue. It hides that issue from their My work until the chosen day, then it returns. Other members still see the issue.
 - Unassigned means the issue has no assignees. Finished issues and archived projects stay off the workspace list. The project filter still includes finished issues when you ask for nobody assigned.
 - A bulk assignee replaces the people on each selected issue. Sending null removes them. Status and priority are unchanged unless they are sent too.

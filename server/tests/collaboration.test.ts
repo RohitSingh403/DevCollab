@@ -1718,4 +1718,65 @@ describe('workspaces, issues, and authorization', () => {
     const updates = activity.body.activities.filter((item: { message: string }) => item.message.includes('updated Cycle 12 extended on API'));
     expect(updates).toHaveLength(1);
   });
+
+  it('renames a milestone and moves its date without dropping issues', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const outsider = await registerUser(authAgent(), 'Jonah Patel');
+    const workspace = await createWorkspace(owner.agent, 'Northwind');
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'API Platform', key: 'API' });
+    const projectId = project.body.project.id;
+    const shift = (days: number) => {
+      const date = new Date();
+      date.setUTCDate(date.getUTCDate() + days);
+      return dayKey(date);
+    };
+
+    const created = await owner.agent.post(`/api/projects/${projectId}/milestones`).send({ name: 'Cookie cutover', targetDate: shift(-2) });
+    const milestoneId = created.body.milestone.id;
+    await owner.agent.post(`/api/projects/${projectId}/milestones`).send({ name: 'Board polish' });
+    const issue = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Sign the cookie' });
+    await owner.agent.patch(`/api/issues/${issue.body.issue.id}`).send({ milestoneId });
+
+    const hidden = await outsider.agent.patch(`/api/projects/${projectId}/milestones/${milestoneId}`).send({ name: 'Nope' });
+    expect(hidden.status).toBe(404);
+    const empty = await owner.agent.patch(`/api/projects/${projectId}/milestones/${milestoneId}`).send({});
+    expect(empty.status).toBe(400);
+    const duplicate = await owner.agent.patch(`/api/projects/${projectId}/milestones/${milestoneId}`).send({ name: 'board polish' });
+    expect(duplicate.status).toBe(409);
+    expect(duplicate.body.error.code).toBe('milestone_exists');
+
+    const updated = await owner.agent.patch(`/api/projects/${projectId}/milestones/${milestoneId}`).send({
+      name: 'Signed cookies',
+      targetDate: shift(14),
+    });
+    expect(updated.status).toBe(200);
+    expect(updated.body.milestone).toMatchObject({ name: 'Signed cookies', targetDate: shift(14), total: 1, done: 0 });
+
+    const same = await owner.agent.patch(`/api/projects/${projectId}/milestones/${milestoneId}`).send({
+      name: 'Signed cookies',
+      targetDate: shift(14),
+    });
+    expect(same.status).toBe(200);
+
+    const stayed = await owner.agent.get(`/api/issues/${issue.body.issue.id}`);
+    expect(stayed.body.issue.milestone).toEqual({ id: milestoneId, name: 'Signed cookies' });
+
+    const cleared = await owner.agent.patch(`/api/projects/${projectId}/milestones/${milestoneId}`).send({ targetDate: null });
+    expect(cleared.body.milestone.targetDate).toBeNull();
+    const roadmap = await owner.agent.get(`/api/workspaces/${workspace.id}/roadmap`);
+    expect(roadmap.body.milestones.find((item: { id: string }) => item.id === milestoneId)).toMatchObject({
+      name: 'Signed cookies',
+      state: 'undated',
+      targetDate: null,
+    });
+
+    await owner.agent.patch(`/api/projects/${projectId}`).send({ archived: true });
+    const blocked = await owner.agent.patch(`/api/projects/${projectId}/milestones/${milestoneId}`).send({ name: 'Too late' });
+    expect(blocked.status).toBe(409);
+    expect(blocked.body.error.code).toBe('project_archived');
+
+    const activity = await owner.agent.get(`/api/projects/${projectId}/activity`);
+    const updates = activity.body.activities.filter((item: { message: string }) => item.message.includes('updated the milestone'));
+    expect(updates).toHaveLength(2);
+  });
 });

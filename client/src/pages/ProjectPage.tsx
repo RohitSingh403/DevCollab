@@ -201,6 +201,20 @@ export function ProjectPage() {
     onError: (error) => pushToast(errorMessage(error)),
   });
 
+  const updateMilestone = useMutation({
+    mutationFn: (input: { id: string; name: string; targetDate: string | null }) =>
+      api.updateMilestone(projectId, input.id, { name: input.name, targetDate: input.targetDate }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['milestones', projectId] });
+      void queryClient.invalidateQueries({ queryKey: ['issues', projectId] });
+      void queryClient.invalidateQueries({ queryKey: ['issue'] });
+      void queryClient.invalidateQueries({ queryKey: ['roadmap'] });
+      void queryClient.invalidateQueries({ queryKey: ['activity'] });
+      pushToast('Milestone updated');
+    },
+    onError: (error) => pushToast(errorMessage(error)),
+  });
+
   const removeMilestone = useMutation({
     mutationFn: (milestone: string) => api.deleteMilestone(projectId, milestone),
     onSuccess: (_data, milestone) => {
@@ -308,10 +322,11 @@ export function ProjectPage() {
       <Milestones
         milestones={milestones.data ?? []}
         activeId={milestoneId}
-        pending={createMilestone.isPending || removeMilestone.isPending}
+        pending={createMilestone.isPending || removeMilestone.isPending || updateMilestone.isPending}
         canCreate={!project.data?.archived}
         onSelect={(id) => updateFilter('milestone', id)}
         onCreate={(input) => createMilestone.mutate(input)}
+        onUpdate={(input) => updateMilestone.mutate(input)}
         onDelete={(id) => removeMilestone.mutate(id)}
       />
       <CycleBar
