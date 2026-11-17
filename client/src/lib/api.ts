@@ -179,6 +179,10 @@ export const api = {
     ),
   endCycle: (projectId: string) =>
     request<{ cycle: Cycle }>(`/api/projects/${projectId}/cycles/end`, { method: 'POST' }).then((data) => data.cycle),
+  updateCycle: (projectId: string, cycleId: string, input: { name?: string; startsAt?: string; endsAt?: string }) =>
+    request<{ cycle: Cycle }>(`/api/projects/${projectId}/cycles/${cycleId}`, { method: 'PATCH', body: JSON.stringify(input) }).then(
+      (data) => data.cycle,
+    ),
   milestones: (projectId: string) =>
     request<{ milestones: Milestone[] }>(`/api/projects/${projectId}/milestones`).then((data) => data.milestones),
   createMilestone: (projectId: string, input: { name: string; targetDate?: string | null }) =>

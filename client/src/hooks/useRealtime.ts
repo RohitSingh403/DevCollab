@@ -23,6 +23,7 @@ export function useRealtime(workspaceId?: string) {
       void queryClient.invalidateQueries({ queryKey: ['unassigned'] });
       void queryClient.invalidateQueries({ queryKey: ['roadmap'] });
       void queryClient.invalidateQueries({ queryKey: ['milestones'] });
+      void queryClient.invalidateQueries({ queryKey: ['cycles'] });
     };
     const onNotification = (notification: { message?: string }) => {
       void queryClient.invalidateQueries({ queryKey: ['notifications'] });
@@ -41,6 +42,7 @@ export function useRealtime(workspaceId?: string) {
     socket.on('view:deleted', refreshWork);
     socket.on('cycle:started', refreshWork);
     socket.on('cycle:ended', refreshWork);
+    socket.on('cycle:updated', refreshWork);
     socket.on('milestone:changed', refreshWork);
 
     if (workspaceId) socket.emit('workspace:join', workspaceId);
@@ -59,6 +61,7 @@ export function useRealtime(workspaceId?: string) {
       socket.off('view:deleted', refreshWork);
       socket.off('cycle:started', refreshWork);
       socket.off('cycle:ended', refreshWork);
+      socket.off('cycle:updated', refreshWork);
       socket.off('milestone:changed', refreshWork);
     };
   }, [workspaceId, queryClient, pushToast]);

@@ -1653,4 +1653,69 @@ describe('workspaces, issues, and authorization', () => {
     expect(cleared.status).toBe(200);
     expect(cleared.body.issues.every((issue: { assignees: unknown[] }) => issue.assignees.length === 0)).toBe(true);
   });
+
+  it('renames the active cycle and keeps its issues', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const outsider = await registerUser(authAgent(), 'Jonah Patel');
+    const workspace = await createWorkspace(owner.agent, 'Northwind');
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'API Platform', key: 'API' });
+    const projectId = project.body.project.id;
+    const day = (offset: number) => {
+      const date = new Date();
+      date.setUTCDate(date.getUTCDate() + offset);
+      return date.toISOString().slice(0, 10);
+    };
+
+    const started = await owner.agent.post(`/api/projects/${projectId}/cycles`).send({
+      name: 'Cycle 12',
+      startsAt: day(-1),
+      endsAt: day(6),
+    });
+    const cycleId = started.body.cycle.id;
+    const open = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Keep this on the cycle' });
+    await owner.agent.patch(`/api/issues/${open.body.issue.id}`).send({ cycleId });
+
+    const hidden = await outsider.agent.patch(`/api/projects/${projectId}/cycles/${cycleId}`).send({ name: 'Nope' });
+    expect(hidden.status).toBe(404);
+
+    const empty = await owner.agent.patch(`/api/projects/${projectId}/cycles/${cycleId}`).send({});
+    expect(empty.status).toBe(400);
+
+    const backwards = await owner.agent.patch(`/api/projects/${projectId}/cycles/${cycleId}`).send({
+      startsAt: day(4),
+      endsAt: day(1),
+    });
+    expect(backwards.status).toBe(400);
+    expect(backwards.body.error.code).toBe('invalid_cycle_dates');
+
+    const past = await owner.agent.patch(`/api/projects/${projectId}/cycles/${cycleId}`).send({ endsAt: day(-1) });
+    expect(past.status).toBe(400);
+
+    const updated = await owner.agent.patch(`/api/projects/${projectId}/cycles/${cycleId}`).send({
+      name: 'Cycle 12 extended',
+      endsAt: day(20),
+    });
+    expect(updated.status).toBe(200);
+    expect(updated.body.cycle).toMatchObject({ name: 'Cycle 12 extended', startsAt: day(-1), endsAt: day(20), status: 'active', total: 1 });
+
+    const same = await owner.agent.patch(`/api/projects/${projectId}/cycles/${cycleId}`).send({
+      name: 'Cycle 12 extended',
+      startsAt: day(-1),
+      endsAt: day(20),
+    });
+    expect(same.status).toBe(200);
+
+    const stayed = await owner.agent.get(`/api/issues/${open.body.issue.id}`);
+    expect(stayed.body.issue.cycle).toEqual({ id: cycleId, name: 'Cycle 12 extended' });
+
+    const ended = await owner.agent.post(`/api/projects/${projectId}/cycles/end`);
+    expect(ended.status).toBe(200);
+    const closed = await owner.agent.patch(`/api/projects/${projectId}/cycles/${cycleId}`).send({ name: 'Too late' });
+    expect(closed.status).toBe(409);
+    expect(closed.body.error.code).toBe('cycle_closed');
+
+    const activity = await owner.agent.get(`/api/projects/${projectId}/activity`);
+    const updates = activity.body.activities.filter((item: { message: string }) => item.message.includes('updated Cycle 12 extended on API'));
+    expect(updates).toHaveLength(1);
+  });
 });

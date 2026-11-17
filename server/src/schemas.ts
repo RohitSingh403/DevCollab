@@ -234,6 +234,17 @@ export const startCycleSchema = z
   })
   .strict();
 
+export const updateCycleSchema = z
+  .object({
+    name: z.string().trim().min(2).max(40).optional(),
+    startsAt: day.optional(),
+    endsAt: day.optional(),
+  })
+  .strict()
+  .refine((value) => value.name !== undefined || value.startsAt !== undefined || value.endsAt !== undefined, {
+    message: 'Choose a name or a date',
+  });
+
 export const paginationSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(50).default(20),
