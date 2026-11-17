@@ -124,6 +124,16 @@ export interface Favorite {
   hint: string;
 }
 
+export interface RoadmapMilestone {
+  id: string;
+  name: string;
+  targetDate: string | null;
+  total: number;
+  done: number;
+  state: 'overdue' | 'upcoming' | 'undated' | 'complete';
+  project: { id: string; name: string; key: string };
+}
+
 export interface Milestone {
   id: string;
   name: string;

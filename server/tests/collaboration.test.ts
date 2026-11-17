@@ -1442,4 +1442,49 @@ describe('workspaces, issues, and authorization', () => {
     const activity = await owner.agent.get(`/api/projects/${projectId}/activity`);
     expect(activity.body.activities.some((item: { message: string }) => item.message.includes('removed the milestone Cookie cutover'))).toBe(true);
   });
+
+  it('lists workspace milestones with overdue first and skips archived projects', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const outsider = await registerUser(authAgent(), 'Jonah Patel');
+    const workspace = await createWorkspace(owner.agent, 'Northwind');
+    const api = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'API Platform', key: 'API' });
+    const web = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'Web', key: 'WEB' });
+    const old = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'Old', key: 'OLD' });
+    const shift = (days: number) => {
+      const date = new Date();
+      date.setUTCDate(date.getUTCDate() + days);
+      return dayKey(date);
+    };
+
+    const late = await owner.agent.post(`/api/projects/${api.body.project.id}/milestones`).send({ name: 'Cookie cutover', targetDate: shift(-2) });
+    const soon = await owner.agent.post(`/api/projects/${web.body.project.id}/milestones`).send({ name: 'Board polish', targetDate: shift(10) });
+    const openEnded = await owner.agent.post(`/api/projects/${web.body.project.id}/milestones`).send({ name: 'Design notes' });
+    const finished = await owner.agent.post(`/api/projects/${api.body.project.id}/milestones`).send({ name: 'Session notes', targetDate: shift(-10) });
+    const hidden = await owner.agent.post(`/api/projects/${old.body.project.id}/milestones`).send({ name: 'Retired' });
+
+    const lateIssue = await owner.agent.post(`/api/projects/${api.body.project.id}/issues`).send({ title: 'Sign the cookie' });
+    await owner.agent.patch(`/api/issues/${lateIssue.body.issue.id}`).send({ milestoneId: late.body.milestone.id });
+    const soonIssue = await owner.agent.post(`/api/projects/${web.body.project.id}/issues`).send({ title: 'Smooth the drag' });
+    await owner.agent.patch(`/api/issues/${soonIssue.body.issue.id}`).send({ milestoneId: soon.body.milestone.id });
+    const doneIssue = await owner.agent.post(`/api/projects/${api.body.project.id}/issues`).send({ title: 'Write the notes', status: 'done' });
+    await owner.agent.patch(`/api/issues/${doneIssue.body.issue.id}`).send({ milestoneId: finished.body.milestone.id });
+    const buried = await owner.agent.post(`/api/projects/${old.body.project.id}/issues`).send({ title: 'Leave it' });
+    await owner.agent.patch(`/api/issues/${buried.body.issue.id}`).send({ milestoneId: hidden.body.milestone.id });
+    await owner.agent.patch(`/api/projects/${old.body.project.id}`).send({ archived: true });
+
+    const denied = await outsider.agent.get(`/api/workspaces/${workspace.id}/roadmap`);
+    expect(denied.status).toBe(404);
+
+    const roadmap = await owner.agent.get(`/api/workspaces/${workspace.id}/roadmap`);
+    expect(roadmap.status).toBe(200);
+    expect(roadmap.body.milestones.map((item: { name: string; state: string }) => `${item.state}:${item.name}`)).toEqual([
+      'overdue:Cookie cutover',
+      'upcoming:Board polish',
+      'undated:Design notes',
+      'complete:Session notes',
+    ]);
+    expect(roadmap.body.milestones[0]).toMatchObject({ total: 1, done: 0, project: { key: 'API' } });
+    expect(roadmap.body.milestones.some((item: { name: string }) => item.name === 'Retired')).toBe(false);
+    expect(openEnded.body.milestone.targetDate).toBeNull();
+  });
 });

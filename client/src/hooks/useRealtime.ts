@@ -20,6 +20,8 @@ export function useRealtime(workspaceId?: string) {
       void queryClient.invalidateQueries({ queryKey: ['comments'] });
       void queryClient.invalidateQueries({ queryKey: ['views'] });
       void queryClient.invalidateQueries({ queryKey: ['my-work'] });
+      void queryClient.invalidateQueries({ queryKey: ['roadmap'] });
+      void queryClient.invalidateQueries({ queryKey: ['milestones'] });
     };
     const onNotification = (notification: { message?: string }) => {
       void queryClient.invalidateQueries({ queryKey: ['notifications'] });

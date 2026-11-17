@@ -203,6 +203,13 @@ export async function seedDatabase() {
     targetDate: isoDaysFromNow(14).slice(0, 10),
   });
   await updateIssue({ issueId: session.id, actor, milestoneId: cookieCutover.id });
+  const boardPolish = await createMilestone({
+    projectId: web.id,
+    actor: { ...actor, role: 'owner' },
+    name: 'Board polish',
+    targetDate: isoDaysFromNow(-2).slice(0, 10),
+  });
+  await updateIssue({ issueId: drag.id, actor, milestoneId: boardPolish.id });
   const webCycle = await startCycle({
     projectId: web.id,
     actor,

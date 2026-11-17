@@ -41,6 +41,7 @@ const links: { label: string; suffix: string; icon: IconName }[] = [
   { label: 'Overview', suffix: '', icon: 'overview' },
   { label: 'My work', suffix: '/my-work', icon: 'work' },
   { label: 'Projects', suffix: '/projects', icon: 'projects' },
+  { label: 'Roadmap', suffix: '/roadmap', icon: 'roadmap' },
   { label: 'Members', suffix: '/members', icon: 'members' },
   { label: 'Activity', suffix: '/activity', icon: 'activity' },
 ];

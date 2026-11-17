@@ -8,6 +8,7 @@ import type {
   IssueTemplate,
   Cycle,
   Milestone,
+  RoadmapMilestone,
   IssueList,
   MyWork,
   IssueStatus,
@@ -130,6 +131,8 @@ export const api = {
   deleteLabel: (workspaceId: string, labelId: string) =>
     request<void>(`/api/workspaces/${workspaceId}/labels/${labelId}`, { method: 'DELETE' }),
 
+  roadmap: (workspaceId: string) =>
+    request<{ milestones: RoadmapMilestone[] }>(`/api/workspaces/${workspaceId}/roadmap`).then((data) => data.milestones),
   projects: (workspaceId: string) =>
     request<{ projects: Project[] }>(`/api/workspaces/${workspaceId}/projects`).then((data) => data.projects),
   project: (id: string) => request<{ project: Project }>(`/api/projects/${id}`).then((data) => data.project),
