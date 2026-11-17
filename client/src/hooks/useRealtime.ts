@@ -37,6 +37,7 @@ export function useRealtime(workspaceId?: string) {
     socket.on('view:saved', refreshWork);
     socket.on('view:deleted', refreshWork);
     socket.on('cycle:started', refreshWork);
+    socket.on('milestone:changed', refreshWork);
 
     if (workspaceId) socket.emit('workspace:join', workspaceId);
 
@@ -53,6 +54,7 @@ export function useRealtime(workspaceId?: string) {
       socket.off('view:saved', refreshWork);
       socket.off('view:deleted', refreshWork);
       socket.off('cycle:started', refreshWork);
+      socket.off('milestone:changed', refreshWork);
     };
   }, [workspaceId, queryClient, pushToast]);
 }

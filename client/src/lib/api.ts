@@ -7,6 +7,7 @@ import type {
   Issue,
   IssueTemplate,
   Cycle,
+  Milestone,
   IssueList,
   MyWork,
   IssueStatus,
@@ -68,6 +69,7 @@ export interface IssueInput {
   dueDate?: string | null;
   estimate?: number | null;
   cycleId?: string | null;
+  milestoneId?: string | null;
   projectId?: string;
   parentId?: string | null;
   checklist?: string[];
@@ -170,6 +172,14 @@ export const api = {
     request<{ cycle: Cycle }>(`/api/projects/${projectId}/cycles`, { method: 'POST', body: JSON.stringify(input) }).then(
       (data) => data.cycle,
     ),
+  milestones: (projectId: string) =>
+    request<{ milestones: Milestone[] }>(`/api/projects/${projectId}/milestones`).then((data) => data.milestones),
+  createMilestone: (projectId: string, input: { name: string; targetDate?: string | null }) =>
+    request<{ milestone: Milestone }>(`/api/projects/${projectId}/milestones`, { method: 'POST', body: JSON.stringify(input) }).then(
+      (data) => data.milestone,
+    ),
+  deleteMilestone: (projectId: string, milestoneId: string) =>
+    request<void>(`/api/projects/${projectId}/milestones/${milestoneId}`, { method: 'DELETE' }),
 
   issues: (projectId: string, params: URLSearchParams) =>
     request<IssueList>(`/api/projects/${projectId}/issues?${params.toString()}`),

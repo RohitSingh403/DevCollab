@@ -33,6 +33,11 @@ export function IssuePage() {
     queryFn: () => api.cycles(issue.data?.project.id ?? ''),
     enabled: Boolean(issue.data?.project.id),
   });
+  const milestones = useQuery({
+    queryKey: ['milestones', issue.data?.project.id],
+    queryFn: () => api.milestones(issue.data?.project.id ?? ''),
+    enabled: Boolean(issue.data?.project.id),
+  });
   useDocumentTitle(issue.data ? `${issue.data.key} ${issue.data.title}` : 'Issue');
 
   const save = useMutation({
@@ -40,6 +45,7 @@ export function IssuePage() {
     onSuccess: (next) => {
       queryClient.setQueryData(['issue', issueId], next);
       void queryClient.invalidateQueries({ queryKey: ['issues'] });
+      void queryClient.invalidateQueries({ queryKey: ['milestones'] });
       void queryClient.invalidateQueries({ queryKey: ['projects'] });
       void queryClient.invalidateQueries({ queryKey: ['cycles'] });
       void queryClient.invalidateQueries({ queryKey: ['my-work'] });
@@ -218,6 +224,25 @@ export function IssuePage() {
               value={toDateInput(current.dueDate)}
               onChange={(event) => save.mutate({ dueDate: event.target.value || null })}
             />
+          </label>
+          <label className="grid grid-cols-[88px_1fr] items-center gap-3 px-4 py-3">
+            <span className="text-[12px] text-muted">Milestone</span>
+            <select
+              className="field"
+              aria-label="Milestone"
+              value={current.milestone?.id ?? ''}
+              onChange={(event) => save.mutate({ milestoneId: event.target.value || null })}
+            >
+              <option value="">None</option>
+              {(milestones.data ?? []).map((milestone) => (
+                <option key={milestone.id} value={milestone.id}>
+                  {milestone.name}
+                </option>
+              ))}
+              {current.milestone && !(milestones.data ?? []).some((item) => item.id === current.milestone?.id) ? (
+                <option value={current.milestone.id}>{current.milestone.name}</option>
+              ) : null}
+            </select>
           </label>
           <CycleField
             cycleId={current.cycle?.id ?? null}

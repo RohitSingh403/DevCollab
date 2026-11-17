@@ -71,6 +71,7 @@ export function IssueBoard({
                 <Link to={`/w/${workspaceId}/issues/${issue.id}`} className="mt-1.5 block text-[13px] font-medium leading-5 text-ink hover:underline">
                   {issue.title}
                 </Link>
+                {issue.milestone ? <p className="mt-1 text-[11px] text-faint">{issue.milestone.name}</p> : null}
                 {issue.labels.length ? (
                   <div className="mt-2 flex flex-wrap gap-1">
                     {issue.labels.slice(0, 2).map((label) => (

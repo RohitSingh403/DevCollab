@@ -33,6 +33,7 @@ const issueSchema = new Schema(
     parent: { type: Schema.Types.ObjectId, ref: 'Issue', default: null, index: true },
     checklist: { type: [checklistItemSchema], default: [] },
     cycle: { type: Schema.Types.ObjectId, ref: 'Cycle', default: null },
+    milestone: { type: Schema.Types.ObjectId, ref: 'Milestone', default: null },
     dueAlertKind: { type: String, enum: ['today', 'overdue', null], default: null },
     dueAlertFor: { type: Date, default: null },
   },
@@ -47,6 +48,7 @@ issueSchema.index({ watchers: 1 });
 issueSchema.index({ blockedBy: 1 });
 issueSchema.index({ related: 1 });
 issueSchema.index({ cycle: 1 });
+issueSchema.index({ milestone: 1 });
 
 issueSchema.pre('save', function setRank() {
   this.priorityRank = PRIORITY_RANK[this.priority as Priority] ?? PRIORITY_RANK.medium;

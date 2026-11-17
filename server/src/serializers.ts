@@ -48,6 +48,7 @@ export interface IssueDto {
   blocked: boolean;
   checklist: ChecklistItemDto[];
   cycle: { id: string; name: string } | null;
+  milestone: { id: string; name: string } | null;
   completedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -109,6 +110,7 @@ export function serializeIssue(issue: {
   blocked?: boolean;
   checklist?: { _id?: unknown; id?: unknown; text?: string; done?: boolean }[];
   cycle?: unknown;
+  milestone?: unknown;
   completedAt?: Date | string | null;
   createdAt: Date | string;
   updatedAt: Date | string;
@@ -141,6 +143,7 @@ export function serializeIssue(issue: {
       done: Boolean(item.done),
     })),
     cycle: cycleRef(issue.cycle),
+    milestone: cycleRef(issue.milestone),
     completedAt: iso(issue.completedAt),
     createdAt: iso(issue.createdAt) ?? new Date(0).toISOString(),
     updatedAt: iso(issue.updatedAt) ?? new Date(0).toISOString(),
