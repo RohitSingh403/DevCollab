@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Cycle } from '../lib/types';
 import { Modal } from './ui';
 
@@ -25,6 +25,7 @@ export function CycleBar({
   onToggle,
   onStart,
   onEnd,
+  onUpdate,
   canStart = true,
 }: {
   cycle: Cycle | null;
@@ -34,9 +35,11 @@ export function CycleBar({
   onToggle: () => void;
   onStart: (input: { name: string; startsAt: string; endsAt: string }) => void;
   onEnd?: () => void;
+  onUpdate?: (input: { name: string; startsAt: string; endsAt: string }) => void;
   canStart?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const done = cycle?.done ?? 0;
   const total = cycle?.total ?? 0;
@@ -80,6 +83,11 @@ export function CycleBar({
           </button>
         ) : null}
         {cycle && canStart ? (
+          <button className="btn-ghost" type="button" onClick={() => setEditing(true)}>
+            Edit cycle
+          </button>
+        ) : null}
+        {cycle && canStart ? (
           <button className="btn-ghost" type="button" onClick={() => setConfirmEnd(true)}>
             End cycle
           </button>
@@ -111,6 +119,18 @@ export function CycleBar({
           </button>
         </div>
       </Modal>
+      {cycle ? (
+        <EditCycleModal
+          open={editing}
+          pending={pending}
+          cycle={cycle}
+          onClose={() => setEditing(false)}
+          onSave={(input) => {
+            onUpdate?.(input);
+            setEditing(false);
+          }}
+        />
+      ) : null}
       <StartCycleModal
         open={open}
         pending={pending}
@@ -122,6 +142,66 @@ export function CycleBar({
         }}
       />
     </section>
+  );
+}
+
+function EditCycleModal({
+  open,
+  pending,
+  cycle,
+  onClose,
+  onSave,
+}: {
+  open: boolean;
+  pending: boolean;
+  cycle: { name: string; startsAt: string; endsAt: string };
+  onClose: () => void;
+  onSave: (input: { name: string; startsAt: string; endsAt: string }) => void;
+}) {
+  const [name, setName] = useState(cycle.name);
+  const [startsAt, setStartsAt] = useState(cycle.startsAt);
+  const [endsAt, setEndsAt] = useState(cycle.endsAt);
+  useEffect(() => {
+    if (!open) return;
+    setName(cycle.name);
+    setStartsAt(cycle.startsAt);
+    setEndsAt(cycle.endsAt);
+  }, [open, cycle.name, cycle.startsAt, cycle.endsAt]);
+  const today = dayFromNow(0);
+  const ready = name.trim().length >= 2 && startsAt <= endsAt && endsAt >= today;
+  return (
+    <Modal open={open} title="Edit cycle" onClose={onClose}>
+      <form
+        className="space-y-3"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (!ready) return;
+          onSave({ name: name.trim(), startsAt, endsAt });
+        }}
+      >
+        <label className="block text-sm">
+          <span className="text-muted">Name</span>
+          <input className="field mt-1" aria-label="Cycle name" value={name} maxLength={40} onChange={(event) => setName(event.target.value)} required />
+        </label>
+        <label className="block text-sm">
+          <span className="text-muted">Starts</span>
+          <input className="field mt-1" aria-label="Cycle start" type="date" value={startsAt} max={endsAt} onChange={(event) => setStartsAt(event.target.value)} required />
+        </label>
+        <label className="block text-sm">
+          <span className="text-muted">Ends</span>
+          <input className="field mt-1" aria-label="Cycle end" type="date" value={endsAt} min={startsAt > today ? startsAt : today} onChange={(event) => setEndsAt(event.target.value)} required />
+        </label>
+        <p className="text-[12px] text-muted">Issues stay on this cycle. A finished cycle cannot be changed.</p>
+        <div className="flex justify-end gap-2">
+          <button className="btn-ghost" type="button" onClick={onClose}>
+            Cancel
+          </button>
+          <button className="btn-primary" type="submit" disabled={pending || !ready}>
+            Save
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 

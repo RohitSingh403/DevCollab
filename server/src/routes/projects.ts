@@ -2,9 +2,9 @@ import { Router } from 'express';
 import { asyncHandler } from '../asyncHandler';
 import { requireAuth } from '../middleware/auth';
 import { requireProject, requireWorkspace } from '../middleware/access';
-import { createMilestoneSchema, createProjectSchema, createTemplateSchema, createViewSchema, paginationSchema, startCycleSchema, updateMilestoneSchema, updateProjectSchema } from '../schemas';
+import { createMilestoneSchema, createProjectSchema, createTemplateSchema, createViewSchema, paginationSchema, startCycleSchema, updateCycleSchema, updateMilestoneSchema, updateProjectSchema } from '../schemas';
 import { buildAnalytics } from '../services/analytics';
-import { activeCycleProgress, endCycle, listCycles, startCycle } from '../services/cycles';
+import { activeCycleProgress, endCycle, listCycles, startCycle, updateCycle } from '../services/cycles';
 import { createMilestone, deleteMilestone, listMilestones, updateMilestone } from '../services/milestones';
 import { listActivity } from '../services/feed';
 import { createProject, deleteProject, getProject, listProjects, updateProject } from '../services/projects';
@@ -102,6 +102,16 @@ projectRouter.post(
       realtimeFrom(ioFromApp(req.app)),
     );
     res.status(201).json({ cycle });
+  }),
+);
+
+projectRouter.patch(
+  '/:projectId/cycles/:cycleId',
+  requireProject(),
+  asyncHandler(async (req, res) => {
+    const input = parseBody<ReturnType<typeof updateCycleSchema.parse>>(updateCycleSchema, req.body);
+    const cycle = await updateCycle(req.params.projectId, req.params.cycleId, req.authUser!, input, realtimeFrom(ioFromApp(req.app)));
+    res.json({ cycle });
   }),
 );
 

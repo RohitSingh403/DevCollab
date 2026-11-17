@@ -226,6 +226,19 @@ export function ProjectPage() {
     onError: (error) => pushToast(errorMessage(error)),
   });
 
+  const updateCycle = useMutation({
+    mutationFn: (input: { name: string; startsAt: string; endsAt: string }) => {
+      const active = (cycles.data ?? []).find((item) => item.status === 'active');
+      if (!active) return Promise.reject(new Error('There is no active cycle'));
+      return api.updateCycle(projectId, active.id, input);
+    },
+    onSuccess: () => {
+      refreshCycles();
+      pushToast('Cycle updated');
+    },
+    onError: (error) => pushToast(errorMessage(error)),
+  });
+
   const endCycle = useMutation({
     mutationFn: () => api.endCycle(projectId),
     onSuccess: () => {
@@ -305,10 +318,11 @@ export function ProjectPage() {
         cycle={(cycles.data ?? []).find((item) => item.status === 'active') ?? analytics.data?.cycle ?? null}
         ended={(cycles.data ?? []).find((item) => item.status === 'completed') ?? null}
         filtered={cycleFilter}
-        pending={startCycle.isPending || endCycle.isPending}
+        pending={startCycle.isPending || endCycle.isPending || updateCycle.isPending}
         canStart={!project.data?.archived}
         onToggle={toggleCycle}
         onStart={(input) => startCycle.mutate(input)}
+        onUpdate={(input) => updateCycle.mutate(input)}
         onEnd={() => endCycle.mutate()}
       />
       <div className="panel">
