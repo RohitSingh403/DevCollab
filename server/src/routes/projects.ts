@@ -4,7 +4,7 @@ import { requireAuth } from '../middleware/auth';
 import { requireProject, requireWorkspace } from '../middleware/access';
 import { createMilestoneSchema, createProjectSchema, createTemplateSchema, createViewSchema, paginationSchema, startCycleSchema, updateMilestoneSchema, updateProjectSchema } from '../schemas';
 import { buildAnalytics } from '../services/analytics';
-import { activeCycleProgress, listCycles, startCycle } from '../services/cycles';
+import { activeCycleProgress, endCycle, listCycles, startCycle } from '../services/cycles';
 import { createMilestone, deleteMilestone, listMilestones, updateMilestone } from '../services/milestones';
 import { listActivity } from '../services/feed';
 import { createProject, deleteProject, getProject, listProjects, updateProject } from '../services/projects';
@@ -80,6 +80,15 @@ projectRouter.get(
   requireProject(),
   asyncHandler(async (req, res) => {
     res.json({ cycles: await listCycles(req.params.projectId) });
+  }),
+);
+
+projectRouter.post(
+  '/:projectId/cycles/end',
+  requireProject(),
+  asyncHandler(async (req, res) => {
+    const cycle = await endCycle(req.params.projectId, req.authUser!, realtimeFrom(ioFromApp(req.app)));
+    res.json({ cycle });
   }),
 );
 

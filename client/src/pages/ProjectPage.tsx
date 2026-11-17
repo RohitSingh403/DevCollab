@@ -208,14 +208,25 @@ export function ProjectPage() {
     onError: (error) => pushToast(errorMessage(error)),
   });
 
+  const refreshCycles = () => {
+    void queryClient.invalidateQueries({ queryKey: ['cycles', projectId] });
+    void queryClient.invalidateQueries({ queryKey: ['issues', projectId] });
+    void queryClient.invalidateQueries({ queryKey: ['analytics', 'project', projectId] });
+    void queryClient.invalidateQueries({ queryKey: ['my-work', workspaceId] });
+    void queryClient.invalidateQueries({ queryKey: ['activity'] });
+  };
+
   const startCycle = useMutation({
     mutationFn: (input: { name: string; startsAt: string; endsAt: string }) => api.startCycle(projectId, input),
+    onSuccess: refreshCycles,
+    onError: (error) => pushToast(errorMessage(error)),
+  });
+
+  const endCycle = useMutation({
+    mutationFn: () => api.endCycle(projectId),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['cycles', projectId] });
-      void queryClient.invalidateQueries({ queryKey: ['issues', projectId] });
-      void queryClient.invalidateQueries({ queryKey: ['analytics', 'project', projectId] });
-      void queryClient.invalidateQueries({ queryKey: ['my-work', workspaceId] });
-      void queryClient.invalidateQueries({ queryKey: ['activity'] });
+      refreshCycles();
+      if (params.get('cycle') === 'active') toggleCycle();
     },
     onError: (error) => pushToast(errorMessage(error)),
   });
@@ -288,11 +299,13 @@ export function ProjectPage() {
       />
       <CycleBar
         cycle={(cycles.data ?? []).find((item) => item.status === 'active') ?? analytics.data?.cycle ?? null}
+        ended={(cycles.data ?? []).find((item) => item.status === 'completed') ?? null}
         filtered={cycleFilter}
-        pending={startCycle.isPending}
+        pending={startCycle.isPending || endCycle.isPending}
         canStart={!project.data?.archived}
         onToggle={toggleCycle}
         onStart={(input) => startCycle.mutate(input)}
+        onEnd={() => endCycle.mutate()}
       />
       <div className="panel">
         <div className="flex flex-wrap items-center gap-1.5 border-b border-line px-2 py-2">

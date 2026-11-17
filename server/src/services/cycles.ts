@@ -106,6 +106,30 @@ export async function startCycle(
   return dto;
 }
 
+export async function endCycle(projectId: string, actor: { id: string; name: string }, rt?: Realtime) {
+  const project = await Project.findById(projectId);
+  if (!project) throw new ApiError(404, 'Project not found', 'not_found');
+  if (project.archivedAt) throw new ApiError(409, 'This project is archived', 'project_archived');
+  const cycle = await Cycle.findOne({ project: project._id, status: 'active' }).sort({ createdAt: -1 });
+  if (!cycle) throw new ApiError(404, 'There is no active cycle', 'no_active_cycle');
+  cycle.status = 'completed';
+  await cycle.save();
+  await recordActivity(
+    {
+      workspaceId: String(project.workspace),
+      projectId: String(project._id),
+      actorId: actor.id,
+      type: 'cycle.ended',
+      message: `${actor.name} ended ${cycle.name} on ${project.key}. Open issues stay on it`,
+    },
+    rt,
+  );
+  rt?.toWorkspace(String(project.workspace), 'cycle:ended', { projectId: String(project._id), cycleId: String(cycle._id) });
+  const dto = (await listCycles(String(project._id))).find((item) => item.id === String(cycle._id));
+  if (!dto) throw new ApiError(500, 'The cycle could not be loaded', 'internal_error');
+  return dto;
+}
+
 export async function closeFinishedCycles(now = new Date()) {
   const start = utcDayStart(now);
   await Cycle.updateMany({ status: 'active', endsAt: { $lt: start } }, { status: 'completed' });

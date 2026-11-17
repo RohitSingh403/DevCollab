@@ -19,20 +19,25 @@ function dayFromNow(days: number) {
 
 export function CycleBar({
   cycle,
+  ended,
   filtered,
   pending,
   onToggle,
   onStart,
+  onEnd,
   canStart = true,
 }: {
   cycle: Cycle | null;
+  ended?: Cycle | null;
   filtered: boolean;
   pending: boolean;
   onToggle: () => void;
   onStart: (input: { name: string; startsAt: string; endsAt: string }) => void;
+  onEnd?: () => void;
   canStart?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [confirmEnd, setConfirmEnd] = useState(false);
   const done = cycle?.done ?? 0;
   const total = cycle?.total ?? 0;
   const points = cycle?.points ?? 0;
@@ -60,7 +65,11 @@ export function CycleBar({
         ) : (
           <>
             <p className="text-[13px] font-semibold text-ink">No active cycle</p>
-            <p className="mt-1 text-[12px] text-muted">Start one to group the issues the team is working on now.</p>
+            <p className="mt-1 text-[12px] text-muted">
+              {ended
+                ? `${ended.name} ended with ${ended.done} of ${ended.total} done. Open issues stayed on it.`
+                : 'Start one to group the issues the team is working on now.'}
+            </p>
           </>
         )}
       </div>
@@ -70,12 +79,38 @@ export function CycleBar({
             {filtered ? 'Showing this cycle' : 'This cycle'}
           </button>
         ) : null}
+        {cycle && canStart ? (
+          <button className="btn-ghost" type="button" onClick={() => setConfirmEnd(true)}>
+            End cycle
+          </button>
+        ) : null}
         {canStart ? (
           <button className="btn-primary" type="button" onClick={() => setOpen(true)}>
             {cycle ? 'Start the next cycle' : 'Start cycle'}
           </button>
         ) : null}
       </div>
+      <Modal open={confirmEnd} title="End this cycle" onClose={() => setConfirmEnd(false)}>
+        <p className="text-sm text-muted">
+          {cycle ? `${cycle.name} stops being the current cycle. Open issues stay on it, and they do not move when the next cycle starts.` : ''}
+        </p>
+        <div className="mt-4 flex justify-end gap-2">
+          <button className="btn-ghost" type="button" onClick={() => setConfirmEnd(false)}>
+            Cancel
+          </button>
+          <button
+            className="btn-primary"
+            type="button"
+            disabled={pending}
+            onClick={() => {
+              onEnd?.();
+              setConfirmEnd(false);
+            }}
+          >
+            End cycle
+          </button>
+        </div>
+      </Modal>
       <StartCycleModal
         open={open}
         pending={pending}

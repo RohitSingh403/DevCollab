@@ -78,7 +78,7 @@ Work:
 - My work, the open issues assigned to you: overdue, due this week, due later, and no due date. Snooze an issue until a later day to hide it from your list. The snooze is private, and the issue comes back on that day
 - Blockers inside one workspace. The issue, the board, and My work show the mark while a blocker is open, and clear it when that blocker is done
 - A checklist on an issue. Steps can be renamed, checked, and removed, and the board, list, and My work show how many are done
-- Cycles. A project has one active cycle, with a start and end date. The board can show just that cycle, My work names it, and the project totals include how much of it is done
+- Cycles. A project has one active cycle, with a start and end date. The board can show just that cycle, My work names it, and the project totals include how much of it is done. Ending the cycle leaves open issues on it. Starting the next cycle while one is still active moves those open issues forward
 - Milestones. A project can name up to 20 targets, each with an optional date. An issue belongs to one milestone, the board can show just that milestone, and the progress counts how many of its issues are done
 - A roadmap for the workspace. It lists milestones from active projects, with overdue targets first, then upcoming dates, undated targets, and finished ones. The overview shows the next few
 - Needs an owner. The overview lists open issues in active projects that have no assignee, highest priority first. The project board can show just those issues
@@ -270,7 +270,8 @@ Authenticated routes expect the session cookie. Collection responses are paginat
 | GET | `/api/issues/:id/activity` | Issue history |
 | GET | `/api/workspaces/:id/analytics` | Workspace totals |
 | GET | `/api/projects/:id/analytics` | Project totals, including the active cycle when there is one |
-| GET, POST | `/api/projects/:id/cycles` | List cycles, or start one. Open issues from the previous cycle move forward |
+| GET, POST | `/api/projects/:id/cycles` | List cycles, or start one. Open issues from the active cycle move into the new one |
+| POST | `/api/projects/:id/cycles/end` | End the active cycle. Open issues stay on it |
 | GET, POST | `/api/projects/:id/milestones` | List milestones with done and total counts, or add one |
 | PATCH, DELETE | `/api/projects/:id/milestones/:milestoneId` | Rename a milestone, change its date, or remove it. Removing it clears the issues that used it |
 | GET | `/api/notifications` | Inbox |
@@ -286,7 +287,7 @@ Socket.IO authenticates with the same cookie. Clients emit `workspace:join` with
 
 ## Tests
 
-Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, snoozing an issue, unassigned issues, blockers, watchers, checklists, due reminders, cycles, milestones, the workspace roadmap, estimates, moving an issue between projects, sub-issues, bulk status and priority edits, comment reactions, pinned comments, notifications, analytics, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, issue keys, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
+Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, snoozing an issue, unassigned issues, blockers, watchers, checklists, due reminders, cycles, ending a cycle, milestones, the workspace roadmap, estimates, moving an issue between projects, sub-issues, bulk status and priority edits, comment reactions, pinned comments, notifications, analytics, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, issue keys, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
 
 ```bash
 npm test
@@ -326,7 +327,7 @@ COOKIE_SAMESITE=none
 - `blocked` stays true while any linked blocker is still open. Adding, removing, completing, reopening, or deleting a blocker updates it.
 - Followers are stored on the issue. Removing someone from the workspace also removes their follows. The reporter and assignees are notified without having to follow.
 - Checklist steps are stored on the issue in the order they were added. Checking a step does not change the issue status. The activity log records adds, checks, renames, and removals.
-- A project has one active cycle. Starting another completes the previous one. An issue keeps its cycle when that cycle ends, and open issues move when the next cycle starts.
+- A project has one active cycle. Starting another completes the previous one and moves open issues forward. Ending the active cycle leaves those issues where they are, so the next cycle starts empty. An issue keeps its cycle when that cycle ends.
 - An estimate is optional. The cycle point total ignores issues that have none, and points on a finished issue count as done.
 - The roadmap skips archived projects. A milestone is overdue when its date is before today and an issue on it is still open. It is done when it has issues and every one of them is done.
 - A snooze belongs to one person and one issue. It hides that issue from their My work until the chosen day, then it returns. Other members still see the issue.
