@@ -179,6 +179,17 @@ export const updateIssueSchema = z
   })
   .strict();
 
+export const bulkUpdateIssueSchema = z
+  .object({
+    issueIds: z.array(objectId).min(1).max(25),
+    status: z.enum(STATUSES).optional(),
+    priority: z.enum(PRIORITIES).optional(),
+  })
+  .strict()
+  .refine((value) => value.status !== undefined || value.priority !== undefined, {
+    message: 'Choose a status or a priority',
+  });
+
 export const listIssueSchema = z.object({
   status: z.enum(STATUSES).optional(),
   priority: z.enum(PRIORITIES).optional(),

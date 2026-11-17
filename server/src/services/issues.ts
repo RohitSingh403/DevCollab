@@ -12,6 +12,7 @@ import { ApiError } from '../errors';
 import { Comment } from '../models/Comment';
 import { Issue } from '../models/Issue';
 import { Label } from '../models/Label';
+import { Membership } from '../models/Membership';
 import { Project } from '../models/Project';
 import { archivedProjectIds } from './projects';
 import type { Realtime } from '../realtime';
@@ -556,6 +557,37 @@ export async function updateIssue(
   }
   rt?.toWorkspace(workspaceId, 'issue:updated', { issueId: dto.id, projectId: String(issue.project) });
   return dto;
+}
+
+export async function bulkUpdateIssues(
+  input: {
+    actor: { id: string; name: string };
+    issueIds: string[];
+    status?: IssueStatus;
+    priority?: Priority;
+  },
+  rt?: Realtime,
+) {
+  if (!input.status && !input.priority) {
+    throw new ApiError(400, 'Choose a status or a priority', 'empty_update');
+  }
+  const unique = [...new Set(input.issueIds)];
+  const found = await Issue.find({ _id: { $in: unique } }).select('workspace project');
+  if (found.length !== unique.length) throw new ApiError(404, 'Issue not found', 'not_found');
+  const workspaceIds = new Set(found.map((issue) => String(issue.workspace)));
+  if (workspaceIds.size !== 1) throw new ApiError(400, 'Choose issues from one workspace', 'mixed_workspace');
+  const workspaceId = [...workspaceIds][0];
+  const membership = await Membership.findOne({ workspace: workspaceId, user: input.actor.id }).lean();
+  if (!membership) throw new ApiError(404, 'Issue not found', 'not_found');
+  const projects = await Project.find({ _id: { $in: found.map((issue) => issue.project) } }).select('archivedAt');
+  if (projects.some((project) => project.archivedAt)) {
+    throw new ApiError(409, 'This project is archived', 'project_archived');
+  }
+  const issues = [];
+  for (const issueId of unique) {
+    issues.push(await updateIssue({ issueId, actor: input.actor, status: input.status, priority: input.priority }, rt));
+  }
+  return issues;
 }
 
 export async function deleteIssue(issueId: string, actor: { id: string; name: string }, role: 'owner' | 'admin' | 'member', rt?: Realtime) {
