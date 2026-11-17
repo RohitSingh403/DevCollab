@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ESTIMATES, INVITE_ROLES, PRIORITIES, ROLES, STATUSES } from './constants';
+import { ESTIMATES, INVITE_ROLES, PRIORITIES, REACTIONS, ROLES, STATUSES } from './constants';
 
 const objectId = z.string().regex(/^[a-f\d]{24}$/i, 'Expected an id');
 
@@ -222,6 +222,12 @@ export const paginationSchema = z.object({
 export const commentSchema = z
   .object({
     body: z.string().trim().min(1).max(2000),
+  })
+  .strict();
+
+export const reactionSchema = z
+  .object({
+    emoji: z.enum(REACTIONS),
   })
   .strict();
 
