@@ -1,4 +1,13 @@
 import { Schema, model, models, type InferSchemaType, type Model } from 'mongoose';
+import { REACTIONS } from '../constants';
+
+const reactionSchema = new Schema(
+  {
+    emoji: { type: String, enum: REACTIONS, required: true },
+    user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  },
+  { _id: false },
+);
 
 const commentSchema = new Schema(
   {
@@ -8,6 +17,7 @@ const commentSchema = new Schema(
     author: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     body: { type: String, required: true, trim: true, maxlength: 2000 },
     editedAt: { type: Date, default: null },
+    reactions: { type: [reactionSchema], default: [] },
   },
   { timestamps: true },
 );

@@ -13,6 +13,9 @@ export type Estimate = (typeof ESTIMATES)[number];
 export const PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const;
 export type Priority = (typeof PRIORITIES)[number];
 
+export const REACTIONS = ['+1', 'eyes', 'tada', 'check', 'heart'] as const;
+export type Reaction = (typeof REACTIONS)[number];
+
 export const PRIORITY_RANK: Record<Priority, number> = {
   low: 1,
   medium: 2,

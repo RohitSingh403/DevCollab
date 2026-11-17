@@ -11,7 +11,7 @@ import { api, errorMessage } from '../lib/api';
 import { timeAgo, toDateInput } from '../lib/format';
 import { MarkdownPane, MarkdownText, useIssueLinks } from '../components/Markdown';
 import { insertMention, matchingMembers, mentionAtCursor } from '../lib/mentions';
-import { ESTIMATES, PRIORITIES, PRIORITY_LABEL, STATUSES, STATUS_LABEL, type IssueStatus, type Priority, type Role } from '../lib/types';
+import { ESTIMATES, PRIORITIES, PRIORITY_LABEL, REACTIONS, REACTION_GLYPH, REACTION_LABEL, STATUSES, STATUS_LABEL, type IssueStatus, type Priority, type Reaction, type Role } from '../lib/types';
 import { useAuthStore } from '../stores/authStore';
 import { useUiStore } from '../stores/uiStore';
 
@@ -602,7 +602,7 @@ function CommentCard({
   workspaceId,
   links,
 }: {
-  comment: { id: string; body: string; author: { id: string; name: string; avatarColor: string }; createdAt: string; edited: boolean };
+  comment: { id: string; body: string; author: { id: string; name: string; avatarColor: string }; createdAt: string; edited: boolean; reactions?: { emoji: Reaction; count: number; mine: boolean }[] };
   role?: Role;
   members: { id: string; name: string }[];
   workspaceId: string;
@@ -614,6 +614,12 @@ function CommentCard({
   const [body, setBody] = useState(comment.body);
   const isAuthor = user?.id === comment.author.id;
   const canModerate = role === 'owner' || role === 'admin';
+  const pushToast = useUiStore((state) => state.pushToast);
+  const react = useMutation({
+    mutationFn: (emoji: Reaction) => api.toggleReaction(comment.id, emoji),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['comments'] }),
+    onError: (error) => pushToast(errorMessage(error)),
+  });
   const save = useMutation({
     mutationFn: () => api.updateComment(comment.id, body.trim()),
     onSuccess: async () => {
@@ -662,6 +668,24 @@ function CommentCard({
       ) : (
         <CommentBody body={comment.body} names={members.map((member) => member.name)} workspaceId={workspaceId} links={links} />
       )}
+      <div className="mt-3 flex flex-wrap gap-1">
+        {REACTIONS.map((emoji) => {
+          const row = (comment.reactions ?? []).find((item) => item.emoji === emoji);
+          return (
+            <button
+              key={emoji}
+              type="button"
+              aria-pressed={Boolean(row?.mine)}
+              aria-label={row?.mine ? `Remove ${REACTION_LABEL[emoji]}` : `React with ${REACTION_LABEL[emoji]}`}
+              className={`inline-flex h-7 items-center gap-1 rounded-full border px-2 text-[12px] ${row?.mine ? 'border-brand bg-brand-soft text-brand' : 'border-line bg-white text-muted hover:bg-slate-50'}`}
+              onClick={() => react.mutate(emoji)}
+            >
+              <span aria-hidden="true">{REACTION_GLYPH[emoji]}</span>
+              {row?.count ? <span className="tabular-nums">{row.count}</span> : null}
+            </button>
+          );
+        })}
+      </div>
     </li>
   );
 }

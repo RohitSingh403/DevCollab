@@ -1,4 +1,4 @@
-import { STATUS_LABEL, type IssueStatus, type Priority, type Role } from './constants';
+import { REACTIONS, STATUS_LABEL, type IssueStatus, type Priority, type Role } from './constants';
 import { isOverdue } from './dates';
 import { asId } from './utils';
 
@@ -165,6 +165,14 @@ export function serializeComment(comment: {
     updatedAt,
     edited: Boolean(comment.editedAt),
   };
+}
+
+export function serializeReactions(reactions: { emoji: string; user: unknown }[] | null | undefined, userId: string) {
+  return REACTIONS.flatMap((emoji) => {
+    const rows = (reactions ?? []).filter((row) => row.emoji === emoji);
+    if (!rows.length) return [];
+    return [{ emoji, count: rows.length, mine: rows.some((row) => String(row.user) === userId) }];
+  });
 }
 
 export function serializeActivity(activity: {
