@@ -178,6 +178,7 @@ export interface Issue {
   reporter: User;
   watchers?: User[];
   watching?: boolean;
+  snoozedUntil?: string | null;
   project: { id: string; name: string; key: string };
   workspaceId: string;
   dueDate: string | null;
@@ -208,6 +209,7 @@ export interface MyWork {
   total: number;
   counts: { overdue: number; dueSoon: number; later: number; undated: number };
   groups: MyWorkGroup[];
+  snoozed: { until: string; issue: Issue }[];
 }
 
 export interface IssueList {

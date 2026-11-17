@@ -13,6 +13,7 @@ import { startCycle } from './services/cycles';
 import { createMilestone } from './services/milestones';
 import { addComment, createIssue, updateIssue } from './services/issues';
 import { addFavorite } from './services/favorites';
+import { snoozeIssue } from './services/snooze';
 import { createProject } from './services/projects';
 import { createTemplate } from './services/templates';
 import { createLabel, createWorkspace } from './services/workspaces';
@@ -243,6 +244,8 @@ export async function seedDatabase() {
     actor: { id: String(priya._id), name: priya.name },
     body: 'I can still open issues as a member. Deleting the project returns 403, which is what we want.',
   });
+
+  await snoozeIssue(notifications.id, String(maya._id), isoDaysFromNow(4).slice(0, 10));
 
   logger.info('Seeded Northwind Labs. Sign in as maya@devcollab.dev / Password123!');
 }

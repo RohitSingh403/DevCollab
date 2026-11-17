@@ -19,6 +19,7 @@ import { serializeUser, serializeWorkspace } from '../serializers';
 import { hashInviteToken, newInviteToken, slugify } from '../utils';
 import { recordActivity } from './activity';
 import { clearMemberFavorites, clearWorkspaceFavorites } from './favorites';
+import { clearMemberSnoozes, clearWorkspaceSnoozes } from './snooze';
 import { assertLastOwner } from './membership';
 import { notifyUsers } from './notifications';
 
@@ -149,6 +150,7 @@ export async function deleteWorkspace(workspaceId: string) {
     IssueTemplate.deleteMany({ workspace: workspaceId }),
     Cycle.deleteMany({ workspace: workspaceId }),
     clearWorkspaceFavorites(workspaceId),
+    clearWorkspaceSnoozes(workspaceId),
     Project.deleteMany({ _id: { $in: projectIds } }),
     Workspace.deleteOne({ _id: workspaceId }),
   ]);
@@ -356,6 +358,7 @@ export async function removeMember(
   const user = await User.findById(targetUserId).select('name');
   await target.deleteOne();
   await clearMemberFavorites(workspaceId, targetUserId);
+  await clearMemberSnoozes(workspaceId, targetUserId);
   await Issue.updateMany({ workspace: workspaceId, assignees: targetUserId }, { $pull: { assignees: targetUserId } });
   await Issue.updateMany({ workspace: workspaceId, watchers: targetUserId }, { $pull: { watchers: targetUserId } });
   await recordActivity(
