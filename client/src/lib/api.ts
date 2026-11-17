@@ -235,6 +235,8 @@ export const api = {
     ),
   updateComment: (id: string, body: string) =>
     request<{ comment: Comment }>(`/api/comments/${id}`, { method: 'PATCH', body: JSON.stringify({ body }) }).then((data) => data.comment),
+  pinComment: (id: string, pinned: boolean) =>
+    request<{ comment: Comment }>(`/api/comments/${id}/pin`, { method: 'POST', body: JSON.stringify({ pinned }) }).then((data) => data.comment),
   toggleReaction: (id: string, emoji: Reaction) =>
     request<{ comment: Comment }>(`/api/comments/${id}/reactions`, { method: 'POST', body: JSON.stringify({ emoji }) }).then(
       (data) => data.comment,

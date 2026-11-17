@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { asyncHandler } from '../asyncHandler';
 import { requireAuth } from '../middleware/auth';
 import { requireIssue, requireProject } from '../middleware/access';
-import { blockerSchema, bulkUpdateIssueSchema, checklistSchema, commentSchema, createIssueSchema, listIssueSchema, paginationSchema, reactionSchema, relatedSchema, updateChecklistSchema, updateIssueSchema } from '../schemas';
+import { blockerSchema, bulkUpdateIssueSchema, checklistSchema, commentSchema, createIssueSchema, listIssueSchema, paginationSchema, pinCommentSchema, reactionSchema, relatedSchema, updateChecklistSchema, updateIssueSchema } from '../schemas';
 import { listActivity } from '../services/feed';
 import { addBlocker, removeBlocker } from '../services/blockers';
 import { addRelated, removeRelated } from '../services/related';
@@ -18,6 +18,7 @@ import {
   getIssue,
   listComments,
   listIssues,
+  setCommentPin,
   toggleReaction,
   updateComment,
   updateIssue,
@@ -246,6 +247,15 @@ commentRouter.patch(
       input.body,
       realtimeFrom(ioFromApp(req.app)),
     );
+    res.json({ comment });
+  }),
+);
+
+commentRouter.post(
+  '/:commentId/pin',
+  asyncHandler(async (req, res) => {
+    const input = parseBody<ReturnType<typeof pinCommentSchema.parse>>(pinCommentSchema, req.body);
+    const comment = await setCommentPin(req.params.commentId, req.authUser!, input.pinned, realtimeFrom(ioFromApp(req.app)));
     res.json({ comment });
   }),
 );

@@ -225,6 +225,12 @@ export const commentSchema = z
   })
   .strict();
 
+export const pinCommentSchema = z
+  .object({
+    pinned: z.boolean(),
+  })
+  .strict();
+
 export const reactionSchema = z
   .object({
     emoji: z.enum(REACTIONS),

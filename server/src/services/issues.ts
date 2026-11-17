@@ -661,7 +661,7 @@ function presentComment(
 }
 
 export async function listComments(issueId: string, userId: string) {
-  const comments = await Comment.find({ issue: issueId }).sort({ createdAt: 1 }).populate('author', 'name email avatarColor');
+  const comments = await Comment.find({ issue: issueId }).sort({ pinnedAt: -1, createdAt: 1 }).populate('author', 'name email avatarColor');
   return comments.map((comment) => presentComment(comment, userId));
 }
 
@@ -765,6 +765,48 @@ export async function toggleReaction(
   const populated = await comment.populate('author', 'name email avatarColor');
   rt?.toWorkspace(String(comment.workspace), 'comment:updated', { issueId: String(comment.issue), commentId: String(comment._id) });
   return presentComment(populated, actor.id);
+}
+
+export async function setCommentPin(
+  commentId: string,
+  actor: { id: string; name: string },
+  pinned: boolean,
+  rt?: Realtime,
+) {
+  const comment = await Comment.findById(commentId);
+  if (!comment) throw new ApiError(404, 'Comment not found', 'not_found');
+  await membershipFor(actor.id, String(comment.workspace));
+  if (Boolean(comment.pinnedAt) === pinned) {
+    const unchanged = await comment.populate('author', 'name email avatarColor');
+    return serializeComment(unchanged);
+  }
+  if (pinned) {
+    await Comment.updateMany({ issue: comment.issue, _id: { $ne: comment._id } }, { $set: { pinnedAt: null } });
+    comment.pinnedAt = new Date();
+  } else {
+    comment.pinnedAt = null;
+  }
+  await comment.save();
+  const issue = await Issue.findById(comment.issue);
+  const project = issue ? await Project.findById(issue.project).select('key') : null;
+  const key = issue ? `${project?.key ?? 'ISSUE'}-${issue.number}` : 'the issue';
+  await recordActivity(
+    {
+      workspaceId: String(comment.workspace),
+      projectId: String(comment.project),
+      issueId: String(comment.issue),
+      actorId: actor.id,
+      type: 'comment.pinned',
+      message: `${actor.name} ${pinned ? 'pinned' : 'unpinned'} a comment on ${key}`,
+    },
+    rt,
+  );
+  rt?.toWorkspace(String(comment.workspace), 'comment:updated', {
+    issueId: String(comment.issue),
+    commentId: String(comment._id),
+  });
+  const populated = await comment.populate('author', 'name email avatarColor');
+  return serializeComment(populated);
 }
 
 async function notifyComment({

@@ -154,6 +154,7 @@ export function serializeComment(comment: {
   createdAt: Date | string;
   updatedAt: Date | string;
   editedAt?: Date | string | null;
+  pinnedAt?: Date | string | null;
 }) {
   const createdAt = iso(comment.createdAt) ?? new Date(0).toISOString();
   const updatedAt = iso(comment.updatedAt) ?? createdAt;
@@ -164,6 +165,7 @@ export function serializeComment(comment: {
     createdAt,
     updatedAt,
     edited: Boolean(comment.editedAt),
+    pinned: Boolean(comment.pinnedAt),
   };
 }
 

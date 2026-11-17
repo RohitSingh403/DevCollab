@@ -205,6 +205,7 @@ export interface Comment {
   createdAt: string;
   updatedAt: string;
   edited: boolean;
+  pinned: boolean;
   reactions: { emoji: Reaction; count: number; mine: boolean }[];
 }
 
