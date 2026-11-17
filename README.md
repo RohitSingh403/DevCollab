@@ -80,6 +80,7 @@ Work:
 - A checklist on an issue. Steps can be renamed, checked, and removed, and the board, list, and My work show how many are done
 - Cycles. A project has one active cycle, with a start and end date. The board can show just that cycle, My work names it, and the project totals include how much of it is done
 - Milestones. A project can name up to 20 targets, each with an optional date. An issue belongs to one milestone, the board can show just that milestone, and the progress counts how many of its issues are done
+- A roadmap for the workspace. It lists milestones from active projects, with overdue targets first, then upcoming dates, undated targets, and finished ones. The overview shows the next few
 - Estimates of 1, 2, 3, 5, or 8 points. The cycle bar adds those up, and the board, list, and My work show the number on each issue
 - Move an issue to another project in the same workspace. It keeps its discussion, checklist, and estimate, takes the next key in the destination, and leaves its cycle
 - Sub-issues in the same workspace. A parent shows how many direct children are done, on the issue, the board, the list, and My work
@@ -240,6 +241,7 @@ Authenticated routes expect the session cookie. Collection responses are paginat
 | POST | `/api/workspaces/:id/invites` | Add a user or mint an invite link |
 | POST | `/api/invites/:token/accept` | Accept an invite |
 | GET, POST | `/api/workspaces/:id/projects` | Projects in a workspace |
+| GET | `/api/workspaces/:id/roadmap` | Milestones on active projects, with progress and a date group |
 | GET, PATCH, DELETE | `/api/projects/:id` | Read, update, or delete a project |
 | GET, POST | `/api/projects/:id/issues` | Filtered, paginated issues. `assignee=me` means the signed-in user |
 | GET | `/api/issues/:id` | One issue, including blockers and whether you follow it |
@@ -281,7 +283,7 @@ Socket.IO authenticates with the same cookie. Clients emit `workspace:join` with
 
 ## Tests
 
-Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, blockers, watchers, checklists, due reminders, cycles, milestones, estimates, moving an issue between projects, sub-issues, bulk status and priority edits, comment reactions, pinned comments, notifications, analytics, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, issue keys, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
+Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, blockers, watchers, checklists, due reminders, cycles, milestones, the workspace roadmap, estimates, moving an issue between projects, sub-issues, bulk status and priority edits, comment reactions, pinned comments, notifications, analytics, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, issue keys, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
 
 ```bash
 npm test
@@ -323,6 +325,7 @@ COOKIE_SAMESITE=none
 - Checklist steps are stored on the issue in the order they were added. Checking a step does not change the issue status. The activity log records adds, checks, renames, and removals.
 - A project has one active cycle. Starting another completes the previous one. An issue keeps its cycle when that cycle ends, and open issues move when the next cycle starts.
 - An estimate is optional. The cycle point total ignores issues that have none, and points on a finished issue count as done.
+- The roadmap skips archived projects. A milestone is overdue when its date is before today and an issue on it is still open. It is done when it has issues and every one of them is done.
 - Moving an issue gives it the next number in the destination project. The old number is not reused. Comments move with it. A cycle does not, because a cycle belongs to one project.
 - A sub-issue has one parent in the same workspace. Nesting stops at eight levels. Deleting a parent leaves its sub-issues in place, without a parent. The count on a card is its direct children.
 - Due reminders are stored on the issue as the date and kind already sent, so the hourly check does not repeat them.

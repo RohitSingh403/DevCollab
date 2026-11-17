@@ -13,6 +13,7 @@ import { MembersPage } from './pages/MembersPage';
 import { MyWorkPage } from './pages/MyWorkPage';
 import { OverviewPage, WorkspaceHome } from './pages/OverviewPage';
 import { ProjectPage } from './pages/ProjectPage';
+import { RoadmapPage } from './pages/RoadmapPage';
 import { ProjectsPage } from './pages/ProjectsPage';
 
 function SessionGate({ children }: { children: ReactNode }) {
@@ -103,6 +104,7 @@ export default function App() {
           <Route path="/w/:workspaceId" element={<OverviewPage />} />
           <Route path="/w/:workspaceId/my-work" element={<MyWorkPage />} />
           <Route path="/w/:workspaceId/projects" element={<ProjectsPage />} />
+          <Route path="/w/:workspaceId/roadmap" element={<RoadmapPage />} />
           <Route path="/w/:workspaceId/projects/:projectId" element={<ProjectPage />} />
           <Route path="/w/:workspaceId/issues/:issueId" element={<IssuePage />} />
           <Route path="/w/:workspaceId/members" element={<MembersPage />} />

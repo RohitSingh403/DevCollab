@@ -29,6 +29,7 @@ export function CommandMenu({ open, workspaceId, onClose }: { open: boolean; wor
     { id: 'overview', group: 'Go to', label: 'Overview', hint: 'Workspace', to: `/w/${workspaceId}` },
     { id: 'my-work', group: 'Go to', label: 'My work', hint: 'Assigned to you', to: `/w/${workspaceId}/my-work` },
     { id: 'projects', group: 'Go to', label: 'Projects', hint: 'All projects', to: `/w/${workspaceId}/projects` },
+    { id: 'roadmap', group: 'Go to', label: 'Roadmap', hint: 'Milestones by date', to: `/w/${workspaceId}/roadmap` },
     { id: 'members', group: 'Go to', label: 'Members', hint: 'People and roles', to: `/w/${workspaceId}/members` },
     { id: 'activity', group: 'Go to', label: 'Activity', hint: 'Recent changes', to: `/w/${workspaceId}/activity` },
     { id: 'inbox', group: 'Go to', label: 'Notifications', hint: 'Inbox', to: '/notifications' },

@@ -5,6 +5,7 @@ import { ApiError } from '../errors';
 import { Issue } from '../models/Issue';
 import { Milestone } from '../models/Milestone';
 import { Project } from '../models/Project';
+import { archivedProjectIds } from './projects';
 import type { Realtime } from '../realtime';
 import { escapeRegex } from '../utils';
 import { recordActivity } from './activity';
@@ -54,6 +55,57 @@ export async function listMilestones(projectId: string, actor: { id: string; rol
   const milestones = await Milestone.find({ project: projectId }).sort({ targetDate: 1, name: 1 });
   const counts = await countsFor(projectId);
   return milestones.map((milestone) => present(milestone, counts.get(String(milestone._id)) ?? { total: 0, done: 0 }, actor));
+}
+
+export type RoadmapState = 'overdue' | 'upcoming' | 'undated' | 'complete';
+
+export async function listRoadmap(workspaceId: string) {
+  const archived = await archivedProjectIds(workspaceId);
+  const milestones = await Milestone.find({ workspace: workspaceId, project: { $nin: archived } }).populate('project', 'name key');
+  if (!milestones.length) return [];
+  const rows = await Issue.aggregate<{ _id: { milestone: unknown; status: string }; count: number }>([
+    {
+      $match: {
+        workspace: new mongoose.Types.ObjectId(workspaceId),
+        milestone: { $in: milestones.map((milestone) => milestone._id) },
+      },
+    },
+    { $group: { _id: { milestone: '$milestone', status: '$status' }, count: { $sum: 1 } } },
+  ]);
+  const counts = new Map<string, { total: number; done: number }>();
+  for (const row of rows) {
+    const id = String(row._id.milestone);
+    const current = counts.get(id) ?? { total: 0, done: 0 };
+    current.total += row.count;
+    if (row._id.status === 'done') current.done += row.count;
+    counts.set(id, current);
+  }
+  const today = dayKey(new Date());
+  const items = milestones.map((milestone) => {
+    const project = milestone.project as { _id?: unknown; name?: string; key?: string };
+    const tally = counts.get(String(milestone._id)) ?? { total: 0, done: 0 };
+    const targetDate = milestone.targetDate ? dayKey(milestone.targetDate) : null;
+    const complete = tally.total > 0 && tally.done === tally.total;
+    const state: RoadmapState = complete ? 'complete' : !targetDate ? 'undated' : targetDate < today ? 'overdue' : 'upcoming';
+    return {
+      id: String(milestone._id),
+      name: milestone.name,
+      targetDate,
+      total: tally.total,
+      done: tally.done,
+      state,
+      project: { id: String(project._id ?? milestone.project), name: project.name ?? '', key: project.key ?? '' },
+    };
+  });
+  const rank: Record<RoadmapState, number> = { overdue: 0, upcoming: 1, undated: 2, complete: 3 };
+  items.sort((left, right) => {
+    if (rank[left.state] !== rank[right.state]) return rank[left.state] - rank[right.state];
+    if (left.targetDate && right.targetDate && left.targetDate !== right.targetDate) {
+      return left.state === 'complete' ? right.targetDate.localeCompare(left.targetDate) : left.targetDate.localeCompare(right.targetDate);
+    }
+    return left.name.localeCompare(right.name);
+  });
+  return items;
 }
 
 export async function assertProjectMilestone(projectId: string, milestoneId: string) {

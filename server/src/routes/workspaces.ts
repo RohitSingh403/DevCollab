@@ -20,6 +20,7 @@ import { listActivity } from '../services/feed';
 import { listMyWork, resolveIssueKeys, searchWorkspaceIssues } from '../services/issues';
 import { addFavorite, listFavorites, removeFavorite } from '../services/favorites';
 import { archivedProjectIds } from '../services/projects';
+import { listRoadmap } from '../services/milestones';
 import {
   acceptInvite,
   createLabel,
@@ -207,6 +208,14 @@ workspaceRouter.get(
   asyncHandler(async (req, res) => {
     const query = paginationSchema.parse(req.query);
     res.json(await listActivity({ workspace: req.params.workspaceId }, query.page, query.limit));
+  }),
+);
+
+workspaceRouter.get(
+  '/:workspaceId/roadmap',
+  requireWorkspace(),
+  asyncHandler(async (req, res) => {
+    res.json({ milestones: await listRoadmap(req.params.workspaceId) });
   }),
 );
 

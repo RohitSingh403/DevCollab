@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AnalyticsPanels, StatGrid } from '../components/AnalyticsPanels';
+import { RoadmapRow } from './RoadmapPage';
 import { EmptyState, Modal, PageHeader, RoleBadge, useDocumentTitle } from '../components/ui';
 import { api, errorMessage } from '../lib/api';
 import { timeAgo } from '../lib/format';
@@ -74,6 +75,7 @@ export function OverviewPage() {
   const workspace = useQuery({ queryKey: ['workspace', workspaceId], queryFn: () => api.workspace(workspaceId) });
   const analytics = useQuery({ queryKey: ['analytics', workspaceId], queryFn: () => api.analytics(`/api/workspaces/${workspaceId}/analytics`) });
   const projects = useQuery({ queryKey: ['projects', workspaceId], queryFn: () => api.projects(workspaceId) });
+  const roadmap = useQuery({ queryKey: ['roadmap', workspaceId], queryFn: () => api.roadmap(workspaceId) });
   const activity = useQuery({
     queryKey: ['activity', workspaceId],
     queryFn: () => api.activity(`/api/workspaces/${workspaceId}/activity`),
@@ -114,6 +116,22 @@ export function OverviewPage() {
       />
       {analytics.data ? <StatGrid analytics={analytics.data} /> : <p className="text-sm text-muted">Loading analytics…</p>}
       {analytics.data ? <AnalyticsPanels analytics={analytics.data} /> : null}
+      <section>
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold">Roadmap</h2>
+          <Link className="text-[12px] font-medium text-brand" to={`/w/${workspaceId}/roadmap`}>
+            View roadmap
+          </Link>
+        </div>
+        <ul className="panel divide-y divide-line">
+          {(roadmap.data ?? []).filter((milestone) => milestone.state !== 'complete').slice(0, 4).map((milestone) => (
+            <RoadmapRow key={milestone.id} workspaceId={workspaceId} milestone={milestone} />
+          ))}
+          {roadmap.data && !(roadmap.data ?? []).some((milestone) => milestone.state !== 'complete') ? (
+            <li className="px-4 py-6 text-sm text-muted">Milestones from active projects will show up here.</li>
+          ) : null}
+        </ul>
+      </section>
       <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
         <section>
           <h2 className="mb-2 text-sm font-semibold">Projects</h2>
