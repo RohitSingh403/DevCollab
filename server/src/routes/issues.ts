@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { asyncHandler } from '../asyncHandler';
 import { requireAuth } from '../middleware/auth';
 import { requireIssue, requireProject } from '../middleware/access';
-import { blockerSchema, checklistSchema, commentSchema, createIssueSchema, listIssueSchema, paginationSchema, relatedSchema, updateChecklistSchema, updateIssueSchema } from '../schemas';
+import { blockerSchema, bulkUpdateIssueSchema, checklistSchema, commentSchema, createIssueSchema, listIssueSchema, paginationSchema, relatedSchema, updateChecklistSchema, updateIssueSchema } from '../schemas';
 import { listActivity } from '../services/feed';
 import { addBlocker, removeBlocker } from '../services/blockers';
 import { addRelated, removeRelated } from '../services/related';
@@ -10,6 +10,7 @@ import { addChecklistItem, deleteChecklistItem, updateChecklistItem } from '../s
 import { setWatching } from '../services/watchers';
 import {
   addComment,
+  bulkUpdateIssues,
   createIssue,
   deleteComment,
   duplicateIssue,
@@ -53,6 +54,15 @@ issueRouterForProject.post(
 );
 
 issueRouter.use(requireAuth);
+
+issueRouter.post(
+  '/bulk',
+  asyncHandler(async (req, res) => {
+    const input = parseBody<ReturnType<typeof bulkUpdateIssueSchema.parse>>(bulkUpdateIssueSchema, req.body);
+    const issues = await bulkUpdateIssues({ actor: req.authUser!, ...input }, realtimeFrom(ioFromApp(req.app)));
+    res.json({ issues });
+  }),
+);
 
 issueRouter.get(
   '/:issueId',

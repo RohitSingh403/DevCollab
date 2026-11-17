@@ -73,6 +73,7 @@ Work:
 - Rename or recolor a label. Issues and templates keep it, and the board shows the new name and color
 - A board you can drag between columns, plus a list view
 - Filters, text search, and pagination. The board can also filter by label and sort by updated, newest, due date, or priority. A saved view keeps that choice
+- Bulk edit on the list. Select issues on the page and set their status or priority together. Each issue keeps its own history, and an archived project stays closed
 - Saved project views, private or shared. A view assigned to “me” follows whoever opens it
 - My work, the open issues assigned to you: overdue, due this week, due later, and no due date
 - Blockers inside one workspace. The issue, the board, and My work show the mark while a blocker is open, and clear it when that blocker is done
@@ -239,6 +240,7 @@ Authenticated routes expect the session cookie. Collection responses are paginat
 | GET, POST | `/api/projects/:id/issues` | Filtered, paginated issues. `assignee=me` means the signed-in user |
 | GET | `/api/issues/:id` | One issue, including blockers and whether you follow it |
 | PATCH, DELETE | `/api/issues/:id` | Update or delete an issue |
+| POST | `/api/issues/bulk` | Set the status or priority of up to 25 issues in one workspace |
 | POST | `/api/issues/:id/blockers` | Block this issue on another issue in the same workspace |
 | DELETE | `/api/issues/:id/blockers/:blockerId` | Remove that blocker |
 | POST, DELETE | `/api/issues/:id/watch` | Follow or unfollow an issue |
@@ -270,7 +272,7 @@ Socket.IO authenticates with the same cookie. Clients emit `workspace:join` with
 
 ## Tests
 
-Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, blockers, watchers, checklists, due reminders, cycles, estimates, moving an issue between projects, sub-issues, notifications, analytics, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
+Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, blockers, watchers, checklists, due reminders, cycles, estimates, moving an issue between projects, sub-issues, bulk status and priority edits, notifications, analytics, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
 
 ```bash
 npm test

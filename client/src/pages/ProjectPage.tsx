@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { CycleBar } from '../components/CycleBar';
 import { FavoriteButton } from '../components/FavoriteButton';
@@ -11,7 +11,7 @@ import { Avatar, BlockedMark, ChecklistCount, EmptyState, EstimateMark, Modal, P
 import { checklistProgress } from '../lib/checklist';
 import { api, errorMessage } from '../lib/api';
 import { dueLabel } from '../lib/format';
-import { PRIORITIES, PRIORITY_LABEL, STATUSES, STATUS_LABEL, type IssueStatus, type ViewFilters } from '../lib/types';
+import { PRIORITIES, PRIORITY_LABEL, STATUSES, STATUS_LABEL, type IssueStatus, type Priority, type ViewFilters } from '../lib/types';
 import { currentFilters, hasViewFilter, sameFilters } from '../lib/views';
 import { useAuthStore } from '../stores/authStore';
 import { useUiStore } from '../stores/uiStore';
@@ -56,6 +56,9 @@ export function ProjectPage() {
   const [creating, setCreating] = useState(false);
   const [labelsOpen, setLabelsOpen] = useState(false);
   const [savingView, setSavingView] = useState(false);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [bulkStatus, setBulkStatus] = useState<'' | IssueStatus>('');
+  const [bulkPriority, setBulkPriority] = useState<'' | Priority>('');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const pushToast = useUiStore((state) => state.pushToast);
@@ -88,6 +91,36 @@ export function ProjectPage() {
       void queryClient.invalidateQueries({ queryKey: ['analytics'] });
     },
   });
+
+  const visibleIds = issues.data?.issues.map((issue) => issue.id) ?? [];
+  const selectedOnPage = selected.filter((id) => visibleIds.includes(id));
+
+  const bulk = useMutation({
+    mutationFn: () =>
+      api.bulkUpdateIssues({
+        issueIds: selectedOnPage,
+        ...(bulkStatus ? { status: bulkStatus } : {}),
+        ...(bulkPriority ? { priority: bulkPriority } : {}),
+      }),
+    onSuccess: async (updated) => {
+      setSelected([]);
+      setBulkStatus('');
+      setBulkPriority('');
+      pushToast(updated.length === 1 ? 'Updated 1 issue' : `Updated ${updated.length} issues`);
+      await queryClient.invalidateQueries({ queryKey: ['issues', projectId] });
+      await queryClient.invalidateQueries({ queryKey: ['analytics'] });
+      await queryClient.invalidateQueries({ queryKey: ['my-work'] });
+    },
+    onError: (error) => pushToast(errorMessage(error)),
+  });
+
+  function toggleSelected(id: string) {
+    setSelected((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
+  }
+
+  function togglePage(checked: boolean) {
+    setSelected(checked ? visibleIds : []);
+  }
 
   const archive = useMutation({
     mutationFn: (archived: boolean) => api.updateProject(projectId, { archived }),
@@ -340,11 +373,46 @@ export function ProjectPage() {
       {issues.data && issues.data.issues.length && view === 'board' ? (
         <IssueBoard workspaceId={workspaceId} issues={issues.data.issues} onMove={(id, next) => move.mutate({ id, status: next })} />
       ) : null}
+      {issues.data && issues.data.issues.length && view === 'list' && selectedOnPage.length ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-line bg-white px-3 py-2 shadow-card">
+          <span className="text-sm font-medium text-ink">{selectedOnPage.length} selected</span>
+          <select className="field w-auto" aria-label="Set status" value={bulkStatus} onChange={(event) => setBulkStatus(event.target.value as '' | IssueStatus)}>
+            <option value="">Status</option>
+            {STATUSES.map((item) => (
+              <option key={item} value={item}>
+                {STATUS_LABEL[item]}
+              </option>
+            ))}
+          </select>
+          <select className="field w-auto" aria-label="Set priority" value={bulkPriority} onChange={(event) => setBulkPriority(event.target.value as '' | Priority)}>
+            <option value="">Priority</option>
+            {PRIORITIES.map((item) => (
+              <option key={item} value={item}>
+                {PRIORITY_LABEL[item]}
+              </option>
+            ))}
+          </select>
+          <button className="btn-primary" type="button" disabled={(!bulkStatus && !bulkPriority) || bulk.isPending} onClick={() => bulk.mutate()}>
+            {bulk.isPending ? 'Updating…' : 'Update'}
+          </button>
+          <button className="btn-ghost" type="button" onClick={() => setSelected([])}>
+            Clear
+          </button>
+        </div>
+      ) : null}
       {issues.data && issues.data.issues.length && view === 'list' ? (
         <div className="panel overflow-x-auto">
           <table className="w-full min-w-[720px] text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-faint">
               <tr>
+                <th className="w-10 px-4 py-3">
+                  <SelectBox
+                    label="Select all issues on this page"
+                    checked={visibleIds.length > 0 && selectedOnPage.length === visibleIds.length}
+                    indeterminate={selectedOnPage.length > 0 && selectedOnPage.length < visibleIds.length}
+                    onChange={(checked) => togglePage(checked)}
+                  />
+                </th>
                 <th className="px-4 py-3 font-medium">Issue</th>
                 <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 font-medium">Priority</th>
@@ -355,6 +423,13 @@ export function ProjectPage() {
             <tbody>
               {issues.data.issues.map((issue) => (
                 <tr key={issue.id} className="border-t border-line hover:bg-slate-50">
+                  <td className="px-4 py-3">
+                    <SelectBox
+                      label={selectedOnPage.includes(issue.id) ? `Deselect ${issue.key}` : `Select ${issue.key}`}
+                      checked={selectedOnPage.includes(issue.id)}
+                      onChange={() => toggleSelected(issue.id)}
+                    />
+                  </td>
                   <td className="px-4 py-3">
                     <Link to={`/w/${workspaceId}/issues/${issue.id}`} className="font-mono text-xs text-muted">
                       {issue.key}
@@ -413,6 +488,33 @@ export function ProjectPage() {
         <IssueForm workspaceId={workspaceId} projectId={projectId} onCreated={() => setCreating(false)} />
       </Modal>
     </div>
+  );
+}
+
+function SelectBox({
+  checked,
+  indeterminate = false,
+  label,
+  onChange,
+}: {
+  checked: boolean;
+  indeterminate?: boolean;
+  label: string;
+  onChange: (checked: boolean) => void;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (ref.current) ref.current.indeterminate = indeterminate;
+  }, [indeterminate]);
+  return (
+    <input
+      ref={ref}
+      type="checkbox"
+      className="h-4 w-4 rounded border-line"
+      aria-label={label}
+      checked={checked}
+      onChange={(event) => onChange(event.target.checked)}
+    />
   );
 }
 

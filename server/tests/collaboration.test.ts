@@ -1206,4 +1206,67 @@ describe('workspaces, issues, and authorization', () => {
     const history = await owner.agent.get(`/api/workspaces/${workspace.id}/activity`);
     expect(history.body.activities.some((item: { message: string }) => item.message.includes('renamed the label bug to defect'))).toBe(true);
   });
+
+  it('sets status and priority for several issues in one workspace', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const outsider = await registerUser(authAgent(), 'Outsider');
+    const workspace = await createWorkspace(owner.agent, 'Bulk');
+    const other = await createWorkspace(owner.agent, 'Elsewhere');
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({
+      name: 'API Platform',
+      key: 'API',
+      description: 'Service layer',
+    });
+    const projectId = project.body.project.id as string;
+    const first = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Rate limit login', priority: 'low' });
+    const second = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Add request logs', priority: 'medium', status: 'todo' });
+    const third = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Leave this one', priority: 'high', status: 'in_review' });
+    const foreignProject = await owner.agent.post(`/api/workspaces/${other.id}/projects`).send({
+      name: 'Other',
+      key: 'OTH',
+      description: 'Separate',
+    });
+    const foreign = await owner.agent.post(`/api/projects/${foreignProject.body.project.id}/issues`).send({ title: 'Other workspace' });
+
+    const hidden = await outsider.agent.post('/api/issues/bulk').send({
+      issueIds: [first.body.issue.id, second.body.issue.id],
+      status: 'in_progress',
+    });
+    expect(hidden.status).toBe(404);
+
+    const empty = await owner.agent.post('/api/issues/bulk').send({ issueIds: [first.body.issue.id] });
+    expect(empty.status).toBe(400);
+    const mixed = await owner.agent.post('/api/issues/bulk').send({
+      issueIds: [first.body.issue.id, foreign.body.issue.id],
+      status: 'done',
+    });
+    expect(mixed.status).toBe(400);
+
+    const updated = await owner.agent.post('/api/issues/bulk').send({
+      issueIds: [first.body.issue.id, second.body.issue.id, second.body.issue.id],
+      status: 'in_progress',
+      priority: 'urgent',
+    });
+    expect(updated.status).toBe(200);
+    expect(updated.body.issues).toHaveLength(2);
+    expect(updated.body.issues.map((issue: { key: string; status: string; priority: string }) => [issue.key, issue.status, issue.priority])).toEqual([
+      ['API-1', 'in_progress', 'urgent'],
+      ['API-2', 'in_progress', 'urgent'],
+    ]);
+    const untouched = await owner.agent.get(`/api/issues/${third.body.issue.id}`);
+    expect(untouched.body.issue.status).toBe('in_review');
+    expect(untouched.body.issue.priority).toBe('high');
+
+    const archived = await owner.agent.patch(`/api/projects/${projectId}`).send({ archived: true });
+    expect(archived.status).toBe(200);
+    const closed = await owner.agent.post('/api/issues/bulk').send({ issueIds: [third.body.issue.id], status: 'done' });
+    expect(closed.status).toBe(409);
+    const stillOpen = await owner.agent.get(`/api/issues/${third.body.issue.id}`);
+    expect(stillOpen.body.issue.status).toBe('in_review');
+
+    const history = await owner.agent.get(`/api/workspaces/${workspace.id}/activity`);
+    const messages = history.body.activities.map((item: { message: string }) => item.message);
+    expect(messages.some((message: string) => message.includes('API-1') && message.includes('In progress') && message.includes('Urgent'))).toBe(true);
+    expect(messages.some((message: string) => message.includes('API-2') && message.includes('In progress') && message.includes('Urgent'))).toBe(true);
+  });
 });
