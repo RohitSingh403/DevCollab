@@ -1487,4 +1487,49 @@ describe('workspaces, issues, and authorization', () => {
     expect(roadmap.body.milestones.some((item: { name: string }) => item.name === 'Retired')).toBe(false);
     expect(openEnded.body.milestone.targetDate).toBeNull();
   });
+
+  it('hides a snoozed issue from the person who snoozed it', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const teammate = await registerUser(authAgent(), 'Jonah Patel');
+    const outsider = await registerUser(authAgent(), 'Priya Nair');
+    const workspace = await createWorkspace(owner.agent, 'Northwind');
+    await owner.agent.post(`/api/workspaces/${workspace.id}/invites`).send({ email: teammate.email, role: 'member' });
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'API Platform', key: 'API' });
+    const issue = await owner.agent.post(`/api/projects/${project.body.project.id}/issues`).send({
+      title: 'Show unread notifications',
+      assigneeIds: [owner.user.id, teammate.user.id],
+      dueDate: dayKey(new Date()),
+    });
+    const issueId = issue.body.issue.id;
+    const tomorrow = (() => {
+      const date = new Date();
+      date.setUTCDate(date.getUTCDate() + 1);
+      return dayKey(date);
+    })();
+
+    const today = await owner.agent.post(`/api/issues/${issueId}/snooze`).send({ until: dayKey(new Date()) });
+    expect(today.status).toBe(400);
+    const hidden = await outsider.agent.post(`/api/issues/${issueId}/snooze`).send({ until: tomorrow });
+    expect(hidden.status).toBe(404);
+
+    const snoozed = await owner.agent.post(`/api/issues/${issueId}/snooze`).send({ until: tomorrow });
+    expect(snoozed.status).toBe(200);
+    expect(snoozed.body.issue.snoozedUntil).toBe(tomorrow);
+
+    const mine = await owner.agent.get(`/api/workspaces/${workspace.id}/my-work`);
+    expect(mine.body.total).toBe(0);
+    expect(mine.body.snoozed.map((item: { until: string; issue: { title: string } }) => `${item.until}:${item.issue.title}`)).toEqual([
+      `${tomorrow}:Show unread notifications`,
+    ]);
+    const theirs = await teammate.agent.get(`/api/workspaces/${workspace.id}/my-work`);
+    expect(theirs.body.total).toBe(1);
+    expect(theirs.body.snoozed).toEqual([]);
+
+    const back = await owner.agent.delete(`/api/issues/${issueId}/snooze`);
+    expect(back.status).toBe(200);
+    expect(back.body.issue.snoozedUntil).toBeNull();
+    const restored = await owner.agent.get(`/api/workspaces/${workspace.id}/my-work`);
+    expect(restored.body.total).toBe(1);
+    expect(restored.body.counts.dueSoon).toBe(1);
+  });
 });

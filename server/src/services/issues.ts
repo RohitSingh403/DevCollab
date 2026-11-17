@@ -8,7 +8,7 @@ import {
   type Priority,
   type Reaction,
 } from '../constants';
-import { utcDayStart } from '../dates';
+import { dayKey, utcDayStart } from '../dates';
 import { ApiError } from '../errors';
 import { Comment } from '../models/Comment';
 import { Issue } from '../models/Issue';
@@ -21,6 +21,7 @@ import { serializeComment, serializeIssue, serializeReactions, serializeUser } f
 import { escapeRegex, pageMeta } from '../utils';
 import { recordActivity } from './activity';
 import { clearTargetFavorites } from './favorites';
+import { activeSnoozes, clearIssueSnoozes, snoozedUntil } from './snooze';
 import { clearBlockerRefs, relationsFor, syncDependents } from './blockers';
 import { clearRelatedRefs, relatedFor } from './related';
 import { activeCycleId, assertProjectCycle } from './cycles';
@@ -132,13 +133,20 @@ export async function listMyWork(workspaceId: string, userId: string, now = new 
     ...(archived.length ? { project: { $nin: archived } } : {}),
   }).populate(ISSUE_POPULATE);
 
+  const snoozes = await activeSnoozes(userId, workspaceId, now);
+  const untilByIssue = new Map(snoozes.map((snooze) => [String(snooze.issue), snooze.until]));
+  const visible = issues.filter((issue) => !untilByIssue.has(String(issue._id)));
+  const hidden = issues
+    .filter((issue) => untilByIssue.has(String(issue._id)))
+    .sort((left, right) => (untilByIssue.get(String(left._id))?.getTime() ?? 0) - (untilByIssue.get(String(right._id))?.getTime() ?? 0));
+
   const groups = {
     overdue: [] as typeof issues,
     dueSoon: [] as typeof issues,
     later: [] as typeof issues,
     undated: [] as typeof issues,
   };
-  for (const issue of issues) {
+  for (const issue of visible) {
     groups[workBucket(issue.dueDate ?? null, now)].push(issue);
   }
   const byDue = (left: { dueDate?: Date | null }, right: { dueDate?: Date | null }) =>
@@ -155,8 +163,9 @@ export async function listMyWork(workspaceId: string, userId: string, now = new 
     { id: 'undated', label: 'No due date', issues: groups.undated },
   ] as const;
 
+  const snoozed = await withSubissueCounts(hidden, serializeIssue);
   return {
-    total: issues.length,
+    total: visible.length,
     counts: {
       overdue: groups.overdue.length,
       dueSoon: groups.dueSoon.length,
@@ -170,6 +179,10 @@ export async function listMyWork(workspaceId: string, userId: string, now = new 
         issues: await withSubissueCounts(section.issues, serializeIssue),
       })),
     ),
+    snoozed: snoozed.map((issue) => {
+      const id = String((issue as unknown as { id: string }).id);
+      return { until: dayKey(untilByIssue.get(id) ?? new Date()), issue };
+    }),
   };
 }
 
@@ -251,6 +264,7 @@ async function presentIssue(issueId: string, userId?: string) {
     ...family,
     watchers,
     watching: Boolean(userId && watchers.some((user) => user.id === userId)),
+    snoozedUntil: userId ? await snoozedUntil(userId, issueId) : null,
     related,
   };
 }
@@ -651,6 +665,7 @@ export async function deleteIssue(issueId: string, actor: { id: string; name: st
   await clearRelatedRefs([issueId]);
   await detachChildren(issueId);
   await clearTargetFavorites({ issueIds: [issueId] });
+  await clearIssueSnoozes([issueId]);
   await Comment.deleteMany({ issue: issue._id });
   await issue.deleteOne();
   await recordActivity(

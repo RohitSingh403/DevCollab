@@ -2,12 +2,13 @@ import { Router } from 'express';
 import { asyncHandler } from '../asyncHandler';
 import { requireAuth } from '../middleware/auth';
 import { requireIssue, requireProject } from '../middleware/access';
-import { blockerSchema, bulkUpdateIssueSchema, checklistSchema, commentSchema, createIssueSchema, listIssueSchema, paginationSchema, pinCommentSchema, reactionSchema, relatedSchema, updateChecklistSchema, updateIssueSchema } from '../schemas';
+import { blockerSchema, bulkUpdateIssueSchema, checklistSchema, commentSchema, createIssueSchema, listIssueSchema, paginationSchema, pinCommentSchema, reactionSchema, relatedSchema, snoozeSchema, updateChecklistSchema, updateIssueSchema } from '../schemas';
 import { listActivity } from '../services/feed';
 import { addBlocker, removeBlocker } from '../services/blockers';
 import { addRelated, removeRelated } from '../services/related';
 import { addChecklistItem, deleteChecklistItem, updateChecklistItem } from '../services/checklist';
 import { setWatching } from '../services/watchers';
+import { snoozeIssue, unsnoozeIssue } from '../services/snooze';
 import {
   addComment,
   bulkUpdateIssues,
@@ -201,6 +202,25 @@ issueRouter.delete(
   requireIssue(),
   asyncHandler(async (req, res) => {
     await setWatching(req.params.issueId, req.authUser!.id, false, realtimeFrom(ioFromApp(req.app)));
+    res.json({ issue: await getIssue(req.params.issueId, req.authUser!.id) });
+  }),
+);
+
+issueRouter.post(
+  '/:issueId/snooze',
+  requireIssue(),
+  asyncHandler(async (req, res) => {
+    const input = parseBody<ReturnType<typeof snoozeSchema.parse>>(snoozeSchema, req.body);
+    const snooze = await snoozeIssue(req.params.issueId, req.authUser!.id, input.until);
+    res.json({ snooze, issue: await getIssue(req.params.issueId, req.authUser!.id) });
+  }),
+);
+
+issueRouter.delete(
+  '/:issueId/snooze',
+  requireIssue(),
+  asyncHandler(async (req, res) => {
+    await unsnoozeIssue(req.params.issueId, req.authUser!.id);
     res.json({ issue: await getIssue(req.params.issueId, req.authUser!.id) });
   }),
 );

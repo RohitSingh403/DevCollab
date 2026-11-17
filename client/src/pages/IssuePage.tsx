@@ -72,6 +72,24 @@ export function IssuePage() {
     onError: (error) => pushToast(errorMessage(error)),
   });
 
+  const snooze = useMutation({
+    mutationFn: (until: string) => api.snoozeIssue(issueId, until),
+    onSuccess: (next) => {
+      queryClient.setQueryData(['issue', issueId], next);
+      void queryClient.invalidateQueries({ queryKey: ['my-work', workspaceId] });
+    },
+    onError: (error) => pushToast(errorMessage(error)),
+  });
+
+  const unsnooze = useMutation({
+    mutationFn: () => api.unsnoozeIssue(issueId),
+    onSuccess: (next) => {
+      queryClient.setQueryData(['issue', issueId], next);
+      void queryClient.invalidateQueries({ queryKey: ['my-work', workspaceId] });
+    },
+    onError: (error) => pushToast(errorMessage(error)),
+  });
+
   const remove = useMutation({
     mutationFn: () => api.deleteIssue(issueId),
     onSuccess: () => {
@@ -215,6 +233,14 @@ export function IssuePage() {
               ))}
             </select>
           </label>
+          {current.status !== 'done' ? (
+            <SnoozeField
+              until={current.snoozedUntil ?? null}
+              pending={snooze.isPending || unsnooze.isPending}
+              onSnooze={(until) => snooze.mutate(until)}
+              onClear={() => unsnooze.mutate()}
+            />
+          ) : null}
           <label className="grid grid-cols-[88px_1fr] items-center gap-3 px-4 py-3">
             <span className="text-[12px] text-muted">Due</span>
             <input
@@ -347,6 +373,53 @@ export function IssuePage() {
           </ul>
         </section>
       </aside>
+    </div>
+  );
+}
+
+function tomorrowKey() {
+  const date = new Date();
+  date.setUTCDate(date.getUTCDate() + 1);
+  return date.toISOString().slice(0, 10);
+}
+
+function SnoozeField({
+  until,
+  pending,
+  onSnooze,
+  onClear,
+}: {
+  until: string | null;
+  pending: boolean;
+  onSnooze: (until: string) => void;
+  onClear: () => void;
+}) {
+  const [value, setValue] = useState(until ?? tomorrowKey());
+  return (
+    <div className="px-4 py-3">
+      <p className="text-[12px] text-muted">Snooze</p>
+      {until ? (
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm text-ink">Hidden from your My work until {until}.</p>
+          <button className="btn-ghost" type="button" disabled={pending} onClick={onClear}>
+            Bring back
+          </button>
+        </div>
+      ) : (
+        <form
+          className="mt-2 flex flex-wrap items-center gap-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            onSnooze(value);
+          }}
+        >
+          <input className="field w-auto" aria-label="Snooze until" type="date" min={tomorrowKey()} value={value} onChange={(event) => setValue(event.target.value)} required />
+          <button className="btn-ghost" type="submit" disabled={pending || !value}>
+            Snooze
+          </button>
+        </form>
+      )}
+      <p className="mt-2 text-[12px] text-faint">Only you stop seeing it in My work. Assignees and the due date stay as they are.</p>
     </div>
   );
 }

@@ -75,7 +75,7 @@ Work:
 - Filters, text search, and pagination. The board can also filter by label and sort by updated, newest, due date, or priority. A saved view keeps that choice
 - Bulk edit on the list. Select issues on the page and set their status or priority together. Each issue keeps its own history, and an archived project stays closed
 - Saved project views, private or shared. A view assigned to “me” follows whoever opens it
-- My work, the open issues assigned to you: overdue, due this week, due later, and no due date
+- My work, the open issues assigned to you: overdue, due this week, due later, and no due date. Snooze an issue until a later day to hide it from your list. The snooze is private, and the issue comes back on that day
 - Blockers inside one workspace. The issue, the board, and My work show the mark while a blocker is open, and clear it when that blocker is done
 - A checklist on an issue. Steps can be renamed, checked, and removed, and the board, list, and My work show how many are done
 - Cycles. A project has one active cycle, with a start and end date. The board can show just that cycle, My work names it, and the project totals include how much of it is done
@@ -246,6 +246,7 @@ Authenticated routes expect the session cookie. Collection responses are paginat
 | GET, POST | `/api/projects/:id/issues` | Filtered, paginated issues. `assignee=me` means the signed-in user |
 | GET | `/api/issues/:id` | One issue, including blockers and whether you follow it |
 | PATCH, DELETE | `/api/issues/:id` | Update or delete an issue |
+| POST, DELETE | `/api/issues/:id/snooze` | Hide an open issue from your My work until a future date, or bring it back |
 | POST | `/api/issues/bulk` | Set the status or priority of up to 25 issues in one workspace |
 | POST | `/api/issues/:id/blockers` | Block this issue on another issue in the same workspace |
 | DELETE | `/api/issues/:id/blockers/:blockerId` | Remove that blocker |
@@ -283,7 +284,7 @@ Socket.IO authenticates with the same cookie. Clients emit `workspace:join` with
 
 ## Tests
 
-Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, blockers, watchers, checklists, due reminders, cycles, milestones, the workspace roadmap, estimates, moving an issue between projects, sub-issues, bulk status and priority edits, comment reactions, pinned comments, notifications, analytics, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, issue keys, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
+Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, snoozing an issue, blockers, watchers, checklists, due reminders, cycles, milestones, the workspace roadmap, estimates, moving an issue between projects, sub-issues, bulk status and priority edits, comment reactions, pinned comments, notifications, analytics, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, issue keys, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
 
 ```bash
 npm test
@@ -326,6 +327,7 @@ COOKIE_SAMESITE=none
 - A project has one active cycle. Starting another completes the previous one. An issue keeps its cycle when that cycle ends, and open issues move when the next cycle starts.
 - An estimate is optional. The cycle point total ignores issues that have none, and points on a finished issue count as done.
 - The roadmap skips archived projects. A milestone is overdue when its date is before today and an issue on it is still open. It is done when it has issues and every one of them is done.
+- A snooze belongs to one person and one issue. It hides that issue from their My work until the chosen day, then it returns. Other members still see the issue.
 - Moving an issue gives it the next number in the destination project. The old number is not reused. Comments move with it. A cycle does not, because a cycle belongs to one project.
 - A sub-issue has one parent in the same workspace. Nesting stops at eight levels. Deleting a parent leaves its sub-issues in place, without a parent. The count on a card is its direct children.
 - Due reminders are stored on the issue as the date and kind already sent, so the hourly check does not repeat them.

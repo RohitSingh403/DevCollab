@@ -1,7 +1,8 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { BlockedMark, ChecklistCount, EmptyState, EstimateMark, PageHeader, PriorityMark, StatusBadge, SubissueCount, useDocumentTitle } from '../components/ui';
 import { api, errorMessage } from '../lib/api';
+import { useUiStore } from '../stores/uiStore';
 import { checklistProgress } from '../lib/checklist';
 import { dueLabel } from '../lib/format';
 import type { MyWorkGroup } from '../lib/types';
@@ -16,13 +17,23 @@ const tone: Record<MyWorkGroup['id'], string> = {
 export function MyWorkPage() {
   const { workspaceId = '' } = useParams();
   const work = useQuery({ queryKey: ['my-work', workspaceId], queryFn: () => api.myWork(workspaceId) });
+  const queryClient = useQueryClient();
+  const pushToast = useUiStore((state) => state.pushToast);
+  const unsnooze = useMutation({
+    mutationFn: (issueId: string) => api.unsnoozeIssue(issueId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['my-work', workspaceId] });
+      void queryClient.invalidateQueries({ queryKey: ['issue'] });
+    },
+    onError: (error) => pushToast(errorMessage(error)),
+  });
   useDocumentTitle('My work');
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="My work"
-        description="Open issues assigned to you in this workspace, with the closest deadlines first."
+        description="Open issues assigned to you, with the closest deadlines first. Snooze one to hide it until a date. That stays private to you."
       />
       {work.isPending ? <p className="text-sm text-muted">Loading your issues…</p> : null}
       {work.isError ? <p className="text-sm text-danger">{errorMessage(work.error)}</p> : null}
@@ -34,7 +45,7 @@ export function MyWorkPage() {
           <Count label="No due date" value={work.data.counts.undated} />
         </div>
       ) : null}
-      {work.data && work.data.total === 0 ? (
+      {work.data && work.data.total === 0 && work.data.snoozed.length === 0 ? (
         <EmptyState
           title="Nothing is assigned to you"
           body="When a teammate assigns you an issue, it shows up here until it is done."
@@ -80,6 +91,28 @@ export function MyWorkPage() {
             </ul>
           </section>
         ))}
+      {work.data?.snoozed.length ? (
+        <section>
+          <h2 className="mb-2 text-[13px] font-semibold text-ink">
+            Snoozed
+            <span className="ml-2 font-normal text-faint">{work.data.snoozed.length}</span>
+          </h2>
+          <ul className="panel divide-y divide-line">
+            {work.data.snoozed.map(({ until, issue }) => (
+              <li key={issue.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                <Link to={`/w/${workspaceId}/issues/${issue.id}`} className="min-w-0">
+                  <span className="font-mono text-[11px] text-muted">{issue.key}</span>
+                  <span className="mt-0.5 block truncate text-[14px] font-medium text-ink">{issue.title}</span>
+                  <span className="mt-0.5 block text-[12px] text-faint">Back on {until}</span>
+                </Link>
+                <button className="btn-ghost" type="button" disabled={unsnooze.isPending} onClick={() => unsnooze.mutate(issue.id)}>
+                  Bring back
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </div>
   );
 }

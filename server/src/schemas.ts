@@ -222,6 +222,8 @@ export const updateMilestoneSchema = z
   .strict()
   .refine((value) => value.name !== undefined || value.targetDate !== undefined, { message: 'Nothing to update' });
 
+export const snoozeSchema = z.object({ until: day }).strict();
+
 export const startCycleSchema = z
   .object({
     name: z.string().trim().min(2).max(40),
