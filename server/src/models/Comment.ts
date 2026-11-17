@@ -8,6 +8,7 @@ const commentSchema = new Schema(
     author: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     body: { type: String, required: true, trim: true, maxlength: 2000 },
     editedAt: { type: Date, default: null },
+    pinnedAt: { type: Date, default: null },
   },
   { timestamps: true },
 );

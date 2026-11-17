@@ -225,6 +225,12 @@ export const commentSchema = z
   })
   .strict();
 
+export const pinCommentSchema = z
+  .object({
+    pinned: z.boolean(),
+  })
+  .strict();
+
 export const viewFiltersSchema = z
   .object({
     status: z.enum(STATUSES).or(z.literal('')).optional().default(''),

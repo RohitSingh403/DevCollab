@@ -1303,4 +1303,48 @@ describe('workspaces, issues, and authorization', () => {
       { key: 'API-2', id: second.body.issue.id, title: 'Signing key' },
     ]);
   });
+
+  it('pins one comment on an issue and moves it to the top', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const outsider = await registerUser(authAgent(), 'Outsider');
+    const workspace = await createWorkspace(owner.agent, 'Notes');
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({
+      name: 'API Platform',
+      key: 'API',
+      description: 'Service layer',
+    });
+    const issue = await owner.agent.post(`/api/projects/${project.body.project.id}/issues`).send({ title: 'Signed cookies' });
+    const issueId = issue.body.issue.id as string;
+    const first = await owner.agent.post(`/api/issues/${issueId}/comments`).send({ body: 'Ship the cookie change.' });
+    const second = await owner.agent.post(`/api/issues/${issueId}/comments`).send({ body: 'Hold for the key rotation.' });
+
+    const hidden = await outsider.agent.post(`/api/comments/${second.body.comment.id}/pin`).send({ pinned: true });
+    expect(hidden.status).toBe(404);
+    const invalid = await owner.agent.post(`/api/comments/${second.body.comment.id}/pin`).send({});
+    expect(invalid.status).toBe(400);
+
+    const pinned = await owner.agent.post(`/api/comments/${second.body.comment.id}/pin`).send({ pinned: true });
+    expect(pinned.status).toBe(200);
+    expect(pinned.body.comment.pinned).toBe(true);
+    const replaced = await owner.agent.post(`/api/comments/${first.body.comment.id}/pin`).send({ pinned: true });
+    expect(replaced.body.comment.pinned).toBe(true);
+
+    const listed = await owner.agent.get(`/api/issues/${issueId}/comments`);
+    expect(listed.body.comments.map((item: { body: string; pinned: boolean }) => [item.body, item.pinned])).toEqual([
+      ['Ship the cookie change.', true],
+      ['Hold for the key rotation.', false],
+    ]);
+
+    const unpinned = await owner.agent.post(`/api/comments/${first.body.comment.id}/pin`).send({ pinned: false });
+    expect(unpinned.body.comment.pinned).toBe(false);
+    const restored = await owner.agent.get(`/api/issues/${issueId}/comments`);
+    expect(restored.body.comments.map((item: { body: string }) => item.body)).toEqual([
+      'Ship the cookie change.',
+      'Hold for the key rotation.',
+    ]);
+    const history = await owner.agent.get(`/api/issues/${issueId}/activity`);
+    const messages = history.body.activities.map((item: { message: string }) => item.message);
+    expect(messages.some((message: string) => message.includes('pinned a comment on API-1'))).toBe(true);
+    expect(messages.some((message: string) => message.includes('unpinned a comment on API-1'))).toBe(true);
+  });
 });

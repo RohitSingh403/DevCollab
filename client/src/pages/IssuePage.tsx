@@ -602,7 +602,7 @@ function CommentCard({
   workspaceId,
   links,
 }: {
-  comment: { id: string; body: string; author: { id: string; name: string; avatarColor: string }; createdAt: string; edited: boolean };
+  comment: { id: string; body: string; author: { id: string; name: string; avatarColor: string }; createdAt: string; edited: boolean; pinned?: boolean };
   role?: Role;
   members: { id: string; name: string }[];
   workspaceId: string;
@@ -625,15 +625,27 @@ function CommentCard({
     mutationFn: () => api.deleteComment(comment.id),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['comments'] }),
   });
+  const pin = useMutation({
+    mutationFn: () => api.pinComment(comment.id, !comment.pinned),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['comments'] });
+      await queryClient.invalidateQueries({ queryKey: ['activity'] });
+    },
+    onError: (error) => useUiStore.getState().pushToast(errorMessage(error)),
+  });
   return (
-    <li className="rounded-lg border border-line bg-white p-4">
+    <li className={`rounded-lg border bg-white p-4 ${comment.pinned ? 'border-brand' : 'border-line'}`}>
       <div className="flex items-center justify-between gap-3">
         <span className="flex items-center gap-2 text-sm">
           <Avatar name={comment.author.name} color={comment.author.avatarColor} size="sm" />
           <span className="font-medium">{comment.author.name}</span>
+          {comment.pinned ? <span className="rounded-full bg-brand-soft px-1.5 text-[11px] font-medium text-brand">Pinned</span> : null}
           <span className="text-faint">{timeAgo(comment.createdAt)}{comment.edited ? ' · edited' : ''}</span>
         </span>
         <span className="flex gap-1">
+          <button className="btn-quiet" type="button" aria-pressed={Boolean(comment.pinned)} onClick={() => pin.mutate()}>
+            {comment.pinned ? 'Unpin' : 'Pin'}
+          </button>
           {isAuthor ? (
             <button className="btn-quiet" type="button" onClick={() => setEditing((open) => !open)}>
               Edit

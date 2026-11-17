@@ -234,6 +234,8 @@ export const api = {
     ),
   updateComment: (id: string, body: string) =>
     request<{ comment: Comment }>(`/api/comments/${id}`, { method: 'PATCH', body: JSON.stringify({ body }) }).then((data) => data.comment),
+  pinComment: (id: string, pinned: boolean) =>
+    request<{ comment: Comment }>(`/api/comments/${id}/pin`, { method: 'POST', body: JSON.stringify({ pinned }) }).then((data) => data.comment),
   deleteComment: (id: string) => request<void>(`/api/comments/${id}`, { method: 'DELETE' }),
 
   activity: (path: string, page = 1) => request<ActivityList>(`${path}?page=${page}&limit=20`),
