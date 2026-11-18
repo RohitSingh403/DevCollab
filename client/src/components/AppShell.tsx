@@ -10,6 +10,33 @@ import { useUiStore } from '../stores/uiStore';
 import { useRealtime } from '../hooks/useRealtime';
 import { Avatar, Icon, Logo, Modal, type IconName } from './ui';
 
+function Recent({ workspaceId, onNavigate }: { workspaceId?: string; onNavigate: () => void }) {
+  const recent = useQuery({
+    queryKey: ['recent', workspaceId],
+    queryFn: () => api.recent(workspaceId!),
+    enabled: Boolean(workspaceId),
+  });
+  if (!workspaceId || !recent.data?.length) return null;
+  return (
+    <div className="mt-4">
+      <p className="px-2.5 pb-1 text-[11px] font-medium uppercase tracking-[0.14em] text-stone-500">Recent</p>
+      {recent.data.map((item) => (
+        <NavLink
+          key={item.id}
+          to={`/w/${workspaceId}/issues/${item.issueId}`}
+          onClick={onNavigate}
+          className={({ isActive }) =>
+            `flex items-center gap-2 rounded-lg px-2.5 py-[7px] text-[13px] ${isActive ? 'bg-white/10 font-medium text-white' : 'text-stone-400 hover:bg-white/5 hover:text-white'}`
+          }
+        >
+          <span className="w-10 shrink-0 font-mono text-[10px] text-stone-500">{item.key}</span>
+          <span className="truncate">{item.title}</span>
+        </NavLink>
+      ))}
+    </div>
+  );
+}
+
 function Favorites({ workspaceId, onNavigate }: { workspaceId?: string; onNavigate: () => void }) {
   const favorites = useQuery({
     queryKey: ['favorites', workspaceId],
@@ -220,7 +247,7 @@ export function AppShell() {
             </select>
           </label>
         </div>
-        <nav className="mt-5 flex flex-1 flex-col gap-0.5 px-2" aria-label="Workspace">
+        <nav className="mt-5 flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2" aria-label="Workspace">
           <p className="px-2.5 pb-1 text-[11px] font-medium uppercase tracking-[0.14em] text-stone-500">Workspace</p>
           {links.map((link) => (
             <NavLink
@@ -255,6 +282,7 @@ export function AppShell() {
             {unread ? <span className="ml-auto rounded-full bg-brand px-1.5 text-[10px] font-semibold leading-4 text-white">{unread}</span> : null}
           </NavLink>
           <Favorites workspaceId={activeId} onNavigate={() => setNavOpen(false)} />
+          <Recent workspaceId={activeId} onNavigate={() => setNavOpen(false)} />
         </nav>
         <div className="border-t border-white/10 p-2">
           <button

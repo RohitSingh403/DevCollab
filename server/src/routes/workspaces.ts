@@ -13,6 +13,7 @@ import {
   createWorkspaceSchema,
   inviteSchema,
   favoriteSchema,
+  recentSchema,
   resolveIssueKeysSchema,
   searchSchema,
   updateMemberSchema,
@@ -22,6 +23,7 @@ import { buildAnalytics } from '../services/analytics';
 import { listActivity } from '../services/feed';
 import { listBlocked, listDue, listMyWork, listQuiet, listUnassigned, listWorkload, resolveIssueKeys, searchWorkspaceIssues } from '../services/issues';
 import { addFavorite, listFavorites, removeFavorite } from '../services/favorites';
+import { listRecent, recordRecent } from '../services/recent';
 import { archivedProjectIds } from '../services/projects';
 import { listRoadmap } from '../services/milestones';
 import {
@@ -315,6 +317,23 @@ workspaceRouter.delete(
       throw new ApiError(400, 'That favorite is not valid', 'invalid_favorite');
     }
     res.json({ favorites: await removeFavorite(req.params.workspaceId, req.authUser!.id, kind, req.params.targetId) });
+  }),
+);
+
+workspaceRouter.get(
+  '/:workspaceId/recent',
+  requireWorkspace(),
+  asyncHandler(async (req, res) => {
+    res.json({ recent: await listRecent(req.params.workspaceId, req.authUser!.id) });
+  }),
+);
+
+workspaceRouter.post(
+  '/:workspaceId/recent',
+  requireWorkspace(),
+  asyncHandler(async (req, res) => {
+    const input = parseBody<ReturnType<typeof recentSchema.parse>>(recentSchema, req.body);
+    res.json({ recent: await recordRecent(req.params.workspaceId, req.authUser!.id, input.issueId) });
   }),
 );
 

@@ -334,3 +334,9 @@ export const favoriteSchema = z
     targetId: objectId,
   })
   .strict();
+
+export const recentSchema = z
+  .object({
+    issueId: objectId,
+  })
+  .strict();

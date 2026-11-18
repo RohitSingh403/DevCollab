@@ -19,6 +19,7 @@ import type {
   IssueStatus,
   Reaction,
   Favorite,
+  RecentIssue,
   Label,
   Member,
   Notification,
@@ -266,6 +267,13 @@ export const api = {
     request<{ favorites: Favorite[] }>(`/api/workspaces/${workspaceId}/favorites/${kind}/${targetId}`, { method: 'DELETE' }).then(
       (data) => data.favorites,
     ),
+  recent: (workspaceId: string) =>
+    request<{ recent: RecentIssue[] }>(`/api/workspaces/${workspaceId}/recent`).then((data) => data.recent),
+  recordRecent: (workspaceId: string, issueId: string) =>
+    request<{ recent: RecentIssue[] }>(`/api/workspaces/${workspaceId}/recent`, {
+      method: 'POST',
+      body: JSON.stringify({ issueId }),
+    }).then((data) => data.recent),
   search: (workspaceId: string, q: string) =>
     request<{ issues: Issue[] }>(`/api/workspaces/${workspaceId}/search?q=${encodeURIComponent(q)}`).then((data) => data.issues),
   resolveIssueKeys: (workspaceId: string, keys: string[]) =>

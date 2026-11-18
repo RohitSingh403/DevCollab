@@ -10,6 +10,7 @@ import { Project } from '../models/Project';
 import type { Realtime } from '../realtime';
 import { recordActivity } from './activity';
 import { clearTargetFavorites } from './favorites';
+import { clearIssueRecent } from './recent';
 import { clearIssueSnoozes } from './snooze';
 import { clearBlockerRefs } from './blockers';
 import { clearRelatedRefs } from './related';
@@ -159,6 +160,7 @@ export async function deleteProject(projectId: string, actor: { id: string; name
   await Cycle.deleteMany({ project: project._id });
   await Milestone.deleteMany({ project: project._id });
   await clearTargetFavorites({ projectId, issueIds: doomed.map((id) => String(id)) });
+  await clearIssueRecent(doomed.map((id) => String(id)));
   await clearIssueSnoozes(doomed.map((id) => String(id)));
   const workspaceId = String(project.workspace);
   const label = `${project.key} ${project.name}`;
