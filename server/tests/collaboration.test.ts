@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { dayKey } from '../src/dates';
+import { Issue } from '../src/models/Issue';
 import { scanDueReminders } from '../src/services/reminders';
 import { authAgent, createWorkspace, registerUser } from './helpers';
 
@@ -1869,5 +1870,49 @@ describe('workspaces, issues, and authorization', () => {
     const all = await owner.agent.get(`/api/workspaces/${workspace.id}/activity`);
     expect(all.body.activities.some((item: { message: string }) => item.message.includes('WEB'))).toBe(true);
     expect(all.body.activities.some((item: { message: string }) => item.message.includes('API'))).toBe(true);
+  });
+
+  it('lists open issues that have not changed for a week', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const outsider = await registerUser(authAgent(), 'Jonah Patel');
+    const workspace = await createWorkspace(owner.agent, 'Northwind');
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'API Platform', key: 'API' });
+    const projectId = project.body.project.id;
+    const old = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Write the empty states' });
+    const finished = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Ship the notes', status: 'done' });
+    const fresh = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Sign the cookie' });
+    const commented = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Store the signing key' });
+    const buried = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'Old', key: 'OLD' });
+    const buriedIssue = await owner.agent.post(`/api/projects/${buried.body.project.id}/issues`).send({ title: 'Leave it' });
+    const ago = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000);
+    await Issue.updateOne({ _id: old.body.issue.id }, { $set: { updatedAt: ago } }, { timestamps: false });
+    await Issue.updateOne({ _id: finished.body.issue.id }, { $set: { updatedAt: ago } }, { timestamps: false });
+    await Issue.updateOne({ _id: commented.body.issue.id }, { $set: { updatedAt: ago } }, { timestamps: false });
+    await Issue.updateOne({ _id: buriedIssue.body.issue.id }, { $set: { updatedAt: ago } }, { timestamps: false });
+    await owner.agent.post(`/api/issues/${commented.body.issue.id}/comments`).send({ body: 'Still looking at this.' });
+    await owner.agent.patch(`/api/projects/${buried.body.project.id}`).send({ archived: true });
+
+    const hidden = await outsider.agent.get(`/api/workspaces/${workspace.id}/quiet`);
+    expect(hidden.status).toBe(404);
+
+    const listed = await owner.agent.get(`/api/workspaces/${workspace.id}/quiet`);
+    expect(listed.status).toBe(200);
+    expect(listed.body.days).toBe(7);
+    expect(listed.body.issues.map((item: { title: string }) => item.title)).toEqual(['Write the empty states']);
+    expect(listed.body.total).toBe(1);
+
+    const wider = await owner.agent.get(`/api/workspaces/${workspace.id}/quiet?days=30`);
+    expect(wider.body.total).toBe(0);
+    expect(fresh.body.issue.title).toBe('Sign the cookie');
+
+    const board = await owner.agent.get(`/api/projects/${projectId}/issues?quiet=true`);
+    expect(board.body.issues.map((item: { title: string }) => item.title)).toEqual(['Write the empty states']);
+
+    const saved = await owner.agent.post(`/api/projects/${projectId}/views`).send({
+      name: 'Quiet',
+      filters: { quiet: true },
+    });
+    expect(saved.status).toBe(201);
+    expect(saved.body.view.filters.quiet).toBe(true);
   });
 });

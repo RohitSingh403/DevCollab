@@ -10,6 +10,7 @@ export function currentFilters(params: URLSearchParams, userId: string): ViewFil
     priority: params.get('priority') ?? '',
     assignee: assignee && assignee === userId ? 'me' : assignee,
     overdue: params.get('overdue') === 'true',
+    quiet: params.get('quiet') === 'true',
     q: params.get('q') ?? '',
     layout: params.get('view') === 'list' ? 'list' : 'board',
     label: params.get('label') ?? '',
@@ -23,6 +24,7 @@ export function sameFilters(left: ViewFilters, right: ViewFilters) {
     left.priority === right.priority &&
     left.assignee === right.assignee &&
     left.overdue === right.overdue &&
+    left.quiet === right.quiet &&
     left.q === right.q &&
     left.layout === right.layout &&
     left.label === right.label &&
@@ -31,5 +33,5 @@ export function sameFilters(left: ViewFilters, right: ViewFilters) {
 }
 
 export function hasViewFilter(filters: ViewFilters) {
-  return Boolean(filters.status || filters.priority || filters.assignee || filters.overdue || filters.q || filters.layout === 'list' || filters.label || filters.sort !== 'updated');
+  return Boolean(filters.status || filters.priority || filters.assignee || filters.overdue || filters.quiet || filters.q || filters.layout === 'list' || filters.label || filters.sort !== 'updated');
 }

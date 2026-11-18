@@ -6,6 +6,7 @@ import { requireAuth } from '../middleware/auth';
 import { requireWorkspace } from '../middleware/access';
 import {
   activityQuerySchema,
+  quietQuerySchema,
   createLabelSchema,
   updateLabelSchema,
   createWorkspaceSchema,
@@ -18,7 +19,7 @@ import {
 } from '../schemas';
 import { buildAnalytics } from '../services/analytics';
 import { listActivity } from '../services/feed';
-import { listMyWork, listUnassigned, resolveIssueKeys, searchWorkspaceIssues } from '../services/issues';
+import { listMyWork, listQuiet, listUnassigned, resolveIssueKeys, searchWorkspaceIssues } from '../services/issues';
 import { addFavorite, listFavorites, removeFavorite } from '../services/favorites';
 import { archivedProjectIds } from '../services/projects';
 import { listRoadmap } from '../services/milestones';
@@ -234,6 +235,15 @@ workspaceRouter.get(
     res.json({
       analytics: { ...(await buildAnalytics(issueMatch, { workspace: workspaceId })), cycle: null },
     });
+  }),
+);
+
+workspaceRouter.get(
+  '/:workspaceId/quiet',
+  requireWorkspace(),
+  asyncHandler(async (req, res) => {
+    const query = quietQuerySchema.parse(req.query);
+    res.json(await listQuiet(req.params.workspaceId, query.days));
   }),
 );
 

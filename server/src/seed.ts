@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import { env } from './config';
 import { connectDb, disconnectDb } from './db';
 import { logger } from './logger';
+import { Issue } from './models/Issue';
 import { Membership } from './models/Membership';
 import { User } from './models/User';
 import { Workspace } from './models/Workspace';
@@ -88,7 +89,7 @@ export async function seedDatabase() {
   });
   await addFavorite(workspace.id, actor.id, { kind: 'project', targetId: api.id });
   await addFavorite(workspace.id, actor.id, { kind: 'issue', targetId: session.id });
-  await createIssue({
+  const signingKey = await createIssue({
     projectId: api.id,
     actor,
     title: 'Store the signing key outside the process',
@@ -136,7 +137,7 @@ export async function seedDatabase() {
     labelIds: [feature.id],
     dueDate: isoDaysFromNow(6),
   });
-  await createIssue({
+  const emptyStates = await createIssue({
     projectId: api.id,
     actor,
     title: 'Write the empty states for a fresh workspace',
@@ -246,6 +247,10 @@ export async function seedDatabase() {
   });
 
   await snoozeIssue(notifications.id, String(maya._id), isoDaysFromNow(4).slice(0, 10));
+
+  const dayMs = 24 * 60 * 60 * 1000;
+  await Issue.updateOne({ _id: signingKey.id }, { $set: { updatedAt: new Date(Date.now() - 14 * dayMs) } }, { timestamps: false });
+  await Issue.updateOne({ _id: emptyStates.id }, { $set: { updatedAt: new Date(Date.now() - 10 * dayMs) } }, { timestamps: false });
 
   logger.info('Seeded Northwind Labs. Sign in as maya@devcollab.dev / Password123!');
 }

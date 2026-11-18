@@ -9,6 +9,7 @@ describe('saved view filters', () => {
       priority: 'high',
       assignee: 'me',
       overdue: false,
+      quiet: false,
       q: '',
       layout: 'list',
       label: '',
@@ -20,9 +21,10 @@ describe('saved view filters', () => {
   });
 
   it('knows when a filter set is worth saving', () => {
-    const empty = { status: '', priority: '', assignee: '', overdue: false, q: '', layout: 'board' as const, label: '', sort: 'updated' as const };
+    const empty = { status: '', priority: '', assignee: '', overdue: false, quiet: false, q: '', layout: 'board' as const, label: '', sort: 'updated' as const };
     expect(hasViewFilter(empty)).toBe(false);
     expect(hasViewFilter({ ...empty, overdue: true })).toBe(true);
+    expect(hasViewFilter({ ...empty, quiet: true })).toBe(true);
     expect(hasViewFilter({ ...empty, label: 'bug' })).toBe(true);
     expect(hasViewFilter({ ...empty, sort: 'priority' })).toBe(true);
     expect(sameFilters(empty, { ...empty })).toBe(true);
