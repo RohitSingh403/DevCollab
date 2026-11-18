@@ -57,6 +57,14 @@ export function Icon({ name, className = 'h-4 w-4' }: { name: IconName; classNam
         <path d="M5 6h9l-2 3 2 3H5" />
       </>
     ),
+    workload: (
+      <>
+        <path d="M4 19V11" />
+        <path d="M10 19V6" />
+        <path d="M16 19v-5" />
+        <path d="M4 19h16" />
+      </>
+    ),
   };
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -65,7 +73,7 @@ export function Icon({ name, className = 'h-4 w-4' }: { name: IconName; classNam
   );
 }
 
-export type IconName = 'overview' | 'projects' | 'members' | 'activity' | 'work' | 'bell' | 'search' | 'menu' | 'roadmap';
+export type IconName = 'overview' | 'projects' | 'members' | 'activity' | 'work' | 'bell' | 'search' | 'menu' | 'roadmap' | 'workload';
 
 export function Spinner() {
   return <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent" aria-hidden="true" />;

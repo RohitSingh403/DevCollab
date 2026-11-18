@@ -2017,4 +2017,64 @@ describe('workspaces, issues, and authorization', () => {
     const cleared = await owner.agent.get(`/api/workspaces/${workspace.id}/blocked`);
     expect(cleared.body.total).toBe(0);
   });
+
+  it('counts open work for each member', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const member = await registerUser(authAgent(), 'Priya Nair');
+    const outsider = await registerUser(authAgent(), 'Jonah Patel');
+    const workspace = await createWorkspace(owner.agent, 'Northwind');
+    await owner.agent.post(`/api/workspaces/${workspace.id}/invites`).send({ email: member.email, role: 'member' });
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'API Platform', key: 'API' });
+    const projectId = project.body.project.id;
+    const today = new Date();
+    const day = (offset: number) => new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + offset)).toISOString().slice(0, 10);
+    const shared = await owner.agent.post(`/api/projects/${projectId}/issues`).send({
+      title: 'Enforce roles',
+      dueDate: day(-1),
+      estimate: 8,
+      assigneeIds: [owner.user.id, member.user.id],
+    });
+    const later = await owner.agent.post(`/api/projects/${projectId}/issues`).send({
+      title: 'Drag columns',
+      dueDate: day(2),
+      estimate: 5,
+      assigneeIds: [member.user.id],
+    });
+    await owner.agent.post(`/api/issues/${later.body.issue.id}/blockers`).send({ blockerId: shared.body.issue.id });
+    await owner.agent.post(`/api/projects/${projectId}/issues`).send({
+      title: 'Ship the notes',
+      status: 'done',
+      assigneeIds: [owner.user.id],
+    });
+    await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Write the empty states' });
+    const buried = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'Old', key: 'OLD' });
+    await owner.agent.post(`/api/projects/${buried.body.project.id}/issues`).send({
+      title: 'Leave it',
+      assigneeIds: [owner.user.id],
+      estimate: 2,
+    });
+    await owner.agent.patch(`/api/projects/${buried.body.project.id}`).send({ archived: true });
+
+    const hidden = await outsider.agent.get(`/api/workspaces/${workspace.id}/workload`);
+    expect(hidden.status).toBe(404);
+
+    const listed = await owner.agent.get(`/api/workspaces/${workspace.id}/workload`);
+    expect(listed.status).toBe(200);
+    expect(listed.body.people.map((person: { user: { name: string } }) => person.user.name)).toEqual(['Priya Nair', 'Maya Chen']);
+    expect(listed.body.people[0]).toMatchObject({ open: 2, overdue: 1, blocked: 1, points: 13 });
+    expect(listed.body.people[0].issues.map((issue: { title: string }) => issue.title)).toEqual(['Enforce roles', 'Drag columns']);
+    expect(listed.body.people[1]).toMatchObject({ open: 1, overdue: 1, blocked: 0, points: 8 });
+    expect(listed.body.people[1].issues.map((issue: { title: string }) => issue.title)).toEqual(['Enforce roles']);
+
+    await owner.agent.patch(`/api/issues/${shared.body.issue.id}`).send({ status: 'done' });
+    const after = await owner.agent.get(`/api/workspaces/${workspace.id}/workload`);
+    expect(after.body.people.map((person: { user: { name: string }; open: number; blocked: number }) => ({
+      name: person.user.name,
+      open: person.open,
+      blocked: person.blocked,
+    }))).toEqual([
+      { name: 'Priya Nair', open: 1, blocked: 0 },
+      { name: 'Maya Chen', open: 0, blocked: 0 },
+    ]);
+  });
 });
