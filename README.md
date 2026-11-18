@@ -82,6 +82,7 @@ Work:
 - Milestones. A project can name up to 20 targets, each with an optional date. An issue belongs to one milestone, the board can show just that milestone, and the progress counts how many of its issues are done. The name and date can be changed later, and the issues stay on it
 - A roadmap for the workspace. It lists milestones from active projects, with overdue targets first, then upcoming dates, undated targets, and finished ones. The overview shows the next few
 - Needs an owner. The overview lists open issues in active projects that have no assignee, highest priority first. The project board can show just those issues
+- Coming due. The overview lists open issues in active projects that are overdue or due within seven days, soonest first. The project board can show just those issues, and a saved view can keep that choice
 - Gone quiet. The overview lists open issues in active projects with no update for seven days, oldest first. A comment counts as an update. The project board can show just those issues, and a saved view can keep that choice
 - Estimates of 1, 2, 3, 5, or 8 points. The cycle bar adds those up, and the board, list, and My work show the number on each issue
 - Move an issue to another project in the same workspace. It keeps its discussion, checklist, and estimate, takes the next key in the destination, and leaves its cycle
@@ -246,6 +247,7 @@ Authenticated routes expect the session cookie. Collection responses are paginat
 | GET, POST | `/api/workspaces/:id/projects` | Projects in a workspace |
 | GET | `/api/workspaces/:id/roadmap` | Milestones on active projects, with progress and a date group |
 | GET | `/api/workspaces/:id/unassigned` | Open issues in active projects with no assignee |
+| GET | `/api/workspaces/:id/due` | Open issues in active projects that are overdue or due within seven days. `days` can be 1–30 |
 | GET | `/api/workspaces/:id/quiet` | Open issues in active projects with no update for seven days. `days` can be 1–30 |
 | GET, PATCH, DELETE | `/api/projects/:id` | Read, update, or delete a project. An update can change the name, the description, or whether it is archived. The key stays the same |
 | GET, POST | `/api/projects/:id/issues` | Filtered, paginated issues. `assignee=me` means the signed-in user |
@@ -283,7 +285,7 @@ Authenticated routes expect the session cookie. Collection responses are paginat
 | PATCH | `/api/notifications/:id/read` | Mark one notification read |
 | GET | `/api/health` | Process and database status |
 
-Issue list filters: `status`, `priority`, `assignee`, `label`, `q`, `overdue`, `quiet`, `cycle` (`active` or a cycle id), `page`, `limit`, `sort` (`updated`, `created`, `due`, `priority`). Setting `cycleId` on an issue update adds or removes it from a cycle in the same project. `quiet=true` keeps open issues whose last update is at least seven days old.
+Issue list filters: `status`, `priority`, `assignee`, `label`, `q`, `overdue`, `quiet`, `dueSoon`, `cycle` (`active` or a cycle id), `page`, `limit`, `sort` (`updated`, `created`, `due`, `priority`). Setting `cycleId` on an issue update adds or removes it from a cycle in the same project. `quiet=true` keeps open issues whose last update is at least seven days old. `dueSoon=true` keeps open issues that are overdue or due within seven days.
 
 The API checks due dates when the process starts and then every hour. A date is due today through the end of that UTC day, and overdue after it. Assignees are notified once for each.
 
@@ -291,7 +293,7 @@ Socket.IO authenticates with the same cookie. Clients emit `workspace:join` with
 
 ## Tests
 
-Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, snoozing an issue, unassigned issues, blockers, watchers, checklists, due reminders, cycles, ending a cycle, editing the active cycle, milestones, editing a milestone, renaming a project, filtering workspace activity by project, quiet issues, the workspace roadmap, estimates, moving an issue between projects, sub-issues, bulk status, priority, and assignee edits, comment reactions, pinned comments, notifications, analytics, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, issue keys, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
+Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, snoozing an issue, unassigned issues, blockers, watchers, checklists, due reminders, cycles, ending a cycle, editing the active cycle, milestones, editing a milestone, renaming a project, filtering workspace activity by project, quiet issues, issues coming due, the workspace roadmap, estimates, moving an issue between projects, sub-issues, bulk status, priority, and assignee edits, comment reactions, pinned comments, notifications, analytics, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, issue keys, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
 
 ```bash
 npm test
@@ -340,6 +342,7 @@ COOKIE_SAMESITE=none
 - A snooze belongs to one person and one issue. It hides that issue from their My work until the chosen day, then it returns. Other members still see the issue.
 - Unassigned means the issue has no assignees. Finished issues and archived projects stay off the workspace list. The project filter still includes finished issues when you ask for nobody assigned.
 - Quiet means an open issue has not changed for the chosen number of days, seven unless the request says otherwise. Finished issues and archived projects stay off the workspace list. A comment moves the issue out of the list.
+- Coming due means an open issue is overdue or its date falls within the chosen number of days, seven unless the request says otherwise. Finished issues, issues with no date, and archived projects stay off the workspace list. The soonest date is first.
 - A bulk assignee replaces the people on each selected issue. Sending null removes them. Status and priority are unchanged unless they are sent too.
 - Moving an issue gives it the next number in the destination project. The old number is not reused. Comments move with it. A cycle does not, because a cycle belongs to one project.
 - A sub-issue has one parent in the same workspace. Nesting stops at eight levels. Deleting a parent leaves its sub-issues in place, without a parent. The count on a card is its direct children.

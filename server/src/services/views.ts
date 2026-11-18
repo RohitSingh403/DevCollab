@@ -14,6 +14,7 @@ export interface ViewFilters {
   assignee: string;
   overdue: boolean;
   quiet: boolean;
+  dueSoon: boolean;
   q: string;
   layout: 'board' | 'list';
   label: string;
@@ -22,7 +23,7 @@ export interface ViewFilters {
 
 function hasFilter(filters: ViewFilters) {
   return Boolean(
-    filters.status || filters.priority || filters.assignee || filters.overdue || filters.quiet || filters.q || filters.layout === 'list' || filters.label || filters.sort !== 'updated',
+    filters.status || filters.priority || filters.assignee || filters.overdue || filters.quiet || filters.dueSoon || filters.q || filters.layout === 'list' || filters.label || filters.sort !== 'updated',
   );
 }
 
@@ -54,6 +55,7 @@ function serialize(
       assignee: view.filters.assignee ?? '',
       overdue: Boolean(view.filters.overdue),
       quiet: Boolean(view.filters.quiet),
+      dueSoon: Boolean(view.filters.dueSoon),
       q: view.filters.q ?? '',
       layout: view.filters.layout === 'list' ? 'list' : 'board',
       label: view.filters.label ?? '',

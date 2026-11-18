@@ -70,6 +70,7 @@ export async function listIssues(input: {
   q?: string;
   overdue?: 'true' | 'false';
   quiet?: 'true' | 'false';
+  dueSoon?: 'true' | 'false';
   page: number;
   limit: number;
   sort: 'updated' | 'created' | 'due' | 'priority';
@@ -99,6 +100,10 @@ export async function listIssues(input: {
     filter.updatedAt = { $lt: new Date(Date.now() - WEEK_MS) };
     if (!input.status && input.overdue !== 'true') filter.status = { $ne: 'done' };
   }
+  if (input.dueSoon === 'true' && input.overdue !== 'true') {
+    filter.dueDate = { $lt: dueHorizon(new Date(), 7) };
+    if (!input.status) filter.status = { $ne: 'done' };
+  }
 
   const sort: Record<string, 1 | -1> =
     input.sort === 'created'
@@ -122,6 +127,11 @@ export async function listIssues(input: {
 }
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+export function dueHorizon(now: Date, days: number) {
+  return new Date(utcDayStart(now).getTime() + (days + 1) * DAY_MS);
+}
 
 export function workBucket(dueDate: Date | null, now: Date) {
   if (!dueDate) return 'undated' as const;
@@ -157,6 +167,21 @@ export async function listQuiet(workspaceId: string, days = 7, now = new Date())
   const [total, issues] = await Promise.all([
     Issue.countDocuments(filter),
     Issue.find(filter).sort({ updatedAt: 1 }).limit(8).populate(ISSUE_POPULATE),
+  ]);
+  return { total, days, issues: await withSubissueCounts(issues, serializeIssue) };
+}
+
+export async function listDue(workspaceId: string, days = 7, now = new Date()) {
+  const archived = await archivedProjectIds(workspaceId);
+  const filter: FilterQuery<unknown> = {
+    workspace: workspaceId,
+    status: { $ne: 'done' },
+    dueDate: { $lt: dueHorizon(now, days) },
+    ...(archived.length ? { project: { $nin: archived } } : {}),
+  };
+  const [total, issues] = await Promise.all([
+    Issue.countDocuments(filter),
+    Issue.find(filter).sort({ dueDate: 1, priorityRank: -1 }).limit(8).populate(ISSUE_POPULATE),
   ]);
   return { total, days, issues: await withSubissueCounts(issues, serializeIssue) };
 }
