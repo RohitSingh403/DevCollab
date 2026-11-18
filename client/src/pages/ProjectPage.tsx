@@ -71,6 +71,7 @@ export function ProjectPage() {
   const [bulkStatus, setBulkStatus] = useState<'' | IssueStatus>('');
   const [bulkPriority, setBulkPriority] = useState<'' | Priority>('');
   const [bulkAssignee, setBulkAssignee] = useState('');
+  const [bulkDue, setBulkDue] = useState('');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const pushToast = useUiStore((state) => state.pushToast);
@@ -114,17 +115,20 @@ export function ProjectPage() {
         ...(bulkStatus ? { status: bulkStatus } : {}),
         ...(bulkPriority ? { priority: bulkPriority } : {}),
         ...(bulkAssignee === 'none' ? { assigneeId: null } : bulkAssignee ? { assigneeId: bulkAssignee } : {}),
+        ...(bulkDue === 'none' ? { dueDate: null } : bulkDue ? { dueDate: bulkDue } : {}),
       }),
     onSuccess: async (updated) => {
       setSelected([]);
       setBulkStatus('');
       setBulkPriority('');
       setBulkAssignee('');
+      setBulkDue('');
       pushToast(updated.length === 1 ? 'Updated 1 issue' : `Updated ${updated.length} issues`);
       await queryClient.invalidateQueries({ queryKey: ['issues', projectId] });
       await queryClient.invalidateQueries({ queryKey: ['analytics'] });
       await queryClient.invalidateQueries({ queryKey: ['my-work'] });
       await queryClient.invalidateQueries({ queryKey: ['unassigned'] });
+      await queryClient.invalidateQueries({ queryKey: ['due'] });
     },
     onError: (error) => pushToast(errorMessage(error)),
   });
@@ -555,7 +559,23 @@ export function ProjectPage() {
               </option>
             ))}
           </select>
-          <button className="btn-primary" type="button" disabled={(!bulkStatus && !bulkPriority && !bulkAssignee) || bulk.isPending} onClick={() => bulk.mutate()}>
+          <input
+            className="field w-auto"
+            type="date"
+            aria-label="Set due date"
+            value={bulkDue === 'none' ? '' : bulkDue}
+            disabled={bulkDue === 'none'}
+            onChange={(event) => setBulkDue(event.target.value)}
+          />
+          <button
+            className={bulkDue === 'none' ? 'btn-primary' : 'btn-ghost'}
+            type="button"
+            aria-pressed={bulkDue === 'none'}
+            onClick={() => setBulkDue((value) => (value === 'none' ? '' : 'none'))}
+          >
+            No due date
+          </button>
+          <button className="btn-primary" type="button" disabled={(!bulkStatus && !bulkPriority && !bulkAssignee && !bulkDue) || bulk.isPending} onClick={() => bulk.mutate()}>
             {bulk.isPending ? 'Updating…' : 'Update'}
           </button>
           <button className="btn-ghost" type="button" onClick={() => setSelected([])}>

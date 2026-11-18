@@ -214,7 +214,7 @@ export const api = {
     ),
   updateIssue: (id: string, input: Partial<IssueInput>) =>
     request<{ issue: Issue }>(`/api/issues/${id}`, { method: 'PATCH', body: JSON.stringify(input) }).then((data) => data.issue),
-  bulkUpdateIssues: (input: { issueIds: string[]; status?: IssueStatus; priority?: Priority; assigneeId?: string | null }) =>
+  bulkUpdateIssues: (input: { issueIds: string[]; status?: IssueStatus; priority?: Priority; assigneeId?: string | null; dueDate?: string | null }) =>
     request<{ issues: Issue[] }>('/api/issues/bulk', { method: 'POST', body: JSON.stringify(input) }).then((data) => data.issues),
   deleteIssue: (id: string) => request<void>(`/api/issues/${id}`, { method: 'DELETE' }),
   snoozeIssue: (id: string, until: string) =>

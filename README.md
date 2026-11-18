@@ -73,7 +73,7 @@ Work:
 - Rename or recolor a label. Issues and templates keep it, and the board shows the new name and color
 - A board you can drag between columns, plus a list view
 - Filters, text search, and pagination. The board can also filter by label, by who is assigned, or by issues with nobody assigned, and sort by updated, newest, due date, or priority. A saved view keeps that choice
-- Bulk edit on the list. Select issues on the page and set their status, priority, or assignee together. Choosing no assignee clears the people on those issues. Each issue keeps its own history, and an archived project stays closed
+- Bulk edit on the list. Select issues on the page and set their status, priority, assignee, or due date together. Choosing no assignee clears the people on those issues. Choosing no due date clears the date. Each issue keeps its own history, and an archived project stays closed
 - Saved project views, private or shared. A view assigned to “me” follows whoever opens it
 - My work, the open issues assigned to you: overdue, due this week, due later, and no due date. Snooze an issue until a later day to hide it from your list. The snooze is private, and the issue comes back on that day
 - Workload. Open issues in active projects, counted for each person they are assigned to. A shared issue counts for everyone on it. The overview shows the counts, and the workload page lists the issues, with overdue ones first
@@ -257,7 +257,7 @@ Authenticated routes expect the session cookie. Collection responses are paginat
 | GET | `/api/issues/:id` | One issue, including blockers and whether you follow it |
 | PATCH, DELETE | `/api/issues/:id` | Update or delete an issue |
 | POST, DELETE | `/api/issues/:id/snooze` | Hide an open issue from your My work until a future date, or bring it back |
-| POST | `/api/issues/bulk` | Set the status, priority, or assignee of up to 25 issues in one workspace. A null assignee clears them |
+| POST | `/api/issues/bulk` | Set the status, priority, assignee, or due date of up to 25 issues in one workspace. A null assignee clears the people. A null due date clears the date |
 | POST | `/api/issues/:id/blockers` | Block this issue on another issue in the same workspace |
 | DELETE | `/api/issues/:id/blockers/:blockerId` | Remove that blocker |
 | POST, DELETE | `/api/issues/:id/watch` | Follow or unfollow an issue |
@@ -297,7 +297,7 @@ Socket.IO authenticates with the same cookie. Clients emit `workspace:join` with
 
 ## Tests
 
-Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, snoozing an issue, unassigned issues, blockers, watchers, checklists, due reminders, cycles, ending a cycle, editing the active cycle, milestones, editing a milestone, renaming a project, filtering workspace activity by project, quiet issues, issues coming due, blocked issues, workload by assignee, the workspace roadmap, estimates, moving an issue between projects, sub-issues, bulk status, priority, and assignee edits, comment reactions, pinned comments, notifications, analytics, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, issue keys, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
+Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, snoozing an issue, unassigned issues, blockers, watchers, checklists, due reminders, cycles, ending a cycle, editing the active cycle, milestones, editing a milestone, renaming a project, filtering workspace activity by project and by kind, quiet issues, issues coming due, blocked issues, workload by assignee, the workspace roadmap, estimates, moving an issue between projects, sub-issues, bulk status, priority, assignee, and due date edits, comment reactions, pinned comments, notifications, analytics, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, issue keys, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
 
 ```bash
 npm test
@@ -349,7 +349,7 @@ COOKIE_SAMESITE=none
 - Coming due means an open issue is overdue or its date falls within the chosen number of days, seven unless the request says otherwise. Finished issues, issues with no date, and archived projects stay off the workspace list. The soonest date is first.
 - Blocked means an open issue still has an open blocker. Finished issues and archived projects stay off the workspace list. Finishing every blocker removes the issue from the list.
 - Workload counts open issues in active projects for each member they are assigned to. Finished issues and archived projects stay out. An issue with two assignees counts once for each of them. Overdue issues are listed first. Each person shows at most eight issues, and the open count is the full number.
-- A bulk assignee replaces the people on each selected issue. Sending null removes them. Status and priority are unchanged unless they are sent too.
+- A bulk assignee replaces the people on each selected issue. Sending null removes them. Status and priority are unchanged unless they are sent too. A bulk due date sets the same day on each selected issue, or clears it when the date is null. A date that is already set is left as it is.
 - Moving an issue gives it the next number in the destination project. The old number is not reused. Comments move with it. A cycle does not, because a cycle belongs to one project.
 - A sub-issue has one parent in the same workspace. Nesting stops at eight levels. Deleting a parent leaves its sub-issues in place, without a parent. The count on a card is its direct children.
 - Due reminders are stored on the issue as the date and kind already sent, so the hourly check does not repeat them.
