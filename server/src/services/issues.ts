@@ -773,11 +773,20 @@ export async function bulkUpdateIssues(
     priority?: Priority;
     assigneeId?: string | null;
     dueDate?: string | null;
+    cycleId?: string | null;
+    milestoneId?: string | null;
   },
   rt?: Realtime,
 ) {
-  if (!input.status && !input.priority && input.assigneeId === undefined && input.dueDate === undefined) {
-    throw new ApiError(400, 'Choose a status, a priority, an assignee, or a due date', 'empty_update');
+  if (
+    !input.status &&
+    !input.priority &&
+    input.assigneeId === undefined &&
+    input.dueDate === undefined &&
+    input.cycleId === undefined &&
+    input.milestoneId === undefined
+  ) {
+    throw new ApiError(400, 'Choose a status, a priority, an assignee, a due date, a cycle, or a milestone', 'empty_update');
   }
   const unique = [...new Set(input.issueIds)];
   const found = await Issue.find({ _id: { $in: unique } }).select('workspace project');
@@ -802,6 +811,8 @@ export async function bulkUpdateIssues(
           priority: input.priority,
           ...(input.assigneeId !== undefined ? { assigneeIds: input.assigneeId ? [input.assigneeId] : [] } : {}),
           ...(input.dueDate !== undefined ? { dueDate: input.dueDate } : {}),
+          ...(input.cycleId !== undefined ? { cycleId: input.cycleId } : {}),
+          ...(input.milestoneId !== undefined ? { milestoneId: input.milestoneId } : {}),
         },
         rt,
       ),

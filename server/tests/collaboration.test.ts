@@ -1698,6 +1698,82 @@ describe('workspaces, issues, and authorization', () => {
     expect(after.body.total).toBe(0);
   });
 
+  it('sets or clears the cycle and milestone on several issues', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const outsider = await registerUser(authAgent(), 'Jonah Patel');
+    const workspace = await createWorkspace(owner.agent, 'Northwind');
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'API Platform', key: 'API' });
+    const projectId = project.body.project.id;
+    const other = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'Web Client', key: 'WEB' });
+    const day = (offset: number) => new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate() + offset)).toISOString().slice(0, 10);
+    const started = await owner.agent.post(`/api/projects/${projectId}/cycles`).send({
+      name: 'Cycle 12',
+      startsAt: day(-1),
+      endsAt: day(6),
+    });
+    const cycleId = started.body.cycle.id;
+    const foreignCycle = await owner.agent.post(`/api/projects/${other.body.project.id}/cycles`).send({
+      name: 'Cycle 4',
+      startsAt: day(0),
+      endsAt: day(13),
+    });
+    const milestone = await owner.agent.post(`/api/projects/${projectId}/milestones`).send({ name: 'Cookie cutover', targetDate: day(14) });
+    const milestoneId = milestone.body.milestone.id;
+    const first = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Write the empty states' });
+    const second = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Store the signing key' });
+
+    const hidden = await outsider.agent.post('/api/issues/bulk').send({ issueIds: [first.body.issue.id], cycleId });
+    expect(hidden.status).toBe(404);
+
+    const foreign = await owner.agent.post('/api/issues/bulk').send({
+      issueIds: [first.body.issue.id, second.body.issue.id],
+      cycleId: foreignCycle.body.cycle.id,
+    });
+    expect(foreign.status).toBe(400);
+    expect(foreign.body.error.code).toBe('invalid_cycle');
+    const untouched = await owner.agent.get(`/api/issues/${first.body.issue.id}`);
+    expect(untouched.body.issue.cycle).toBeNull();
+
+    const placed = await owner.agent.post('/api/issues/bulk').send({
+      issueIds: [first.body.issue.id, second.body.issue.id],
+      cycleId,
+      milestoneId,
+    });
+    expect(placed.status).toBe(200);
+    expect(placed.body.issues.every((issue: { cycle: { id: string } | null; milestone: { id: string } | null }) => issue.cycle?.id === cycleId && issue.milestone?.id === milestoneId)).toBe(true);
+
+    const again = await owner.agent.post('/api/issues/bulk').send({
+      issueIds: [first.body.issue.id, second.body.issue.id],
+      cycleId,
+      milestoneId,
+    });
+    expect(again.status).toBe(200);
+    const activity = await owner.agent.get(`/api/projects/${projectId}/activity`);
+    const notes = activity.body.activities.filter((item: { message: string }) => item.message.includes('cycle') && item.message.includes('milestone'));
+    expect(notes).toHaveLength(2);
+
+    const onCycle = await owner.agent.get(`/api/projects/${projectId}/issues?cycle=active`);
+    expect(onCycle.body.issues.map((issue: { title: string }) => issue.title).sort()).toEqual(['Store the signing key', 'Write the empty states']);
+    const onMilestone = await owner.agent.get(`/api/projects/${projectId}/issues?milestone=${milestoneId}`);
+    expect(onMilestone.body.total).toBe(2);
+    const cycles = await owner.agent.get(`/api/projects/${projectId}/cycles`);
+    expect(cycles.body.cycles.find((cycle: { id: string }) => cycle.id === cycleId)).toMatchObject({ total: 2 });
+    const milestones = await owner.agent.get(`/api/projects/${projectId}/milestones`);
+    expect(milestones.body.milestones.find((item: { id: string }) => item.id === milestoneId)).toMatchObject({ total: 2 });
+
+    const cleared = await owner.agent.post('/api/issues/bulk').send({
+      issueIds: [first.body.issue.id, second.body.issue.id],
+      cycleId: null,
+      milestoneId: null,
+    });
+    expect(cleared.status).toBe(200);
+    expect(cleared.body.issues.every((issue: { cycle: unknown; milestone: unknown }) => issue.cycle === null && issue.milestone === null)).toBe(true);
+    const emptyCycle = await owner.agent.get(`/api/projects/${projectId}/issues?cycle=active`);
+    expect(emptyCycle.body.total).toBe(0);
+    const emptyMilestone = await owner.agent.get(`/api/projects/${projectId}/issues?milestone=${milestoneId}`);
+    expect(emptyMilestone.body.total).toBe(0);
+  });
+
   it('renames the active cycle and keeps its issues', async () => {
     const owner = await registerUser(authAgent(), 'Maya Chen');
     const outsider = await registerUser(authAgent(), 'Jonah Patel');
