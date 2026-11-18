@@ -230,6 +230,19 @@ export interface BlockedWork {
   issues: Issue[];
 }
 
+export interface WorkloadPerson {
+  user: User;
+  open: number;
+  overdue: number;
+  blocked: number;
+  points: number;
+  issues: Issue[];
+}
+
+export interface Workload {
+  people: WorkloadPerson[];
+}
+
 export interface MyWork {
   total: number;
   counts: { overdue: number; dueSoon: number; later: number; undated: number };

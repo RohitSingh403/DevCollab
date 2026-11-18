@@ -8,7 +8,7 @@ import {
   type Priority,
   type Reaction,
 } from '../constants';
-import { dayKey, utcDayStart } from '../dates';
+import { dayKey, isOverdue, utcDayStart } from '../dates';
 import { ApiError } from '../errors';
 import { Comment } from '../models/Comment';
 import { Issue } from '../models/Issue';
@@ -219,6 +219,55 @@ export async function listBlocked(workspaceId: string) {
       }),
     })),
   };
+}
+
+const WORKLOAD_LIMIT = 8;
+
+export async function listWorkload(workspaceId: string, now = new Date()) {
+  const archived = await archivedProjectIds(workspaceId);
+  const [memberships, issues] = await Promise.all([
+    Membership.find({ workspace: workspaceId }).populate('user', 'name email avatarColor'),
+    Issue.find({
+      workspace: workspaceId,
+      status: { $ne: 'done' },
+      ...(archived.length ? { project: { $nin: archived } } : {}),
+    }).populate(ISSUE_POPULATE),
+  ]);
+  const byUser = new Map<string, typeof issues>();
+  for (const membership of memberships) {
+    byUser.set(String((membership.user as { _id?: unknown })._id ?? membership.user), []);
+  }
+  for (const issue of issues) {
+    for (const assignee of issue.assignees) {
+      const id = String((assignee as { _id?: unknown })._id ?? assignee);
+      byUser.get(id)?.push(issue);
+    }
+  }
+  const people = await Promise.all(
+    memberships.map(async (membership) => {
+      const user = membership.user as { _id?: unknown; name?: string; email?: string; avatarColor?: string };
+      const mine = byUser.get(String(user._id ?? user)) ?? [];
+      const sorted = [...mine].sort((left, right) => {
+        const leftOver = isOverdue(left.dueDate, left.status, now) ? 0 : 1;
+        const rightOver = isOverdue(right.dueDate, right.status, now) ? 0 : 1;
+        if (leftOver !== rightOver) return leftOver - rightOver;
+        const leftDue = left.dueDate?.getTime() ?? Number.MAX_SAFE_INTEGER;
+        const rightDue = right.dueDate?.getTime() ?? Number.MAX_SAFE_INTEGER;
+        if (leftDue !== rightDue) return leftDue - rightDue;
+        return right.priorityRank - left.priorityRank;
+      });
+      return {
+        user: serializeUser(user),
+        open: mine.length,
+        overdue: mine.filter((issue) => isOverdue(issue.dueDate, issue.status, now)).length,
+        blocked: mine.filter((issue) => issue.blocked).length,
+        points: mine.reduce((sum, issue) => sum + (typeof issue.estimate === 'number' ? issue.estimate : 0), 0),
+        issues: await withSubissueCounts(sorted.slice(0, WORKLOAD_LIMIT), serializeIssue),
+      };
+    }),
+  );
+  people.sort((left, right) => right.open - left.open || right.overdue - left.overdue || left.user.name.localeCompare(right.user.name));
+  return { people };
 }
 
 export async function listMyWork(workspaceId: string, userId: string, now = new Date()) {

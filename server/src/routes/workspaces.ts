@@ -20,7 +20,7 @@ import {
 } from '../schemas';
 import { buildAnalytics } from '../services/analytics';
 import { listActivity } from '../services/feed';
-import { listBlocked, listDue, listMyWork, listQuiet, listUnassigned, resolveIssueKeys, searchWorkspaceIssues } from '../services/issues';
+import { listBlocked, listDue, listMyWork, listQuiet, listUnassigned, listWorkload, resolveIssueKeys, searchWorkspaceIssues } from '../services/issues';
 import { addFavorite, listFavorites, removeFavorite } from '../services/favorites';
 import { archivedProjectIds } from '../services/projects';
 import { listRoadmap } from '../services/milestones';
@@ -270,6 +270,14 @@ workspaceRouter.get(
   requireWorkspace(),
   asyncHandler(async (req, res) => {
     res.json(await listUnassigned(req.params.workspaceId));
+  }),
+);
+
+workspaceRouter.get(
+  '/:workspaceId/workload',
+  requireWorkspace(),
+  asyncHandler(async (req, res) => {
+    res.json(await listWorkload(req.params.workspaceId));
   }),
 );
 
