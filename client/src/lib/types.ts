@@ -73,6 +73,7 @@ export interface ViewFilters {
   overdue: boolean;
   quiet: boolean;
   dueSoon: boolean;
+  blocked: boolean;
   q: string;
   layout: 'board' | 'list';
   label: string;
@@ -221,6 +222,11 @@ export interface QuietWork {
 export interface DueWork {
   total: number;
   days: number;
+  issues: Issue[];
+}
+
+export interface BlockedWork {
+  total: number;
   issues: Issue[];
 }
 

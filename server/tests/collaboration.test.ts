@@ -1975,4 +1975,46 @@ describe('workspaces, issues, and authorization', () => {
     expect(saved.body.view.filters.dueSoon).toBe(true);
     expect(dayKey(today)).toBe(day(0));
   });
+
+  it('lists open issues that are still blocked', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const outsider = await registerUser(authAgent(), 'Jonah Patel');
+    const workspace = await createWorkspace(owner.agent, 'Northwind');
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'API Platform', key: 'API' });
+    const projectId = project.body.project.id;
+    const waiting = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Paginate comments', priority: 'high' });
+    const foundation = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Enforce roles' });
+    const finished = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Ship the notes', status: 'done' });
+    const free = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Sign the cookie' });
+    const buried = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'Old', key: 'OLD' });
+    const buriedIssue = await owner.agent.post(`/api/projects/${buried.body.project.id}/issues`).send({ title: 'Leave it' });
+    await owner.agent.post(`/api/issues/${waiting.body.issue.id}/blockers`).send({ blockerId: foundation.body.issue.id });
+    await owner.agent.post(`/api/issues/${finished.body.issue.id}/blockers`).send({ blockerId: foundation.body.issue.id });
+    await owner.agent.post(`/api/issues/${buriedIssue.body.issue.id}/blockers`).send({ blockerId: foundation.body.issue.id });
+    await owner.agent.patch(`/api/projects/${buried.body.project.id}`).send({ archived: true });
+
+    const hidden = await outsider.agent.get(`/api/workspaces/${workspace.id}/blocked`);
+    expect(hidden.status).toBe(404);
+
+    const listed = await owner.agent.get(`/api/workspaces/${workspace.id}/blocked`);
+    expect(listed.status).toBe(200);
+    expect(listed.body.total).toBe(1);
+    expect(listed.body.issues.map((item: { title: string }) => item.title)).toEqual(['Paginate comments']);
+    expect(listed.body.issues[0].blockedBy.map((item: { key: string }) => item.key)).toEqual([`API-${foundation.body.issue.number}`]);
+    expect(free.body.issue.title).toBe('Sign the cookie');
+
+    const board = await owner.agent.get(`/api/projects/${projectId}/issues?blocked=true`);
+    expect(board.body.issues.map((item: { title: string }) => item.title)).toEqual(['Paginate comments']);
+
+    const saved = await owner.agent.post(`/api/projects/${projectId}/views`).send({
+      name: 'Blocked',
+      filters: { blocked: true },
+    });
+    expect(saved.status).toBe(201);
+    expect(saved.body.view.filters.blocked).toBe(true);
+
+    await owner.agent.patch(`/api/issues/${foundation.body.issue.id}`).send({ status: 'done' });
+    const cleared = await owner.agent.get(`/api/workspaces/${workspace.id}/blocked`);
+    expect(cleared.body.total).toBe(0);
+  });
 });

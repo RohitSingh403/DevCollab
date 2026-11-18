@@ -80,6 +80,7 @@ export function OverviewPage() {
   const roadmap = useQuery({ queryKey: ['roadmap', workspaceId], queryFn: () => api.roadmap(workspaceId) });
   const unassigned = useQuery({ queryKey: ['unassigned', workspaceId], queryFn: () => api.unassigned(workspaceId) });
   const due = useQuery({ queryKey: ['due', workspaceId], queryFn: () => api.due(workspaceId) });
+  const blocked = useQuery({ queryKey: ['blocked', workspaceId], queryFn: () => api.blocked(workspaceId) });
   const quiet = useQuery({ queryKey: ['quiet', workspaceId], queryFn: () => api.quiet(workspaceId) });
   const activity = useQuery({
     queryKey: ['activity', workspaceId],
@@ -157,6 +158,30 @@ export function OverviewPage() {
         </ul>
         {due.data && due.data.total > due.data.issues.length ? (
           <p className="mt-2 text-[12px] text-muted">Showing {due.data.issues.length} of {due.data.total}.</p>
+        ) : null}
+      </section>
+      <section>
+        <h2 className="text-sm font-semibold">Blocked</h2>
+        <p className="mb-2 mt-1 text-[12px] text-muted">Open issues in active projects that are still blocked. The mark clears when every blocker is done.</p>
+        <ul className="panel divide-y divide-line">
+          {(blocked.data?.issues ?? []).map((issue) => (
+            <li key={issue.id}>
+              <Link to={`/w/${workspaceId}/issues/${issue.id}`} className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-brand-soft">
+                <span className="min-w-0">
+                  <span className="font-mono text-[11px] text-muted">{issue.key}</span>
+                  <span className="mt-0.5 block truncate text-sm font-medium">{issue.title}</span>
+                  <span className="mt-0.5 block text-[12px] text-faint">{issue.project.name}</span>
+                </span>
+                <span className="shrink-0 text-[12px] font-medium text-danger">
+                  Blocked by {(issue.blockedBy ?? []).map((item) => item.key).join(', ') || 'an open issue'}
+                </span>
+              </Link>
+            </li>
+          ))}
+          {blocked.data && blocked.data.total === 0 ? <li className="px-4 py-6 text-sm text-muted">Nothing open is waiting on another issue.</li> : null}
+        </ul>
+        {blocked.data && blocked.data.total > blocked.data.issues.length ? (
+          <p className="mt-2 text-[12px] text-muted">Showing {blocked.data.issues.length} of {blocked.data.total}.</p>
         ) : null}
       </section>
       <section>

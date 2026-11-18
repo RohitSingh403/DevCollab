@@ -22,7 +22,7 @@ import { escapeRegex, pageMeta } from '../utils';
 import { recordActivity } from './activity';
 import { clearTargetFavorites } from './favorites';
 import { activeSnoozes, clearIssueSnoozes, snoozedUntil } from './snooze';
-import { clearBlockerRefs, relationsFor, syncDependents } from './blockers';
+import { clearBlockerRefs, relationsFor, syncDependents, toLink } from './blockers';
 import { clearRelatedRefs, relatedFor } from './related';
 import { activeCycleId, assertProjectCycle } from './cycles';
 import { assertProjectMilestone } from './milestones';
@@ -71,6 +71,7 @@ export async function listIssues(input: {
   overdue?: 'true' | 'false';
   quiet?: 'true' | 'false';
   dueSoon?: 'true' | 'false';
+  blocked?: 'true' | 'false';
   page: number;
   limit: number;
   sort: 'updated' | 'created' | 'due' | 'priority';
@@ -103,6 +104,10 @@ export async function listIssues(input: {
   if (input.dueSoon === 'true' && input.overdue !== 'true') {
     filter.dueDate = { $lt: dueHorizon(new Date(), 7) };
     if (!input.status) filter.status = { $ne: 'done' };
+  }
+  if (input.blocked === 'true') {
+    filter.blocked = true;
+    if (!input.status && !filter.status) filter.status = { $ne: 'done' };
   }
 
   const sort: Record<string, 1 | -1> =
@@ -184,6 +189,36 @@ export async function listDue(workspaceId: string, days = 7, now = new Date()) {
     Issue.find(filter).sort({ dueDate: 1, priorityRank: -1 }).limit(8).populate(ISSUE_POPULATE),
   ]);
   return { total, days, issues: await withSubissueCounts(issues, serializeIssue) };
+}
+
+export async function listBlocked(workspaceId: string) {
+  const archived = await archivedProjectIds(workspaceId);
+  const filter: FilterQuery<unknown> = {
+    workspace: workspaceId,
+    status: { $ne: 'done' },
+    blocked: true,
+    ...(archived.length ? { project: { $nin: archived } } : {}),
+  };
+  const [total, issues] = await Promise.all([
+    Issue.countDocuments(filter),
+    Issue.find(filter).sort({ priorityRank: -1, updatedAt: -1 }).limit(8).populate(ISSUE_POPULATE),
+  ]);
+  const blockerIds = [...new Set(issues.flatMap((issue) => issue.blockedBy.map((id) => String(id))))];
+  const blockers = blockerIds.length
+    ? await Issue.find({ _id: { $in: blockerIds }, status: { $ne: 'done' } }).populate('project', 'key')
+    : [];
+  const byId = new Map(blockers.map((doc) => [String(doc._id), toLink(doc)]));
+  const serialized = await withSubissueCounts(issues, serializeIssue);
+  return {
+    total,
+    issues: serialized.map((issue, index) => ({
+      ...issue,
+      blockedBy: issues[index].blockedBy.flatMap((id) => {
+        const link = byId.get(String(id));
+        return link ? [link] : [];
+      }),
+    })),
+  };
 }
 
 export async function listMyWork(workspaceId: string, userId: string, now = new Date()) {
