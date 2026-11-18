@@ -58,6 +58,7 @@ export function ProjectPage() {
   const cycles = useQuery({ queryKey: ['cycles', projectId], queryFn: () => api.cycles(projectId) });
   const milestones = useQuery({ queryKey: ['milestones', projectId], queryFn: () => api.milestones(projectId) });
   const [creating, setCreating] = useState(false);
+  const [editingProject, setEditingProject] = useState(false);
   const [labelsOpen, setLabelsOpen] = useState(false);
   const [savingView, setSavingView] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
@@ -129,6 +130,23 @@ export function ProjectPage() {
   function togglePage(checked: boolean) {
     setSelected(checked ? visibleIds : []);
   }
+
+  const editDetails = useMutation({
+    mutationFn: (input: { name: string; description: string }) => api.updateProject(projectId, input),
+    onSuccess: async () => {
+      setEditingProject(false);
+      await queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      await queryClient.invalidateQueries({ queryKey: ['projects', workspaceId] });
+      await queryClient.invalidateQueries({ queryKey: ['favorites', workspaceId] });
+      await queryClient.invalidateQueries({ queryKey: ['roadmap'] });
+      await queryClient.invalidateQueries({ queryKey: ['my-work'] });
+      await queryClient.invalidateQueries({ queryKey: ['issues'] });
+      await queryClient.invalidateQueries({ queryKey: ['issue'] });
+      await queryClient.invalidateQueries({ queryKey: ['activity'] });
+      pushToast('Project updated');
+    },
+    onError: (error) => pushToast(errorMessage(error)),
+  });
 
   const archive = useMutation({
     mutationFn: (archived: boolean) => api.updateProject(projectId, { archived }),
@@ -289,6 +307,11 @@ export function ProjectPage() {
         actions={
           <>
             <FavoriteButton workspaceId={workspaceId} kind="project" targetId={projectId} />
+            {canManage && project.data ? (
+              <button className="btn-ghost" type="button" onClick={() => setEditingProject(true)}>
+                Edit project
+              </button>
+            ) : null}
             {canManage ? (
               <button className="btn-ghost" type="button" disabled={archive.isPending} onClick={() => archive.mutate(!project.data?.archived)}>
                 {project.data?.archived ? 'Restore project' : 'Archive project'}
@@ -454,6 +477,17 @@ export function ProjectPage() {
       </div>
       <SaveViewModal open={savingView} onClose={() => setSavingView(false)} projectId={projectId} filters={filters} />
       <LabelsDialog workspaceId={workspaceId} open={labelsOpen} canDelete={canManage} onClose={() => setLabelsOpen(false)} />
+      {project.data ? (
+        <EditProjectModal
+          open={editingProject}
+          pending={editDetails.isPending}
+          projectKey={project.data.key}
+          name={project.data.name}
+          description={project.data.description}
+          onClose={() => setEditingProject(false)}
+          onSave={(input) => editDetails.mutate(input)}
+        />
+      ) : null}
       {issues.isPending ? <p className="text-sm text-muted">Loading issues…</p> : null}
       {issues.isError ? <p className="text-sm text-danger">{errorMessage(issues.error)}</p> : null}
       {issues.data && !issues.data.issues.length ? (
@@ -685,6 +719,63 @@ function SaveViewModal({
         <button className="btn-primary" type="submit" disabled={save.isPending}>
           {save.isPending ? 'Saving…' : 'Save view'}
         </button>
+      </form>
+    </Modal>
+  );
+}
+
+function EditProjectModal({
+  open,
+  pending,
+  projectKey,
+  name,
+  description,
+  onClose,
+  onSave,
+}: {
+  open: boolean;
+  pending: boolean;
+  projectKey: string;
+  name: string;
+  description: string;
+  onClose: () => void;
+  onSave: (input: { name: string; description: string }) => void;
+}) {
+  const [nextName, setNextName] = useState(name);
+  const [nextDescription, setNextDescription] = useState(description);
+  useEffect(() => {
+    if (!open) return;
+    setNextName(name);
+    setNextDescription(description);
+  }, [open, name, description]);
+  const ready = nextName.trim().length >= 2;
+  return (
+    <Modal open={open} title="Edit project" onClose={onClose}>
+      <form
+        className="space-y-3"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (!ready) return;
+          onSave({ name: nextName.trim(), description: nextDescription.trim() });
+        }}
+      >
+        <label className="block text-sm">
+          <span className="text-muted">Name</span>
+          <input className="field mt-1" aria-label="Project name" value={nextName} maxLength={80} onChange={(event) => setNextName(event.target.value)} required />
+        </label>
+        <label className="block text-sm">
+          <span className="text-muted">Description</span>
+          <textarea className="field mt-1 min-h-24" aria-label="Project description" value={nextDescription} maxLength={500} onChange={(event) => setNextDescription(event.target.value)} />
+        </label>
+        <p className="text-[12px] text-muted">The key stays {projectKey}. Issue numbers do not change.</p>
+        <div className="flex justify-end gap-2">
+          <button className="btn-ghost" type="button" onClick={onClose}>
+            Cancel
+          </button>
+          <button className="btn-primary" type="submit" disabled={pending || !ready}>
+            Save
+          </button>
+        </div>
       </form>
     </Modal>
   );
