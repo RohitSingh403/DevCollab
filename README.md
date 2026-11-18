@@ -67,7 +67,7 @@ Accounts and access:
 
 Work:
 
-- Projects with short keys (`API-12`) and per-project issue numbers
+- Projects with short keys (`API-12`) and per-project issue numbers. An owner or admin can rename a project and rewrite its description. The key stays the same, so existing issue numbers do not change
 - Archive a finished project. It leaves My work and the workspace totals, and comes back when an owner or admin restores it
 - Issues with status, priority, labels, assignees, due dates, comments, and history
 - Rename or recolor a label. Issues and templates keep it, and the board shows the new name and color
@@ -244,7 +244,7 @@ Authenticated routes expect the session cookie. Collection responses are paginat
 | GET, POST | `/api/workspaces/:id/projects` | Projects in a workspace |
 | GET | `/api/workspaces/:id/roadmap` | Milestones on active projects, with progress and a date group |
 | GET | `/api/workspaces/:id/unassigned` | Open issues in active projects with no assignee |
-| GET, PATCH, DELETE | `/api/projects/:id` | Read, update, or delete a project |
+| GET, PATCH, DELETE | `/api/projects/:id` | Read, update, or delete a project. An update can change the name, the description, or whether it is archived. The key stays the same |
 | GET, POST | `/api/projects/:id/issues` | Filtered, paginated issues. `assignee=me` means the signed-in user |
 | GET | `/api/issues/:id` | One issue, including blockers and whether you follow it |
 | PATCH, DELETE | `/api/issues/:id` | Update or delete an issue |
@@ -284,11 +284,11 @@ Issue list filters: `status`, `priority`, `assignee`, `label`, `q`, `overdue`, `
 
 The API checks due dates when the process starts and then every hour. A date is due today through the end of that UTC day, and overdue after it. Assignees are notified once for each.
 
-Socket.IO authenticates with the same cookie. Clients emit `workspace:join` with a workspace id. The server checks membership before joining `workspace:{id}`. Each connection also joins `user:{id}` for notifications. Events: `issue:created`, `issue:updated`, `issue:deleted`, `comment:created`, `comment:updated`, `comment:deleted`, `view:saved`, `view:deleted`, `cycle:started`, `cycle:updated`, `cycle:ended`, `activity:created`, `notification:created`.
+Socket.IO authenticates with the same cookie. Clients emit `workspace:join` with a workspace id. The server checks membership before joining `workspace:{id}`. Each connection also joins `user:{id}` for notifications. Events: `issue:created`, `issue:updated`, `issue:deleted`, `comment:created`, `comment:updated`, `comment:deleted`, `view:saved`, `view:deleted`, `cycle:started`, `cycle:updated`, `cycle:ended`, `project:updated`, `activity:created`, `notification:created`.
 
 ## Tests
 
-Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, snoozing an issue, unassigned issues, blockers, watchers, checklists, due reminders, cycles, ending a cycle, editing the active cycle, milestones, editing a milestone, the workspace roadmap, estimates, moving an issue between projects, sub-issues, bulk status, priority, and assignee edits, comment reactions, pinned comments, notifications, analytics, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, issue keys, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
+Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, snoozing an issue, unassigned issues, blockers, watchers, checklists, due reminders, cycles, ending a cycle, editing the active cycle, milestones, editing a milestone, renaming a project, the workspace roadmap, estimates, moving an issue between projects, sub-issues, bulk status, priority, and assignee edits, comment reactions, pinned comments, notifications, analytics, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, issue keys, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
 
 ```bash
 npm test
@@ -322,7 +322,8 @@ COOKIE_SAMESITE=none
 
 ## Data notes
 
-- Issue numbers increment on the project document, so concurrent creates do not reuse a number.
+- Issue numbers increment on the project document, so concurrent creates do not reuse a number. Renaming a project changes the name only. The key and the issue numbers stay where they are.
+
 - `completedAt` is set when an issue moves to Done and cleared if it is reopened. "Done this week" uses that field.
 - `commentCount` is stored on the issue and updated when comments are added or removed.
 - `blocked` stays true while any linked blocker is still open. Adding, removing, completing, reopening, or deleting a blocker updates it.

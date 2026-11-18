@@ -1779,4 +1779,65 @@ describe('workspaces, issues, and authorization', () => {
     const updates = activity.body.activities.filter((item: { message: string }) => item.message.includes('updated the milestone'));
     expect(updates).toHaveLength(2);
   });
+
+  it('renames a project and keeps its key and issue numbers', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const member = await registerUser(authAgent(), 'Jonah Patel');
+    const outsider = await registerUser(authAgent(), 'Priya Nair');
+    const workspace = await createWorkspace(owner.agent, 'Northwind');
+    await owner.agent.post(`/api/workspaces/${workspace.id}/invites`).send({ email: member.email, role: 'member' });
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({
+      name: 'API Platform',
+      key: 'API',
+      description: 'Auth, workspaces, and the issue API.',
+    });
+    const projectId = project.body.project.id;
+    const issue = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Sign the cookie' });
+    await owner.agent.post(`/api/workspaces/${workspace.id}/favorites`).send({ kind: 'project', targetId: projectId });
+
+    const hidden = await outsider.agent.patch(`/api/projects/${projectId}`).send({ name: 'Nope' });
+    expect(hidden.status).toBe(404);
+    const denied = await member.agent.patch(`/api/projects/${projectId}`).send({ name: 'Nope' });
+    expect(denied.status).toBe(403);
+    expect(denied.body.error.code).toBe('forbidden');
+    const blank = await owner.agent.patch(`/api/projects/${projectId}`).send({ name: ' ' });
+    expect(blank.status).toBe(400);
+
+    const updated = await owner.agent.patch(`/api/projects/${projectId}`).send({
+      name: 'API Services',
+      description: 'Signed cookies and the session store.',
+    });
+    expect(updated.status).toBe(200);
+    expect(updated.body.project).toMatchObject({
+      name: 'API Services',
+      key: 'API',
+      description: 'Signed cookies and the session store.',
+    });
+
+    const same = await owner.agent.patch(`/api/projects/${projectId}`).send({
+      name: 'API Services',
+      description: 'Signed cookies and the session store.',
+    });
+    expect(same.status).toBe(200);
+
+    const listed = await owner.agent.get(`/api/workspaces/${workspace.id}/projects`);
+    expect(listed.body.projects.find((item: { id: string }) => item.id === projectId)).toMatchObject({
+      name: 'API Services',
+      key: 'API',
+      description: 'Signed cookies and the session store.',
+    });
+    const stayed = await owner.agent.get(`/api/issues/${issue.body.issue.id}`);
+    expect(stayed.body.issue.key).toBe('API-1');
+    expect(stayed.body.issue.project).toMatchObject({ key: 'API', name: 'API Services' });
+
+    const favorites = await owner.agent.get(`/api/workspaces/${workspace.id}/favorites`);
+    expect(favorites.body.favorites.find((item: { kind: string }) => item.kind === 'project')).toMatchObject({
+      label: 'API Services',
+      hint: 'API',
+    });
+
+    const activity = await owner.agent.get(`/api/projects/${projectId}/activity`);
+    const renames = activity.body.activities.filter((item: { message: string }) => item.message.includes('renamed API to API Services'));
+    expect(renames).toHaveLength(1);
+  });
 });

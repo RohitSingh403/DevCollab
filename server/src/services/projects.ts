@@ -112,9 +112,9 @@ export async function updateProject(
 ) {
   const project = await Project.findById(projectId);
   if (!project) throw new ApiError(404, 'Project not found', 'not_found');
-  if (input.name) project.name = input.name;
-  if (input.description !== undefined) project.description = input.description;
-  let action = 'updated';
+  const nameChanged = input.name !== undefined && input.name !== project.name;
+  const descriptionChanged = input.description !== undefined && input.description !== (project.description ?? '');
+  let action: 'updated' | 'archived' | 'restored' = 'updated';
   if (input.archived === true && !project.archivedAt) {
     project.archivedAt = new Date();
     action = 'archived';
@@ -122,17 +122,27 @@ export async function updateProject(
     project.archivedAt = null;
     action = 'restored';
   }
+  if (!nameChanged && !descriptionChanged && action === 'updated') return getProject(projectId);
+  if (nameChanged && input.name) project.name = input.name;
+  if (descriptionChanged) project.description = input.description ?? '';
   await project.save();
+  const message =
+    action === 'updated'
+      ? nameChanged
+        ? `${actor.name} renamed ${project.key} to ${project.name}`
+        : `${actor.name} updated the description of ${project.key}`
+      : `${actor.name} ${action} project ${project.key}`;
   await recordActivity(
     {
       workspaceId: String(project.workspace),
       projectId,
       actorId: actor.id,
       type: 'project.updated',
-      message: `${actor.name} ${action} project ${project.key}`,
+      message,
     },
     rt,
   );
+  rt?.toWorkspace(String(project.workspace), 'project:updated', { projectId });
   return getProject(projectId);
 }
 

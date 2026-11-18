@@ -25,6 +25,16 @@ export function useRealtime(workspaceId?: string) {
       void queryClient.invalidateQueries({ queryKey: ['milestones'] });
       void queryClient.invalidateQueries({ queryKey: ['cycles'] });
     };
+    const refreshProject = () => {
+      void queryClient.invalidateQueries({ queryKey: ['project'] });
+      void queryClient.invalidateQueries({ queryKey: ['projects'] });
+      void queryClient.invalidateQueries({ queryKey: ['favorites'] });
+      void queryClient.invalidateQueries({ queryKey: ['roadmap'] });
+      void queryClient.invalidateQueries({ queryKey: ['my-work'] });
+      void queryClient.invalidateQueries({ queryKey: ['issues'] });
+      void queryClient.invalidateQueries({ queryKey: ['issue'] });
+      void queryClient.invalidateQueries({ queryKey: ['activity'] });
+    };
     const onNotification = (notification: { message?: string }) => {
       void queryClient.invalidateQueries({ queryKey: ['notifications'] });
       if (notification.message) pushToast(notification.message);
@@ -44,6 +54,7 @@ export function useRealtime(workspaceId?: string) {
     socket.on('cycle:ended', refreshWork);
     socket.on('cycle:updated', refreshWork);
     socket.on('milestone:changed', refreshWork);
+    socket.on('project:updated', refreshProject);
 
     if (workspaceId) socket.emit('workspace:join', workspaceId);
 
@@ -63,6 +74,7 @@ export function useRealtime(workspaceId?: string) {
       socket.off('cycle:ended', refreshWork);
       socket.off('cycle:updated', refreshWork);
       socket.off('milestone:changed', refreshWork);
+      socket.off('project:updated', refreshProject);
     };
   }, [workspaceId, queryClient, pushToast]);
 }
