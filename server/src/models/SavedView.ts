@@ -9,6 +9,7 @@ const filtersSchema = new Schema(
     overdue: { type: Boolean, default: false },
     quiet: { type: Boolean, default: false },
     dueSoon: { type: Boolean, default: false },
+    blocked: { type: Boolean, default: false },
     q: { type: String, default: '', maxlength: 80 },
     layout: { type: String, enum: ['board', 'list'], default: 'board' },
     label: { type: String, default: '' },
