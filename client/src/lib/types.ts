@@ -127,6 +127,15 @@ export interface Favorite {
   hint: string;
 }
 
+export interface RecentIssue {
+  id: string;
+  issueId: string;
+  key: string;
+  title: string;
+  projectId: string;
+  projectName: string;
+}
+
 export interface RoadmapMilestone {
   id: string;
   name: string;

@@ -2238,4 +2238,48 @@ describe('workspaces, issues, and authorization', () => {
       { name: 'Maya Chen', open: 0, blocked: 0 },
     ]);
   });
+
+  it('keeps the issues a person opened, newest first', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const outsider = await registerUser(authAgent(), 'Jonah Patel');
+    const workspace = await createWorkspace(owner.agent, 'Northwind');
+    const other = await createWorkspace(owner.agent, 'Elsewhere');
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'API Platform', key: 'API' });
+    const projectId = project.body.project.id;
+    const foreignProject = await owner.agent.post(`/api/workspaces/${other.id}/projects`).send({ name: 'Other', key: 'OTH' });
+    const foreign = await owner.agent.post(`/api/projects/${foreignProject.body.project.id}/issues`).send({ title: 'Leave it' });
+    const first = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Write the empty states' });
+    const second = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Store the signing key' });
+
+    const hidden = await outsider.agent.get(`/api/workspaces/${workspace.id}/recent`);
+    expect(hidden.status).toBe(404);
+    const hiddenWrite = await outsider.agent.post(`/api/workspaces/${workspace.id}/recent`).send({ issueId: first.body.issue.id });
+    expect(hiddenWrite.status).toBe(404);
+
+    const missing = await owner.agent.post(`/api/workspaces/${workspace.id}/recent`).send({ issueId: foreign.body.issue.id });
+    expect(missing.status).toBe(400);
+    expect(missing.body.error.code).toBe('invalid_recent');
+
+    await owner.agent.post(`/api/workspaces/${workspace.id}/recent`).send({ issueId: first.body.issue.id });
+    await owner.agent.post(`/api/workspaces/${workspace.id}/recent`).send({ issueId: second.body.issue.id });
+    const opened = await owner.agent.post(`/api/workspaces/${workspace.id}/recent`).send({ issueId: first.body.issue.id });
+    expect(opened.status).toBe(200);
+    expect(opened.body.recent.map((item: { key: string }) => item.key)).toEqual(['API-1', 'API-2']);
+
+    const rest = [];
+    for (let index = 0; index < 7; index += 1) {
+      const created = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: `Follow up ${index}` });
+      rest.push(created.body.issue.id as string);
+      await owner.agent.post(`/api/workspaces/${workspace.id}/recent`).send({ issueId: created.body.issue.id });
+    }
+    const listed = await owner.agent.get(`/api/workspaces/${workspace.id}/recent`);
+    expect(listed.body.recent).toHaveLength(8);
+    expect(listed.body.recent.map((item: { title: string }) => item.title)).not.toContain('Store the signing key');
+    expect(listed.body.recent[0].title).toBe('Follow up 6');
+
+    await owner.agent.delete(`/api/issues/${rest[6]}`);
+    const after = await owner.agent.get(`/api/workspaces/${workspace.id}/recent`);
+    expect(after.body.recent.map((item: { title: string }) => item.title)).not.toContain('Follow up 6');
+    expect(after.body.recent[0].title).toBe('Follow up 5');
+  });
 });

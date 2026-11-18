@@ -21,6 +21,7 @@ import { serializeComment, serializeIssue, serializeReactions, serializeUser } f
 import { escapeRegex, pageMeta } from '../utils';
 import { recordActivity } from './activity';
 import { clearTargetFavorites } from './favorites';
+import { clearIssueRecent } from './recent';
 import { activeSnoozes, clearIssueSnoozes, snoozedUntil } from './snooze';
 import { clearBlockerRefs, relationsFor, syncDependents, toLink } from './blockers';
 import { clearRelatedRefs, relatedFor } from './related';
@@ -836,6 +837,7 @@ export async function deleteIssue(issueId: string, actor: { id: string; name: st
   await clearRelatedRefs([issueId]);
   await detachChildren(issueId);
   await clearTargetFavorites({ issueIds: [issueId] });
+  await clearIssueRecent([issueId]);
   await clearIssueSnoozes([issueId]);
   await Comment.deleteMany({ issue: issue._id });
   await issue.deleteOne();

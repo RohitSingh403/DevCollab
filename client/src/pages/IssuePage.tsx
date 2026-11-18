@@ -40,6 +40,20 @@ export function IssuePage() {
   });
   useDocumentTitle(issue.data ? `${issue.data.key} ${issue.data.title}` : 'Issue');
 
+  useEffect(() => {
+    if (!issue.data || issue.data.id !== issueId || issue.data.workspaceId !== workspaceId) return;
+    let cancelled = false;
+    void api
+      .recordRecent(workspaceId, issueId)
+      .then((recent) => {
+        if (!cancelled) queryClient.setQueryData(['recent', workspaceId], recent);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [issue.data, issueId, workspaceId, queryClient]);
+
   const save = useMutation({
     mutationFn: (input: Parameters<typeof api.updateIssue>[1]) => api.updateIssue(issueId, input),
     onSuccess: (next) => {

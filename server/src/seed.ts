@@ -14,6 +14,7 @@ import { startCycle } from './services/cycles';
 import { createMilestone } from './services/milestones';
 import { addComment, createIssue, updateIssue } from './services/issues';
 import { addFavorite } from './services/favorites';
+import { recordRecent } from './services/recent';
 import { snoozeIssue } from './services/snooze';
 import { createProject } from './services/projects';
 import { createTemplate } from './services/templates';
@@ -89,6 +90,7 @@ export async function seedDatabase() {
   });
   await addFavorite(workspace.id, actor.id, { kind: 'project', targetId: api.id });
   await addFavorite(workspace.id, actor.id, { kind: 'issue', targetId: session.id });
+  await recordRecent(workspace.id, actor.id, session.id);
   const signingKey = await createIssue({
     projectId: api.id,
     actor,

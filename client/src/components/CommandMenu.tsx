@@ -18,6 +18,7 @@ export function CommandMenu({ open, workspaceId, onClose }: { open: boolean; wor
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
   const projects = useQuery({ queryKey: ['projects', workspaceId], queryFn: () => api.projects(workspaceId), enabled: open });
+  const recent = useQuery({ queryKey: ['recent', workspaceId], queryFn: () => api.recent(workspaceId), enabled: open });
   const trimmed = query.trim();
   const issues = useQuery({
     queryKey: ['search', workspaceId, trimmed],
@@ -35,6 +36,13 @@ export function CommandMenu({ open, workspaceId, onClose }: { open: boolean; wor
     { id: 'activity', group: 'Go to', label: 'Activity', hint: 'Recent changes', to: `/w/${workspaceId}/activity` },
     { id: 'inbox', group: 'Go to', label: 'Notifications', hint: 'Inbox', to: '/notifications' },
   ];
+  const recentItems: CommandItem[] = (recent.data ?? []).map((issue) => ({
+    id: `recent-${issue.issueId}`,
+    group: 'Recent',
+    label: issue.title,
+    hint: issue.key,
+    to: `/w/${workspaceId}/issues/${issue.issueId}`,
+  }));
   const projectItems: CommandItem[] = (projects.data ?? []).map((project) => ({
     id: `project-${project.id}`,
     group: 'Projects',
@@ -49,7 +57,7 @@ export function CommandMenu({ open, workspaceId, onClose }: { open: boolean; wor
     hint: `${issue.key} · ${issue.project.name}`,
     to: `/w/${workspaceId}/issues/${issue.id}`,
   }));
-  const items = [...filterCommands([...places, ...projectItems], query), ...(trimmed.length >= 2 ? issueItems : [])];
+  const items = [...filterCommands([...recentItems, ...places, ...projectItems], query), ...(trimmed.length >= 2 ? issueItems : [])];
   const selected = items[Math.min(active, Math.max(items.length - 1, 0))];
 
   useEffect(() => {
