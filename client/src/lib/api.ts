@@ -279,8 +279,8 @@ export const api = {
     ),
   deleteComment: (id: string) => request<void>(`/api/comments/${id}`, { method: 'DELETE' }),
 
-  activity: (path: string, page = 1, projectId?: string) =>
-    request<ActivityList>(`${path}?page=${page}&limit=20${projectId ? `&project=${projectId}` : ''}`),
+  activity: (path: string, page = 1, projectId?: string, kind?: string) =>
+    request<ActivityList>(`${path}?page=${page}&limit=20${projectId ? `&project=${projectId}` : ''}${kind ? `&kind=${kind}` : ''}`),
   analytics: (path: string) => request<{ analytics: Analytics }>(path).then((data) => data.analytics),
   notifications: () => request<{ notifications: Notification[]; unread: number }>('/api/notifications'),
   markRead: (id: string) => request<void>(`/api/notifications/${id}/read`, { method: 'PATCH' }),

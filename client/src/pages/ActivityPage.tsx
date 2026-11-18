@@ -6,6 +6,15 @@ import { api, errorMessage } from '../lib/api';
 import { timeAgo } from '../lib/format';
 import type { Activity } from '../lib/types';
 
+const ACTIVITY_KINDS = [
+  { id: 'issues', label: 'Issues', noun: 'issue changes' },
+  { id: 'comments', label: 'Comments', noun: 'comments' },
+  { id: 'blockers', label: 'Blockers', noun: 'blocker changes' },
+  { id: 'cycles', label: 'Cycles', noun: 'cycle changes' },
+  { id: 'milestones', label: 'Milestones', noun: 'milestone changes' },
+  { id: 'members', label: 'Members', noun: 'membership changes' },
+];
+
 export function ActivityText({ workspaceId, item, className = 'text-sm' }: { workspaceId: string; item: Activity; className?: string }) {
   if (item.issueId) {
     return (
@@ -28,36 +37,56 @@ export function ActivityPage() {
   const { workspaceId = '' } = useParams();
   const [page, setPage] = useState(1);
   const [projectId, setProjectId] = useState('');
+  const [kind, setKind] = useState('');
   const projects = useQuery({ queryKey: ['projects', workspaceId], queryFn: () => api.projects(workspaceId) });
   const activity = useQuery({
-    queryKey: ['activity', workspaceId, page, projectId],
-    queryFn: () => api.activity(`/api/workspaces/${workspaceId}/activity`, page, projectId || undefined),
+    queryKey: ['activity', workspaceId, page, projectId, kind],
+    queryFn: () => api.activity(`/api/workspaces/${workspaceId}/activity`, page, projectId || undefined, kind || undefined),
   });
   useDocumentTitle('Activity');
   const selected = (projects.data ?? []).find((project) => project.id === projectId);
+  const kindLabel = ACTIVITY_KINDS.find((item) => item.id === kind)?.noun;
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <PageHeader
         title="Activity"
         description="A running history of issues, comments, and membership changes in this workspace."
         actions={
-          <select
-            className="field w-auto"
-            aria-label="Filter by project"
-            value={projectId}
-            onChange={(event) => {
-              setProjectId(event.target.value);
-              setPage(1);
-            }}
-          >
-            <option value="">All projects</option>
-            {(projects.data ?? []).map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.key} {project.name}
-                {project.archived ? ' (archived)' : ''}
-              </option>
-            ))}
-          </select>
+          <div className="flex flex-wrap gap-2">
+            <select
+              className="field w-auto"
+              aria-label="Filter by kind"
+              value={kind}
+              onChange={(event) => {
+                setKind(event.target.value);
+                setPage(1);
+              }}
+            >
+              <option value="">All activity</option>
+              {ACTIVITY_KINDS.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+            <select
+              className="field w-auto"
+              aria-label="Filter by project"
+              value={projectId}
+              onChange={(event) => {
+                setProjectId(event.target.value);
+                setPage(1);
+              }}
+            >
+              <option value="">All projects</option>
+              {(projects.data ?? []).map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.key} {project.name}
+                  {project.archived ? ' (archived)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
         }
       />
       {activity.isError ? <p className="text-sm text-danger">{errorMessage(activity.error)}</p> : null}
@@ -73,7 +102,11 @@ export function ActivityPage() {
         ))}
         {activity.data && !activity.data.activities.length ? (
           <li className="px-4 py-8 text-sm text-muted">
-            {selected ? `Nothing has happened in ${selected.key} yet.` : 'Activity will show up as the team files work.'}
+            {kindLabel
+              ? `No ${kindLabel} in this history${selected ? ` for ${selected.key}` : ''}.`
+              : selected
+                ? `Nothing has happened in ${selected.key} yet.`
+                : 'Activity will show up as the team files work.'}
           </li>
         ) : null}
       </ul>

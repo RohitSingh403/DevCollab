@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ESTIMATES, INVITE_ROLES, PRIORITIES, REACTIONS, ROLES, STATUSES } from './constants';
+import { ACTIVITY_KINDS, ESTIMATES, INVITE_ROLES, PRIORITIES, REACTIONS, ROLES, STATUSES } from './constants';
 
 const objectId = z.string().regex(/^[a-f\d]{24}$/i, 'Expected an id');
 
@@ -255,6 +255,7 @@ export const paginationSchema = z.object({
 
 export const activityQuerySchema = paginationSchema.extend({
   project: objectId.optional(),
+  kind: z.enum(ACTIVITY_KINDS).optional(),
 });
 
 export const quietQuerySchema = z.object({

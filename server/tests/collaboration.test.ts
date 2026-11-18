@@ -2017,4 +2017,46 @@ describe('workspaces, issues, and authorization', () => {
     const cleared = await owner.agent.get(`/api/workspaces/${workspace.id}/blocked`);
     expect(cleared.body.total).toBe(0);
   });
+
+  it('limits workspace activity to one kind of change', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const teammate = await registerUser(authAgent(), 'Priya Nair');
+    const outsider = await registerUser(authAgent(), 'Jonah Patel');
+    const workspace = await createWorkspace(owner.agent, 'Northwind');
+    await owner.agent.post(`/api/workspaces/${workspace.id}/invites`).send({ email: teammate.email, role: 'member' });
+    const api = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'API Platform', key: 'API' });
+    const web = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'Web Client', key: 'WEB' });
+    const waiting = await owner.agent.post(`/api/projects/${api.body.project.id}/issues`).send({ title: 'Paginate comments' });
+    const foundation = await owner.agent.post(`/api/projects/${api.body.project.id}/issues`).send({ title: 'Enforce roles' });
+    await owner.agent.post(`/api/issues/${waiting.body.issue.id}/comments`).send({ body: 'The first page should stay small.' });
+    await owner.agent.post(`/api/issues/${waiting.body.issue.id}/blockers`).send({ blockerId: foundation.body.issue.id });
+    await owner.agent.post(`/api/projects/${web.body.project.id}/issues`).send({ title: 'Smooth the drag' });
+
+    const hidden = await outsider.agent.get(`/api/workspaces/${workspace.id}/activity?kind=comments`);
+    expect(hidden.status).toBe(404);
+    const unknown = await owner.agent.get(`/api/workspaces/${workspace.id}/activity?kind=labels`);
+    expect(unknown.status).toBe(400);
+
+    const comments = await owner.agent.get(`/api/workspaces/${workspace.id}/activity?kind=comments`);
+    expect(comments.status).toBe(200);
+    expect(comments.body.activities.length).toBeGreaterThan(0);
+    expect(comments.body.activities.every((item: { message: string }) => item.message.toLowerCase().includes('comment'))).toBe(true);
+    expect(comments.body.activities.some((item: { message: string }) => item.message.includes('WEB'))).toBe(false);
+
+    const blockers = await owner.agent.get(`/api/workspaces/${workspace.id}/activity?kind=blockers`);
+    expect(blockers.body.activities.every((item: { message: string }) => item.message.includes('blocked'))).toBe(true);
+    expect(blockers.body.activities.some((item: { message: string }) => item.message.includes('blocked by'))).toBe(true);
+
+    const issues = await owner.agent.get(`/api/workspaces/${workspace.id}/activity?kind=issues&project=${api.body.project.id}`);
+    expect(issues.body.activities.some((item: { message: string }) => item.message.includes('Paginate comments'))).toBe(true);
+    expect(issues.body.activities.some((item: { message: string }) => item.message.toLowerCase().includes('commented'))).toBe(false);
+    expect(issues.body.activities.some((item: { message: string }) => item.message.includes('WEB'))).toBe(false);
+
+    const members = await owner.agent.get(`/api/workspaces/${workspace.id}/activity?kind=members`);
+    expect(members.body.activities.some((item: { message: string }) => item.message.includes('Priya Nair'))).toBe(true);
+    expect(members.body.activities.some((item: { message: string }) => item.message.includes('Paginate comments'))).toBe(false);
+
+    const elsewhere = await owner.agent.get(`/api/workspaces/${workspace.id}/activity?kind=comments&project=${web.body.project.id}`);
+    expect(elsewhere.body.activities).toEqual([]);
+  });
 });
