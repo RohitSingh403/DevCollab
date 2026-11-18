@@ -11,6 +11,7 @@ import type {
   RoadmapMilestone,
   IssueList,
   MyWork,
+  QuietWork,
   UnassignedWork,
   IssueStatus,
   Reaction,
@@ -93,6 +94,7 @@ export const api = {
   workspace: (id: string) => request<{ workspace: Workspace }>(`/api/workspaces/${id}`).then((data) => data.workspace),
   myWork: (id: string) => request<MyWork>(`/api/workspaces/${id}/my-work`),
   unassigned: (id: string) => request<UnassignedWork>(`/api/workspaces/${id}/unassigned`),
+  quiet: (id: string) => request<QuietWork>(`/api/workspaces/${id}/quiet`),
   createWorkspace: (input: { name: string; description?: string }) =>
     request<{ workspace: Workspace }>('/api/workspaces', { method: 'POST', body: JSON.stringify(input) }).then(
       (data) => data.workspace,

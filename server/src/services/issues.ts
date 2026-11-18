@@ -69,6 +69,7 @@ export async function listIssues(input: {
   label?: string;
   q?: string;
   overdue?: 'true' | 'false';
+  quiet?: 'true' | 'false';
   page: number;
   limit: number;
   sort: 'updated' | 'created' | 'due' | 'priority';
@@ -93,6 +94,10 @@ export async function listIssues(input: {
   if (input.overdue === 'true') {
     filter.dueDate = { $lt: utcDayStart(new Date()) };
     if (!input.status) filter.status = { $ne: 'done' };
+  }
+  if (input.quiet === 'true') {
+    filter.updatedAt = { $lt: new Date(Date.now() - WEEK_MS) };
+    if (!input.status && input.overdue !== 'true') filter.status = { $ne: 'done' };
   }
 
   const sort: Record<string, 1 | -1> =
@@ -138,6 +143,22 @@ export async function listUnassigned(workspaceId: string) {
     Issue.find(filter).sort({ priorityRank: -1, updatedAt: -1 }).limit(8).populate(ISSUE_POPULATE),
   ]);
   return { total, issues: await withSubissueCounts(issues, serializeIssue) };
+}
+
+export async function listQuiet(workspaceId: string, days = 7, now = new Date()) {
+  const archived = await archivedProjectIds(workspaceId);
+  const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+  const filter: FilterQuery<unknown> = {
+    workspace: workspaceId,
+    status: { $ne: 'done' },
+    updatedAt: { $lt: cutoff },
+    ...(archived.length ? { project: { $nin: archived } } : {}),
+  };
+  const [total, issues] = await Promise.all([
+    Issue.countDocuments(filter),
+    Issue.find(filter).sort({ updatedAt: 1 }).limit(8).populate(ISSUE_POPULATE),
+  ]);
+  return { total, days, issues: await withSubissueCounts(issues, serializeIssue) };
 }
 
 export async function listMyWork(workspaceId: string, userId: string, now = new Date()) {
