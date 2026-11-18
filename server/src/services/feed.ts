@@ -1,10 +1,17 @@
+import { activityTypesForKind, type ActivityKind } from '../constants';
 import { Activity } from '../models/Activity';
 import { Notification } from '../models/Notification';
 import { serializeActivity, serializeNotification } from '../serializers';
 import { pageMeta } from '../utils';
 
-export async function listActivity(filter: { workspace?: string; project?: string; issue?: string }, page: number, limit: number) {
-  const query = Object.fromEntries(Object.entries(filter).filter(([, value]) => value));
+export async function listActivity(
+  filter: { workspace?: string; project?: string; issue?: string; kind?: ActivityKind },
+  page: number,
+  limit: number,
+) {
+  const { kind, ...rest } = filter;
+  const query: Record<string, unknown> = Object.fromEntries(Object.entries(rest).filter(([, value]) => value));
+  if (kind) query.type = { $in: activityTypesForKind(kind) };
   const [total, rows] = await Promise.all([
     Activity.countDocuments(query),
     Activity.find(query)

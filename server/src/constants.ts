@@ -16,6 +16,34 @@ export type Priority = (typeof PRIORITIES)[number];
 export const REACTIONS = ['+1', 'eyes', 'tada', 'check', 'heart'] as const;
 export type Reaction = (typeof REACTIONS)[number];
 
+export const ACTIVITY_KINDS = ['issues', 'comments', 'blockers', 'cycles', 'milestones', 'members'] as const;
+export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
+
+const ACTIVITY_TYPES: Record<ActivityKind, string[]> = {
+  issues: [
+    'issue.created',
+    'issue.updated',
+    'issue.deleted',
+    'issue.moved',
+    'issue.duplicated',
+    'issue.status',
+    'issue.assigned',
+    'issue.subissue',
+    'issue.checklist',
+    'issue.related',
+    'issue.unrelated',
+  ],
+  comments: ['comment.created', 'comment.pinned', 'comment.mentioned'],
+  blockers: ['issue.blocked', 'issue.unblocked'],
+  cycles: ['cycle.started', 'cycle.ended', 'cycle.updated'],
+  milestones: ['milestone.created', 'milestone.updated', 'milestone.deleted'],
+  members: ['member.joined', 'member.role_changed', 'member.removed'],
+};
+
+export function activityTypesForKind(kind: ActivityKind) {
+  return ACTIVITY_TYPES[kind];
+}
+
 export const PRIORITY_RANK: Record<Priority, number> = {
   low: 1,
   medium: 2,

@@ -107,7 +107,7 @@ Discussion:
 Workspace:
 
 - Workspace and project analytics: open work, overdue issues, completions this week, status mix, and 14 days of activity
-- Workspace activity can be limited to one project. A row opens the issue it describes, or the project when the change was not about one issue
+- Workspace activity can be limited to one project, and to issues, comments, blockers, cycles, milestones, or membership changes. A row opens the issue it describes, or the project when the change was not about one issue
 - Real-time issue, comment, view, and notification events for other members
 - API integration tests, authorization tests, and a frontend suite
 
@@ -274,7 +274,7 @@ Authenticated routes expect the session cookie. Collection responses are paginat
 | GET | `/api/workspaces/:id/search?q=` | Issues by title, or by key such as `API-12` |
 | POST | `/api/workspaces/:id/issue-keys` | Resolve up to 40 issue keys in that workspace. Unknown keys are omitted |
 | GET, POST, DELETE | `/api/workspaces/:id/labels` | Workspace labels. Deleting one requires an admin |
-| GET | `/api/workspaces/:id/activity` | Workspace history. `project` limits it to one project in that workspace |
+| GET | `/api/workspaces/:id/activity` | Workspace history. `project` limits it to one project in that workspace. `kind` is `issues`, `comments`, `blockers`, `cycles`, `milestones`, or `members` |
 | GET | `/api/projects/:id/activity` | Project history |
 | GET | `/api/issues/:id/activity` | Issue history |
 | GET | `/api/workspaces/:id/analytics` | Workspace totals |
@@ -332,7 +332,7 @@ COOKIE_SAMESITE=none
 ## Data notes
 
 - Issue numbers increment on the project document, so concurrent creates do not reuse a number. Renaming a project changes the name only. The key and the issue numbers stay where they are.
-- Workspace activity includes every project until a project id is sent. That id has to belong to the workspace. Membership changes stay on the full list because they are not tied to a project.
+- Workspace activity includes every project until a project id is sent. That id has to belong to the workspace. Membership changes stay on the full list because they are not tied to a project. `kind` keeps one group of changes: issues, comments, blockers, cycles, milestones, or members. A membership change stays off the issue and comment lists.
 
 - `completedAt` is set when an issue moves to Done and cleared if it is reopened. "Done this week" uses that field.
 - `commentCount` is stored on the issue and updated when comments are added or removed.

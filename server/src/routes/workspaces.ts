@@ -214,7 +214,7 @@ workspaceRouter.get(
       const project = await Project.findOne({ _id: query.project, workspace: req.params.workspaceId }).select('_id');
       if (!project) throw new ApiError(404, 'Project not found', 'not_found');
     }
-    res.json(await listActivity({ workspace: req.params.workspaceId, project: query.project }, query.page, query.limit));
+    res.json(await listActivity({ workspace: req.params.workspaceId, project: query.project, kind: query.kind }, query.page, query.limit));
   }),
 );
 
