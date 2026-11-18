@@ -103,6 +103,7 @@ Discussion:
 Workspace:
 
 - Workspace and project analytics: open work, overdue issues, completions this week, status mix, and 14 days of activity
+- Workspace activity can be limited to one project. A row opens the issue it describes, or the project when the change was not about one issue
 - Real-time issue, comment, view, and notification events for other members
 - API integration tests, authorization tests, and a frontend suite
 
@@ -265,7 +266,7 @@ Authenticated routes expect the session cookie. Collection responses are paginat
 | GET | `/api/workspaces/:id/search?q=` | Issues by title, or by key such as `API-12` |
 | POST | `/api/workspaces/:id/issue-keys` | Resolve up to 40 issue keys in that workspace. Unknown keys are omitted |
 | GET, POST, DELETE | `/api/workspaces/:id/labels` | Workspace labels. Deleting one requires an admin |
-| GET | `/api/workspaces/:id/activity` | Workspace history |
+| GET | `/api/workspaces/:id/activity` | Workspace history. `project` limits it to one project in that workspace |
 | GET | `/api/projects/:id/activity` | Project history |
 | GET | `/api/issues/:id/activity` | Issue history |
 | GET | `/api/workspaces/:id/analytics` | Workspace totals |
@@ -288,7 +289,7 @@ Socket.IO authenticates with the same cookie. Clients emit `workspace:join` with
 
 ## Tests
 
-Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, snoozing an issue, unassigned issues, blockers, watchers, checklists, due reminders, cycles, ending a cycle, editing the active cycle, milestones, editing a milestone, renaming a project, the workspace roadmap, estimates, moving an issue between projects, sub-issues, bulk status, priority, and assignee edits, comment reactions, pinned comments, notifications, analytics, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, issue keys, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
+Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, snoozing an issue, unassigned issues, blockers, watchers, checklists, due reminders, cycles, ending a cycle, editing the active cycle, milestones, editing a milestone, renaming a project, filtering workspace activity by project, the workspace roadmap, estimates, moving an issue between projects, sub-issues, bulk status, priority, and assignee edits, comment reactions, pinned comments, notifications, analytics, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, issue keys, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
 
 ```bash
 npm test
@@ -323,6 +324,7 @@ COOKIE_SAMESITE=none
 ## Data notes
 
 - Issue numbers increment on the project document, so concurrent creates do not reuse a number. Renaming a project changes the name only. The key and the issue numbers stay where they are.
+- Workspace activity includes every project until a project id is sent. That id has to belong to the workspace. Membership changes stay on the full list because they are not tied to a project.
 
 - `completedAt` is set when an issue moves to Done and cleared if it is reopened. "Done this week" uses that field.
 - `commentCount` is stored on the issue and updated when comments are added or removed.

@@ -250,6 +250,10 @@ export const paginationSchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(20),
 });
 
+export const activityQuerySchema = paginationSchema.extend({
+  project: objectId.optional(),
+});
+
 export const commentSchema = z
   .object({
     body: z.string().trim().min(1).max(2000),

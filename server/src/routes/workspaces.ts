@@ -1,14 +1,15 @@
 import { Router } from 'express';
 import { asyncHandler } from '../asyncHandler';
 import { ApiError } from '../errors';
+import { Project } from '../models/Project';
 import { requireAuth } from '../middleware/auth';
 import { requireWorkspace } from '../middleware/access';
 import {
+  activityQuerySchema,
   createLabelSchema,
   updateLabelSchema,
   createWorkspaceSchema,
   inviteSchema,
-  paginationSchema,
   favoriteSchema,
   resolveIssueKeysSchema,
   searchSchema,
@@ -206,8 +207,12 @@ workspaceRouter.get(
   '/:workspaceId/activity',
   requireWorkspace(),
   asyncHandler(async (req, res) => {
-    const query = paginationSchema.parse(req.query);
-    res.json(await listActivity({ workspace: req.params.workspaceId }, query.page, query.limit));
+    const query = activityQuerySchema.parse(req.query);
+    if (query.project) {
+      const project = await Project.findOne({ _id: query.project, workspace: req.params.workspaceId }).select('_id');
+      if (!project) throw new ApiError(404, 'Project not found', 'not_found');
+    }
+    res.json(await listActivity({ workspace: req.params.workspaceId, project: query.project }, query.page, query.limit));
   }),
 );
 
