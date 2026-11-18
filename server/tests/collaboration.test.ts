@@ -1840,4 +1840,34 @@ describe('workspaces, issues, and authorization', () => {
     const renames = activity.body.activities.filter((item: { message: string }) => item.message.includes('renamed API to API Services'));
     expect(renames).toHaveLength(1);
   });
+
+  it('limits workspace activity to one project and keeps issue links', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const outsider = await registerUser(authAgent(), 'Jonah Patel');
+    const workspace = await createWorkspace(owner.agent, 'Northwind');
+    const elsewhere = await createWorkspace(owner.agent, 'Elsewhere');
+    const api = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'API Platform', key: 'API' });
+    const web = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'Web Client', key: 'WEB' });
+    const foreign = await owner.agent.post(`/api/workspaces/${elsewhere.id}/projects`).send({ name: 'Other', key: 'OTH' });
+    const apiIssue = await owner.agent.post(`/api/projects/${api.body.project.id}/issues`).send({ title: 'Sign the cookie' });
+    await owner.agent.post(`/api/projects/${web.body.project.id}/issues`).send({ title: 'Smooth the drag' });
+
+    const hidden = await outsider.agent.get(`/api/workspaces/${workspace.id}/activity?project=${api.body.project.id}`);
+    expect(hidden.status).toBe(404);
+    const missing = await owner.agent.get(`/api/workspaces/${workspace.id}/activity?project=${foreign.body.project.id}`);
+    expect(missing.status).toBe(404);
+    expect(missing.body.error.code).toBe('not_found');
+
+    const filtered = await owner.agent.get(`/api/workspaces/${workspace.id}/activity?project=${api.body.project.id}`);
+    expect(filtered.status).toBe(200);
+    expect(filtered.body.activities.length).toBeGreaterThan(0);
+    expect(filtered.body.activities.every((item: { projectId: string }) => item.projectId === api.body.project.id)).toBe(true);
+    expect(filtered.body.activities.some((item: { message: string }) => item.message.includes('WEB'))).toBe(false);
+    const linked = filtered.body.activities.find((item: { issueId: string | null }) => item.issueId === apiIssue.body.issue.id);
+    expect(linked?.issueId).toBe(apiIssue.body.issue.id);
+
+    const all = await owner.agent.get(`/api/workspaces/${workspace.id}/activity`);
+    expect(all.body.activities.some((item: { message: string }) => item.message.includes('WEB'))).toBe(true);
+    expect(all.body.activities.some((item: { message: string }) => item.message.includes('API'))).toBe(true);
+  });
 });

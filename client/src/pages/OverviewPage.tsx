@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AnalyticsPanels, StatGrid } from '../components/AnalyticsPanels';
+import { ActivityText } from './ActivityPage';
 import { RoadmapRow } from './RoadmapPage';
 import { EmptyState, Modal, PageHeader, RoleBadge, useDocumentTitle } from '../components/ui';
 import { api, errorMessage } from '../lib/api';
@@ -177,7 +178,7 @@ export function OverviewPage() {
           <ul className="panel divide-y divide-line">
             {(activity.data?.activities ?? []).slice(0, 8).map((item) => (
               <li key={item.id} className="px-4 py-3 text-sm">
-                <p>{item.message}</p>
+                <ActivityText workspaceId={workspaceId} item={item} />
                 <p className="mt-1 text-xs text-faint">{timeAgo(item.createdAt)}</p>
               </li>
             ))}
