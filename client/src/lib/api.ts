@@ -189,6 +189,11 @@ export const api = {
     request<{ milestone: Milestone }>(`/api/projects/${projectId}/milestones`, { method: 'POST', body: JSON.stringify(input) }).then(
       (data) => data.milestone,
     ),
+  updateMilestone: (projectId: string, milestoneId: string, input: { name?: string; targetDate?: string | null }) =>
+    request<{ milestone: Milestone }>(`/api/projects/${projectId}/milestones/${milestoneId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    }).then((data) => data.milestone),
   deleteMilestone: (projectId: string, milestoneId: string) =>
     request<void>(`/api/projects/${projectId}/milestones/${milestoneId}`, { method: 'DELETE' }),
 

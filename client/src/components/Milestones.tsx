@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Milestone } from '../lib/types';
+import { Modal } from './ui';
 
 function formatDay(value: string) {
   const [year, month, day] = value.split('-').map(Number);
@@ -16,6 +17,7 @@ export function Milestones({
   pending,
   onSelect,
   onCreate,
+  onUpdate,
   onDelete,
   canCreate = true,
 }: {
@@ -24,11 +26,13 @@ export function Milestones({
   pending: boolean;
   onSelect: (id: string) => void;
   onCreate: (input: { name: string; targetDate: string | null }) => void;
+  onUpdate?: (input: { id: string; name: string; targetDate: string | null }) => void;
   onDelete: (id: string) => void;
   canCreate?: boolean;
 }) {
   const [name, setName] = useState('');
   const [targetDate, setTargetDate] = useState('');
+  const [editing, setEditing] = useState<Milestone | null>(null);
   return (
     <section className="panel px-4 py-3">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -75,6 +79,11 @@ export function Milestones({
                     <span className="block h-full rounded-full bg-brand" style={{ width: `${progress * 100}%` }} />
                   </span>
                 </button>
+                {canCreate ? (
+                  <button className="btn-quiet" type="button" aria-label={`Edit ${milestone.name}`} onClick={() => setEditing(milestone)}>
+                    Edit
+                  </button>
+                ) : null}
                 {milestone.canDelete ? (
                   <button className="btn-quiet" type="button" onClick={() => onDelete(milestone.id)}>
                     Delete
@@ -87,6 +96,67 @@ export function Milestones({
       ) : (
         <p className="mt-3 text-[12px] text-muted">No milestones yet.</p>
       )}
+      {editing ? (
+        <EditMilestoneModal
+          milestone={editing}
+          pending={pending}
+          onClose={() => setEditing(null)}
+          onSave={(input) => {
+            onUpdate?.(input);
+            setEditing(null);
+          }}
+        />
+      ) : null}
     </section>
+  );
+}
+
+function EditMilestoneModal({
+  milestone,
+  pending,
+  onClose,
+  onSave,
+}: {
+  milestone: Milestone;
+  pending: boolean;
+  onClose: () => void;
+  onSave: (input: { id: string; name: string; targetDate: string | null }) => void;
+}) {
+  const [name, setName] = useState(milestone.name);
+  const [targetDate, setTargetDate] = useState(milestone.targetDate ?? '');
+  useEffect(() => {
+    setName(milestone.name);
+    setTargetDate(milestone.targetDate ?? '');
+  }, [milestone.id, milestone.name, milestone.targetDate]);
+  const ready = name.trim().length >= 2;
+  return (
+    <Modal open title={`Edit ${milestone.name}`} onClose={onClose}>
+      <form
+        className="space-y-3"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (!ready) return;
+          onSave({ id: milestone.id, name: name.trim(), targetDate: targetDate || null });
+        }}
+      >
+        <label className="block text-sm">
+          <span className="text-muted">Name</span>
+          <input className="field mt-1" aria-label="Edited milestone name" value={name} maxLength={40} onChange={(event) => setName(event.target.value)} required />
+        </label>
+        <label className="block text-sm">
+          <span className="text-muted">Target date</span>
+          <input className="field mt-1" aria-label="Edited milestone date" type="date" value={targetDate} onChange={(event) => setTargetDate(event.target.value)} />
+        </label>
+        <p className="text-[12px] text-muted">Issues stay on this milestone. Leave the date empty to take it off the calendar.</p>
+        <div className="flex justify-end gap-2">
+          <button className="btn-ghost" type="button" onClick={onClose}>
+            Cancel
+          </button>
+          <button className="btn-primary" type="submit" disabled={pending || !ready}>
+            Save
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }

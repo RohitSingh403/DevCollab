@@ -161,16 +161,27 @@ export async function updateMilestone(
   if (project.archivedAt) throw new ApiError(409, 'This project is archived', 'project_archived');
   const milestone = await Milestone.findOne({ _id: milestoneId, project: projectId });
   if (!milestone) throw new ApiError(404, 'Milestone not found', 'not_found');
-  if (input.name && input.name.toLowerCase() !== milestone.name.toLowerCase()) {
-    if (await nameTaken(projectId, input.name, milestoneId)) {
+  let changed = false;
+  if (input.name && input.name !== milestone.name) {
+    if (input.name.toLowerCase() !== milestone.name.toLowerCase() && (await nameTaken(projectId, input.name, milestoneId))) {
       throw new ApiError(409, 'A milestone already has that name', 'milestone_exists');
     }
     milestone.name = input.name;
+    changed = true;
   }
   if (input.targetDate !== undefined) {
     const next = input.targetDate ? parseDay(input.targetDate) : null;
     if (input.targetDate && !next) throw new ApiError(400, 'That date is not valid', 'invalid_date');
-    milestone.targetDate = next;
+    const current = milestone.targetDate ? dayKey(milestone.targetDate) : null;
+    const nextKey = next ? dayKey(next) : null;
+    if (nextKey !== current) {
+      milestone.targetDate = next;
+      changed = true;
+    }
+  }
+  if (!changed) {
+    const counts = await countsFor(projectId);
+    return present(milestone, counts.get(String(milestone._id)) ?? { total: 0, done: 0 }, actor);
   }
   await milestone.save();
   await recordActivity(
