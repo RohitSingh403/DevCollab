@@ -4,7 +4,7 @@ import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-r
 import { AnalyticsPanels, StatGrid } from '../components/AnalyticsPanels';
 import { ActivityText } from './ActivityPage';
 import { RoadmapRow } from './RoadmapPage';
-import { EmptyState, Modal, PageHeader, RoleBadge, useDocumentTitle } from '../components/ui';
+import { Avatar, EmptyState, Modal, PageHeader, RoleBadge, useDocumentTitle } from '../components/ui';
 import { api, errorMessage } from '../lib/api';
 import { dueLabel, timeAgo } from '../lib/format';
 import { PRIORITY_LABEL } from '../lib/types';
@@ -76,6 +76,7 @@ export function OverviewPage() {
   const { workspaceId = '' } = useParams();
   const workspace = useQuery({ queryKey: ['workspace', workspaceId], queryFn: () => api.workspace(workspaceId) });
   const analytics = useQuery({ queryKey: ['analytics', workspaceId], queryFn: () => api.analytics(`/api/workspaces/${workspaceId}/analytics`) });
+  const workload = useQuery({ queryKey: ['workload', workspaceId], queryFn: () => api.workload(workspaceId) });
   const projects = useQuery({ queryKey: ['projects', workspaceId], queryFn: () => api.projects(workspaceId) });
   const roadmap = useQuery({ queryKey: ['roadmap', workspaceId], queryFn: () => api.roadmap(workspaceId) });
   const unassigned = useQuery({ queryKey: ['unassigned', workspaceId], queryFn: () => api.unassigned(workspaceId) });
@@ -122,6 +123,35 @@ export function OverviewPage() {
       />
       {analytics.data ? <StatGrid analytics={analytics.data} /> : <p className="text-sm text-muted">Loading analytics…</p>}
       {analytics.data ? <AnalyticsPanels analytics={analytics.data} /> : null}
+      <section>
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold">Workload</h2>
+          <Link className="text-[12px] font-medium text-brand" to={`/w/${workspaceId}/workload`}>
+            View workload
+          </Link>
+        </div>
+        <ul className="panel divide-y divide-line">
+          {(workload.data?.people ?? []).map((person) => (
+            <li key={person.user.id}>
+              <Link to={`/w/${workspaceId}/workload`} className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-brand-soft">
+                <span className="flex min-w-0 items-center gap-3">
+                  <Avatar name={person.user.name} color={person.user.avatarColor} size="sm" />
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium">{person.user.name}</span>
+                    <span className="mt-0.5 block text-[12px] text-faint">
+                      {person.open} open{person.points ? ` · ${person.points} points` : ''}
+                    </span>
+                  </span>
+                </span>
+                <span className={`shrink-0 text-[12px] ${person.overdue ? 'font-medium text-danger' : 'text-muted'}`}>
+                  {person.overdue ? `${person.overdue} overdue` : 'None overdue'}
+                </span>
+              </Link>
+            </li>
+          ))}
+          {workload.data && workload.data.people.length === 0 ? <li className="px-4 py-6 text-sm text-muted">Members will show up here with their open work.</li> : null}
+        </ul>
+      </section>
       <section>
         <div className="mb-2 flex items-center justify-between gap-3">
           <h2 className="text-sm font-semibold">Roadmap</h2>
