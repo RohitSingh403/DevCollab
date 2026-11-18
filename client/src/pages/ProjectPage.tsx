@@ -72,6 +72,8 @@ export function ProjectPage() {
   const [bulkPriority, setBulkPriority] = useState<'' | Priority>('');
   const [bulkAssignee, setBulkAssignee] = useState('');
   const [bulkDue, setBulkDue] = useState('');
+  const [bulkCycle, setBulkCycle] = useState('');
+  const [bulkMilestone, setBulkMilestone] = useState('');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const pushToast = useUiStore((state) => state.pushToast);
@@ -116,6 +118,8 @@ export function ProjectPage() {
         ...(bulkPriority ? { priority: bulkPriority } : {}),
         ...(bulkAssignee === 'none' ? { assigneeId: null } : bulkAssignee ? { assigneeId: bulkAssignee } : {}),
         ...(bulkDue === 'none' ? { dueDate: null } : bulkDue ? { dueDate: bulkDue } : {}),
+        ...(bulkCycle === 'none' ? { cycleId: null } : bulkCycle ? { cycleId: bulkCycle } : {}),
+        ...(bulkMilestone === 'none' ? { milestoneId: null } : bulkMilestone ? { milestoneId: bulkMilestone } : {}),
       }),
     onSuccess: async (updated) => {
       setSelected([]);
@@ -123,12 +127,17 @@ export function ProjectPage() {
       setBulkPriority('');
       setBulkAssignee('');
       setBulkDue('');
+      setBulkCycle('');
+      setBulkMilestone('');
       pushToast(updated.length === 1 ? 'Updated 1 issue' : `Updated ${updated.length} issues`);
       await queryClient.invalidateQueries({ queryKey: ['issues', projectId] });
       await queryClient.invalidateQueries({ queryKey: ['analytics'] });
       await queryClient.invalidateQueries({ queryKey: ['my-work'] });
       await queryClient.invalidateQueries({ queryKey: ['unassigned'] });
       await queryClient.invalidateQueries({ queryKey: ['due'] });
+      await queryClient.invalidateQueries({ queryKey: ['cycles', projectId] });
+      await queryClient.invalidateQueries({ queryKey: ['milestones', projectId] });
+      await queryClient.invalidateQueries({ queryKey: ['roadmap'] });
     },
     onError: (error) => pushToast(errorMessage(error)),
   });
@@ -575,7 +584,30 @@ export function ProjectPage() {
           >
             No due date
           </button>
-          <button className="btn-primary" type="button" disabled={(!bulkStatus && !bulkPriority && !bulkAssignee && !bulkDue) || bulk.isPending} onClick={() => bulk.mutate()}>
+          <select className="field w-auto" aria-label="Set cycle" value={bulkCycle} onChange={(event) => setBulkCycle(event.target.value)}>
+            <option value="">Cycle</option>
+            <option value="none">No cycle</option>
+            {(cycles.data ?? []).map((cycle) => (
+              <option key={cycle.id} value={cycle.id}>
+                {cycle.name}
+              </option>
+            ))}
+          </select>
+          <select className="field w-auto" aria-label="Set milestone" value={bulkMilestone} onChange={(event) => setBulkMilestone(event.target.value)}>
+            <option value="">Milestone</option>
+            <option value="none">No milestone</option>
+            {(milestones.data ?? []).map((milestone) => (
+              <option key={milestone.id} value={milestone.id}>
+                {milestone.name}
+              </option>
+            ))}
+          </select>
+          <button
+            className="btn-primary"
+            type="button"
+            disabled={(!bulkStatus && !bulkPriority && !bulkAssignee && !bulkDue && !bulkCycle && !bulkMilestone) || bulk.isPending}
+            onClick={() => bulk.mutate()}
+          >
             {bulk.isPending ? 'Updating…' : 'Update'}
           </button>
           <button className="btn-ghost" type="button" onClick={() => setSelected([])}>
