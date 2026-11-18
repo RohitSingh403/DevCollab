@@ -202,6 +202,7 @@ export const listIssueSchema = z.object({
   q: z.string().trim().max(80).optional(),
   overdue: z.enum(['true', 'false']).optional(),
   quiet: z.enum(['true', 'false']).optional(),
+  dueSoon: z.enum(['true', 'false']).optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   sort: z.enum(['updated', 'created', 'due', 'priority']).optional().default('updated'),
@@ -259,6 +260,8 @@ export const quietQuerySchema = z.object({
   days: z.coerce.number().int().min(1).max(30).default(7),
 });
 
+export const dueQuerySchema = quietQuerySchema;
+
 export const commentSchema = z
   .object({
     body: z.string().trim().min(1).max(2000),
@@ -284,6 +287,7 @@ export const viewFiltersSchema = z
     assignee: z.union([z.literal(''), z.literal('me'), z.literal('none'), objectId]).optional().default(''),
     overdue: z.boolean().optional().default(false),
     quiet: z.boolean().optional().default(false),
+    dueSoon: z.boolean().optional().default(false),
     q: z.string().trim().max(80).optional().default(''),
     layout: z.enum(['board', 'list']).optional().default('board'),
     label: z.union([z.literal(''), objectId]).optional().default(''),

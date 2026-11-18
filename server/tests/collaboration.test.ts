@@ -1915,4 +1915,64 @@ describe('workspaces, issues, and authorization', () => {
     expect(saved.status).toBe(201);
     expect(saved.body.view.filters.quiet).toBe(true);
   });
+
+  it('lists open issues that are overdue or due within the week', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const outsider = await registerUser(authAgent(), 'Jonah Patel');
+    const workspace = await createWorkspace(owner.agent, 'Northwind');
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'API Platform', key: 'API' });
+    const projectId = project.body.project.id;
+    const today = new Date();
+    const day = (offset: number) => {
+      const date = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + offset));
+      return date.toISOString().slice(0, 10);
+    };
+    await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Enforce roles', dueDate: day(-1), priority: 'urgent' });
+    await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Show notifications', dueDate: day(0) });
+    await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Clear the cookie', dueDate: day(1) });
+    await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Drag columns', dueDate: day(2) });
+    await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Plan the quarter', dueDate: day(20) });
+    await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Ship the notes', status: 'done', dueDate: day(-2) });
+    await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Write the empty states' });
+    const buried = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'Old', key: 'OLD' });
+    await owner.agent.post(`/api/projects/${buried.body.project.id}/issues`).send({ title: 'Leave it', dueDate: day(-1) });
+    await owner.agent.patch(`/api/projects/${buried.body.project.id}`).send({ archived: true });
+
+    const hidden = await outsider.agent.get(`/api/workspaces/${workspace.id}/due`);
+    expect(hidden.status).toBe(404);
+
+    const soon = await owner.agent.get(`/api/workspaces/${workspace.id}/due?days=1`);
+    expect(soon.status).toBe(200);
+    expect(soon.body.days).toBe(1);
+    expect(soon.body.issues.map((item: { title: string }) => item.title)).toEqual(['Enforce roles', 'Show notifications', 'Clear the cookie']);
+    expect(soon.body.issues[0].overdue).toBe(true);
+    expect(soon.body.total).toBe(3);
+
+    const week = await owner.agent.get(`/api/workspaces/${workspace.id}/due`);
+    expect(week.body.days).toBe(7);
+    expect(week.body.issues.map((item: { title: string }) => item.title)).toEqual([
+      'Enforce roles',
+      'Show notifications',
+      'Clear the cookie',
+      'Drag columns',
+    ]);
+    expect(week.body.total).toBe(4);
+
+    const wider = await owner.agent.get(`/api/workspaces/${workspace.id}/due?days=30`);
+    expect(wider.body.total).toBe(5);
+    expect(wider.body.issues.at(-1).title).toBe('Plan the quarter');
+
+    const board = await owner.agent.get(`/api/projects/${projectId}/issues?dueSoon=true`);
+    expect(board.body.issues.map((item: { title: string }) => item.title).sort()).toEqual(
+      ['Clear the cookie', 'Drag columns', 'Enforce roles', 'Show notifications'].sort(),
+    );
+
+    const saved = await owner.agent.post(`/api/projects/${projectId}/views`).send({
+      name: 'Due soon',
+      filters: { dueSoon: true },
+    });
+    expect(saved.status).toBe(201);
+    expect(saved.body.view.filters.dueSoon).toBe(true);
+    expect(dayKey(today)).toBe(day(0));
+  });
 });

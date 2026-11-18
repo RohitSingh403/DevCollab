@@ -72,6 +72,7 @@ export interface ViewFilters {
   assignee: string;
   overdue: boolean;
   quiet: boolean;
+  dueSoon: boolean;
   q: string;
   layout: 'board' | 'list';
   label: string;
@@ -212,6 +213,12 @@ export interface UnassignedWork {
 }
 
 export interface QuietWork {
+  total: number;
+  days: number;
+  issues: Issue[];
+}
+
+export interface DueWork {
   total: number;
   days: number;
   issues: Issue[];
