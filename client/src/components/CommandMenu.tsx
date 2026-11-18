@@ -28,6 +28,7 @@ export function CommandMenu({ open, workspaceId, onClose }: { open: boolean; wor
   const places: CommandItem[] = [
     { id: 'overview', group: 'Go to', label: 'Overview', hint: 'Workspace', to: `/w/${workspaceId}` },
     { id: 'my-work', group: 'Go to', label: 'My work', hint: 'Assigned to you', to: `/w/${workspaceId}/my-work` },
+    { id: 'workload', group: 'Go to', label: 'Workload', hint: 'Open work by person', to: `/w/${workspaceId}/workload` },
     { id: 'projects', group: 'Go to', label: 'Projects', hint: 'All projects', to: `/w/${workspaceId}/projects` },
     { id: 'roadmap', group: 'Go to', label: 'Roadmap', hint: 'Milestones by date', to: `/w/${workspaceId}/roadmap` },
     { id: 'members', group: 'Go to', label: 'Members', hint: 'People and roles', to: `/w/${workspaceId}/members` },

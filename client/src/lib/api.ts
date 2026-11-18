@@ -14,6 +14,7 @@ import type {
   QuietWork,
   DueWork,
   BlockedWork,
+  Workload,
   UnassignedWork,
   IssueStatus,
   Reaction,
@@ -99,6 +100,7 @@ export const api = {
   quiet: (id: string) => request<QuietWork>(`/api/workspaces/${id}/quiet`),
   due: (id: string) => request<DueWork>(`/api/workspaces/${id}/due`),
   blocked: (id: string) => request<BlockedWork>(`/api/workspaces/${id}/blocked`),
+  workload: (id: string) => request<Workload>(`/api/workspaces/${id}/workload`),
   createWorkspace: (input: { name: string; description?: string }) =>
     request<{ workspace: Workspace }>('/api/workspaces', { method: 'POST', body: JSON.stringify(input) }).then(
       (data) => data.workspace,
