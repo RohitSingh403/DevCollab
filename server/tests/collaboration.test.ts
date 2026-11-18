@@ -1655,6 +1655,49 @@ describe('workspaces, issues, and authorization', () => {
     expect(cleared.body.issues.every((issue: { assignees: unknown[] }) => issue.assignees.length === 0)).toBe(true);
   });
 
+  it('sets or clears the due date on several issues', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const outsider = await registerUser(authAgent(), 'Jonah Patel');
+    const workspace = await createWorkspace(owner.agent, 'Northwind');
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'API Platform', key: 'API' });
+    const projectId = project.body.project.id;
+    const first = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Write the empty states' });
+    const second = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Store the signing key' });
+    const today = new Date();
+    const due = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + 2)).toISOString().slice(0, 10);
+
+    const hidden = await outsider.agent.post('/api/issues/bulk').send({ issueIds: [first.body.issue.id], dueDate: due });
+    expect(hidden.status).toBe(404);
+
+    const dated = await owner.agent.post('/api/issues/bulk').send({
+      issueIds: [first.body.issue.id, second.body.issue.id],
+      dueDate: due,
+    });
+    expect(dated.status).toBe(200);
+    expect(dated.body.issues.map((issue: { dueDate: string }) => issue.dueDate.slice(0, 10))).toEqual([due, due]);
+
+    const again = await owner.agent.post('/api/issues/bulk').send({
+      issueIds: [first.body.issue.id, second.body.issue.id],
+      dueDate: due,
+    });
+    expect(again.status).toBe(200);
+    const activity = await owner.agent.get(`/api/projects/${projectId}/activity`);
+    const dueNotes = activity.body.activities.filter((item: { message: string }) => item.message.includes('due date'));
+    expect(dueNotes).toHaveLength(2);
+
+    const soon = await owner.agent.get(`/api/workspaces/${workspace.id}/due`);
+    expect(soon.body.issues.map((issue: { title: string }) => issue.title).sort()).toEqual(['Store the signing key', 'Write the empty states']);
+
+    const cleared = await owner.agent.post('/api/issues/bulk').send({
+      issueIds: [first.body.issue.id, second.body.issue.id],
+      dueDate: null,
+    });
+    expect(cleared.status).toBe(200);
+    expect(cleared.body.issues.every((issue: { dueDate: string | null }) => issue.dueDate === null)).toBe(true);
+    const after = await owner.agent.get(`/api/workspaces/${workspace.id}/due`);
+    expect(after.body.total).toBe(0);
+  });
+
   it('renames the active cycle and keeps its issues', async () => {
     const owner = await registerUser(authAgent(), 'Maya Chen');
     const outsider = await registerUser(authAgent(), 'Jonah Patel');
