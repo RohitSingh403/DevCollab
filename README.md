@@ -67,7 +67,7 @@ Accounts and access:
 
 Work:
 
-- Projects with short keys (`API-12`) and per-project issue numbers. An owner or admin can rename a project, rewrite its description, or choose a color. The key stays the same, so existing issue numbers do not change. The color shows on the project list, the overview, and favorites
+- Projects with short keys (`API-12`) and per-project issue numbers. An owner or admin can rename a project, rewrite its description, choose a color, or name a member as the lead. The key stays the same, so existing issue numbers do not change. The color and the lead show on the project list, the project, and the overview. The color also shows on favorites
 - Archive a finished project. It leaves My work and the workspace totals, and comes back when an owner or admin restores it
 - Issues with status, priority, labels, assignees, due dates, comments, and history
 - Rename or recolor a label. Issues and templates keep it, and the board shows the new name and color
@@ -259,7 +259,7 @@ Authenticated routes expect the session cookie. Collection responses are paginat
 | GET | `/api/workspaces/:id/due` | Open issues in active projects that are overdue or due within seven days. `days` can be 1–30 |
 | GET | `/api/workspaces/:id/blocked` | Open issues in active projects that are still blocked by an open issue |
 | GET | `/api/workspaces/:id/quiet` | Open issues in active projects with no update for seven days. `days` can be 1–30 |
-| GET, PATCH, DELETE | `/api/projects/:id` | Read, update, or delete a project. An update can change the name, the description, the color, or whether it is archived. The key stays the same |
+| GET, PATCH, DELETE | `/api/projects/:id` | Read, update, or delete a project. An update can change the name, the description, the color, the lead, or whether it is archived. The key stays the same. `leadId` null clears the lead |
 | GET, POST | `/api/projects/:id/issues` | Filtered, paginated issues. `assignee=me` means the signed-in user |
 | GET | `/api/projects/:id/issues/export` | CSV of that same view, up to 1,000 issues. The file is named with the project key |
 | GET | `/api/issues/:id` | One issue, including blockers and whether you follow it |
@@ -307,7 +307,7 @@ Socket.IO authenticates with the same cookie. Clients emit `workspace:join` with
 
 ## Tests
 
-Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, snoozing an issue, unassigned issues, blockers, watchers, checklists, due reminders, cycles, ending a cycle, editing the active cycle, a point budget on a cycle, active cycles, milestones, editing a milestone, renaming a project, recoloring a project, filtering workspace activity by project and by kind, quiet issues, issues coming due, blocked issues, issues with no estimate, workload by assignee, the workspace roadmap, estimates, moving an issue between projects, sub-issues, bulk status, priority, assignee, due date, cycle, and milestone edits, comment reactions, pinned comments, notifications, inbox preferences, exporting a project view, analytics, recently opened issues, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, issue keys, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
+Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, snoozing an issue, unassigned issues, blockers, watchers, checklists, due reminders, cycles, ending a cycle, editing the active cycle, a point budget on a cycle, active cycles, milestones, editing a milestone, renaming a project, recoloring a project, naming a project lead, filtering workspace activity by project and by kind, quiet issues, issues coming due, blocked issues, issues with no estimate, workload by assignee, the workspace roadmap, estimates, moving an issue between projects, sub-issues, bulk status, priority, assignee, due date, cycle, and milestone edits, comment reactions, pinned comments, notifications, inbox preferences, exporting a project view, analytics, recently opened issues, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, issue keys, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
 
 ```bash
 npm test
@@ -341,7 +341,7 @@ COOKIE_SAMESITE=none
 
 ## Data notes
 
-- Issue numbers increment on the project document, so concurrent creates do not reuse a number. Renaming a project changes the name only. The key and the issue numbers stay where they are. A project color is one of eight values. A new project takes a color from its key until someone chooses one. Choosing the color it already has does not add another history row.
+- Issue numbers increment on the project document, so concurrent creates do not reuse a number. Renaming a project changes the name only. The key and the issue numbers stay where they are. A project color is one of eight values. A new project takes a color from its key until someone chooses one. Choosing the color it already has does not add another history row. A project lead is a member of the workspace. Naming the person who is already the lead does not add another history row. Removing that member from the workspace clears the lead.
 - Workspace activity includes every project until a project id is sent. That id has to belong to the workspace. Membership changes stay on the full list because they are not tied to a project. `kind` keeps one group of changes: issues, comments, blockers, cycles, milestones, or members. A membership change stays off the issue and comment lists.
 
 - `completedAt` is set when an issue moves to Done and cleared if it is reopened. "Done this week" uses that field.

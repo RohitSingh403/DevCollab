@@ -364,6 +364,7 @@ export async function removeMember(
   await clearMemberSnoozes(workspaceId, targetUserId);
   await Issue.updateMany({ workspace: workspaceId, assignees: targetUserId }, { $pull: { assignees: targetUserId } });
   await Issue.updateMany({ workspace: workspaceId, watchers: targetUserId }, { $pull: { watchers: targetUserId } });
+  await Project.updateMany({ workspace: workspaceId, lead: targetUserId }, { $set: { lead: null } });
   await recordActivity(
     {
       workspaceId,

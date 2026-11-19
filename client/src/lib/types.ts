@@ -113,6 +113,7 @@ export interface Project {
   key: string;
   description: string;
   color: string;
+  lead: { id: string; name: string; avatarColor: string } | null;
   archived: boolean;
   archivedAt: string | null;
   issueCount: number;

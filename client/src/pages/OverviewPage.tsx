@@ -336,7 +336,15 @@ export function OverviewPage() {
                   </span>
                   <span className="mt-1 block truncate text-sm font-medium">{project.name}</span>
                 </span>
-                <span className="shrink-0 text-sm text-muted">{project.openIssueCount} open</span>
+                <span className="inline-flex shrink-0 items-center gap-2 text-sm text-muted">
+                  {project.lead ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Avatar name={project.lead.name} color={project.lead.avatarColor} size="sm" />
+                      {project.lead.name}
+                    </span>
+                  ) : null}
+                  <span>{project.openIssueCount} open</span>
+                </span>
               </Link>
             ))}
             {!(projects.data ?? []).some((project) => !project.archived) ? <EmptyState title="No active projects" body="Projects group issues by product area, with their own keys and boards. Archived projects stay on the projects page." action={<Link className="btn-primary" to={`/w/${workspaceId}/projects`}>View projects</Link>} /> : null}

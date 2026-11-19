@@ -157,7 +157,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(input),
     }).then((data) => data.project),
-  updateProject: (id: string, input: { name?: string; description?: string; archived?: boolean; color?: string }) =>
+  updateProject: (id: string, input: { name?: string; description?: string; archived?: boolean; color?: string; leadId?: string | null }) =>
     request<{ project: Project }>(`/api/projects/${id}`, { method: 'PATCH', body: JSON.stringify(input) }).then((data) => data.project),
   deleteProject: (id: string) => request<void>(`/api/projects/${id}`, { method: 'DELETE' }),
   templates: (projectId: string) =>

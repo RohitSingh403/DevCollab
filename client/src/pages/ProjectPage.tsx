@@ -156,7 +156,7 @@ export function ProjectPage() {
   }
 
   const editDetails = useMutation({
-    mutationFn: (input: { name: string; description: string; color: string }) => api.updateProject(projectId, input),
+    mutationFn: (input: { name: string; description: string; color: string; leadId: string | null }) => api.updateProject(projectId, input),
     onSuccess: async () => {
       setEditingProject(false);
       await queryClient.invalidateQueries({ queryKey: ['project', projectId] });
@@ -340,7 +340,21 @@ export function ProjectPage() {
           </span>
         }
         title={project.data?.name ?? 'Project'}
-        description={project.data?.description}
+        description={
+          project.data ? (
+            <span className="block">
+              {project.data.description ? <span className="block">{project.data.description}</span> : null}
+              {project.data.lead ? (
+                <span className="mt-2 inline-flex items-center gap-1.5 text-[13px] text-ink">
+                  <Avatar name={project.data.lead.name} color={project.data.lead.avatarColor} size="sm" />
+                  Lead {project.data.lead.name}
+                </span>
+              ) : (
+                <span className="mt-2 block text-[13px] text-faint">No lead</span>
+              )}
+            </span>
+          ) : null
+        }
         actions={
           <>
             <FavoriteButton workspaceId={workspaceId} kind="project" targetId={projectId} />
@@ -567,10 +581,12 @@ export function ProjectPage() {
         <EditProjectModal
           open={editingProject}
           pending={editDetails.isPending}
+          workspaceId={workspaceId}
           projectKey={project.data.key}
           name={project.data.name}
           description={project.data.description}
           color={project.data.color}
+          leadId={project.data.lead?.id ?? ''}
           onClose={() => setEditingProject(false)}
           onSave={(input) => editDetails.mutate(input)}
         />
@@ -853,31 +869,38 @@ function SaveViewModal({
 function EditProjectModal({
   open,
   pending,
+  workspaceId,
   projectKey,
   name,
   description,
   color,
+  leadId,
   onClose,
   onSave,
 }: {
   open: boolean;
   pending: boolean;
+  workspaceId: string;
   projectKey: string;
   name: string;
   description: string;
   color: string;
+  leadId: string;
   onClose: () => void;
-  onSave: (input: { name: string; description: string; color: string }) => void;
+  onSave: (input: { name: string; description: string; color: string; leadId: string | null }) => void;
 }) {
+  const members = useQuery({ queryKey: ['members', workspaceId], queryFn: () => api.members(workspaceId), enabled: open });
   const [nextName, setNextName] = useState(name);
   const [nextDescription, setNextDescription] = useState(description);
   const [nextColor, setNextColor] = useState(color);
+  const [nextLead, setNextLead] = useState(leadId);
   useEffect(() => {
     if (!open) return;
     setNextName(name);
     setNextDescription(description);
     setNextColor(color);
-  }, [open, name, description, color]);
+    setNextLead(leadId);
+  }, [open, name, description, color, leadId]);
   const ready = nextName.trim().length >= 2;
   return (
     <Modal open={open} title="Edit project" onClose={onClose}>
@@ -886,7 +909,7 @@ function EditProjectModal({
         onSubmit={(event) => {
           event.preventDefault();
           if (!ready) return;
-          onSave({ name: nextName.trim(), description: nextDescription.trim(), color: nextColor });
+          onSave({ name: nextName.trim(), description: nextDescription.trim(), color: nextColor, leadId: nextLead || null });
         }}
       >
         <label className="block text-sm">
@@ -896,6 +919,17 @@ function EditProjectModal({
         <label className="block text-sm">
           <span className="text-muted">Description</span>
           <textarea className="field mt-1 min-h-24" aria-label="Project description" value={nextDescription} maxLength={500} onChange={(event) => setNextDescription(event.target.value)} />
+        </label>
+        <label className="block text-sm">
+          <span className="text-muted">Lead</span>
+          <select className="field mt-1" aria-label="Project lead" value={nextLead} onChange={(event) => setNextLead(event.target.value)}>
+            <option value="">No lead</option>
+            {(members.data ?? []).map((member) => (
+              <option key={member.user.id} value={member.user.id}>
+                {member.user.name}
+              </option>
+            ))}
+          </select>
         </label>
         <div>
           <span className="text-sm text-muted">Color</span>
