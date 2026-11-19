@@ -10,6 +10,15 @@ import { dueLabel, timeAgo } from '../lib/format';
 import { PRIORITY_LABEL } from '../lib/types';
 import { useUiStore } from '../stores/uiStore';
 
+function formatCycleDay(value: string) {
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
 export function WorkspaceHome() {
   const workspaces = useQuery({ queryKey: ['workspaces'], queryFn: api.workspaces });
   const remembered = useUiStore((state) => state.workspaceId);
@@ -79,6 +88,7 @@ export function OverviewPage() {
   const workload = useQuery({ queryKey: ['workload', workspaceId], queryFn: () => api.workload(workspaceId) });
   const projects = useQuery({ queryKey: ['projects', workspaceId], queryFn: () => api.projects(workspaceId) });
   const roadmap = useQuery({ queryKey: ['roadmap', workspaceId], queryFn: () => api.roadmap(workspaceId) });
+  const activeCycles = useQuery({ queryKey: ['active-cycles', workspaceId], queryFn: () => api.activeCycles(workspaceId) });
   const unassigned = useQuery({ queryKey: ['unassigned', workspaceId], queryFn: () => api.unassigned(workspaceId) });
   const unestimated = useQuery({ queryKey: ['unestimated', workspaceId], queryFn: () => api.unestimated(workspaceId) });
   const due = useQuery({ queryKey: ['due', workspaceId], queryFn: () => api.due(workspaceId) });
@@ -168,6 +178,38 @@ export function OverviewPage() {
             <li className="px-4 py-6 text-sm text-muted">Milestones from active projects will show up here.</li>
           ) : null}
         </ul>
+      </section>
+      <section>
+        <h2 className="text-sm font-semibold">Cycles</h2>
+        <p className="mb-2 mt-1 text-[12px] text-muted">Active cycles on open projects. A cycle over its point budget is listed first.</p>
+        <ul className="panel divide-y divide-line">
+          {(activeCycles.data?.cycles ?? []).map((cycle) => (
+            <li key={cycle.id}>
+              <Link to={`/w/${workspaceId}/projects/${cycle.project.id}`} className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-brand-soft">
+                <span className="min-w-0">
+                  <span className="font-mono text-[11px] text-muted">{cycle.project.key}</span>
+                  <span className="mt-0.5 block truncate text-sm font-medium">
+                    {cycle.name}
+                    <span className="ml-2 font-normal text-muted">
+                      {formatCycleDay(cycle.startsAt)} – {formatCycleDay(cycle.endsAt)}
+                    </span>
+                  </span>
+                  <span className="mt-0.5 block text-[12px] text-faint">{cycle.project.name}</span>
+                </span>
+                <span className="shrink-0 text-right">
+                  <span className={`block text-[12px] ${cycle.overBudget ? 'font-medium text-danger' : 'text-muted'}`}>
+                    {typeof cycle.capacity === 'number' ? `${cycle.points} of ${cycle.capacity} point budget` : 'No budget'}
+                  </span>
+                  <span className="mt-0.5 block text-[12px] text-faint">{cycle.done} of {cycle.total} done</span>
+                </span>
+              </Link>
+            </li>
+          ))}
+          {activeCycles.data && activeCycles.data.total === 0 ? <li className="px-4 py-6 text-sm text-muted">No project has an active cycle.</li> : null}
+        </ul>
+        {activeCycles.data && activeCycles.data.total > activeCycles.data.cycles.length ? (
+          <p className="mt-2 text-[12px] text-muted">Showing {activeCycles.data.cycles.length} of {activeCycles.data.total}.</p>
+        ) : null}
       </section>
       <section>
         <h2 className="text-sm font-semibold">Coming due</h2>

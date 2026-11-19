@@ -1891,6 +1891,76 @@ describe('workspaces, issues, and authorization', () => {
     expect(closed.body.error.code).toBe('cycle_closed');
   });
 
+  it('lists active cycles and puts one over its budget first', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const outsider = await registerUser(authAgent(), 'Jonah Patel');
+    const workspace = await createWorkspace(owner.agent, 'Northwind');
+    const api = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'API Platform', key: 'API' });
+    const docs = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'Docs', key: 'DOCS' });
+    const web = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'Web Client', key: 'WEB' });
+    const day = (offset: number) => new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate() + offset)).toISOString().slice(0, 10);
+
+    const hidden = await outsider.agent.get(`/api/workspaces/${workspace.id}/cycles`);
+    expect(hidden.status).toBe(404);
+
+    const apiCycle = await owner.agent.post(`/api/projects/${api.body.project.id}/cycles`).send({
+      name: 'Cycle 12',
+      startsAt: day(-1),
+      endsAt: day(6),
+      capacity: 20,
+    });
+    const apiIssue = await owner.agent.post(`/api/projects/${api.body.project.id}/issues`).send({ title: 'Keep the session', estimate: 8 });
+    await owner.agent.patch(`/api/issues/${apiIssue.body.issue.id}`).send({ cycleId: apiCycle.body.cycle.id });
+
+    const docsCycle = await owner.agent.post(`/api/projects/${docs.body.project.id}/cycles`).send({
+      name: 'Cycle 2',
+      startsAt: day(0),
+      endsAt: day(1),
+    });
+    const docsIssue = await owner.agent.post(`/api/projects/${docs.body.project.id}/issues`).send({ title: 'Write the guide', estimate: 2 });
+    await owner.agent.patch(`/api/issues/${docsIssue.body.issue.id}`).send({ cycleId: docsCycle.body.cycle.id });
+
+    const webCycle = await owner.agent.post(`/api/projects/${web.body.project.id}/cycles`).send({
+      name: 'Cycle 4',
+      startsAt: day(0),
+      endsAt: day(13),
+      capacity: 5,
+    });
+    const webIssue = await owner.agent.post(`/api/projects/${web.body.project.id}/issues`).send({ title: 'Drag the cards', estimate: 8 });
+    await owner.agent.patch(`/api/issues/${webIssue.body.issue.id}`).send({ cycleId: webCycle.body.cycle.id });
+
+    const listed = await owner.agent.get(`/api/workspaces/${workspace.id}/cycles`);
+    expect(listed.status).toBe(200);
+    expect(listed.body.total).toBe(3);
+    expect(listed.body.cycles.map((cycle: { name: string; overBudget: boolean; project: { key: string }; points: number; capacity: number | null }) => ({
+      name: cycle.name,
+      key: cycle.project.key,
+      overBudget: cycle.overBudget,
+      points: cycle.points,
+      capacity: cycle.capacity,
+    }))).toEqual([
+      { name: 'Cycle 4', key: 'WEB', overBudget: true, points: 8, capacity: 5 },
+      { name: 'Cycle 2', key: 'DOCS', overBudget: false, points: 2, capacity: null },
+      { name: 'Cycle 12', key: 'API', overBudget: false, points: 8, capacity: 20 },
+    ]);
+
+    const archived = await owner.agent.patch(`/api/projects/${docs.body.project.id}`).send({ archived: true });
+    expect(archived.status).toBe(200);
+    const afterArchive = await owner.agent.get(`/api/workspaces/${workspace.id}/cycles`);
+    expect(afterArchive.body.cycles.map((cycle: { project: { key: string } }) => cycle.project.key)).toEqual(['WEB', 'API']);
+
+    const ended = await owner.agent.post(`/api/projects/${web.body.project.id}/cycles/end`);
+    expect(ended.status).toBe(200);
+    const afterEnd = await owner.agent.get(`/api/workspaces/${workspace.id}/cycles`);
+    expect(afterEnd.body.total).toBe(1);
+    expect(afterEnd.body.cycles[0]).toMatchObject({ name: 'Cycle 12', overBudget: false, project: { key: 'API' } });
+
+    const tightened = await owner.agent.patch(`/api/projects/${api.body.project.id}/cycles/${apiCycle.body.cycle.id}`).send({ capacity: 3 });
+    expect(tightened.status).toBe(200);
+    const over = await owner.agent.get(`/api/workspaces/${workspace.id}/cycles`);
+    expect(over.body.cycles[0]).toMatchObject({ name: 'Cycle 12', overBudget: true, points: 8, capacity: 3 });
+  });
+
   it('renames a milestone and moves its date without dropping issues', async () => {
     const owner = await registerUser(authAgent(), 'Maya Chen');
     const outsider = await registerUser(authAgent(), 'Jonah Patel');

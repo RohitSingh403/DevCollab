@@ -138,6 +138,7 @@ export function ProjectPage() {
       await queryClient.invalidateQueries({ queryKey: ['unassigned'] });
       await queryClient.invalidateQueries({ queryKey: ['due'] });
       await queryClient.invalidateQueries({ queryKey: ['cycles', projectId] });
+      await queryClient.invalidateQueries({ queryKey: ['active-cycles', workspaceId] });
       await queryClient.invalidateQueries({ queryKey: ['milestones', projectId] });
       await queryClient.invalidateQueries({ queryKey: ['roadmap'] });
     },
@@ -276,6 +277,7 @@ export function ProjectPage() {
 
   const refreshCycles = () => {
     void queryClient.invalidateQueries({ queryKey: ['cycles', projectId] });
+    void queryClient.invalidateQueries({ queryKey: ['active-cycles', workspaceId] });
     void queryClient.invalidateQueries({ queryKey: ['issues', projectId] });
     void queryClient.invalidateQueries({ queryKey: ['analytics', 'project', projectId] });
     void queryClient.invalidateQueries({ queryKey: ['my-work', workspaceId] });

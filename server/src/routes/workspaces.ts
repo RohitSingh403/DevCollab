@@ -25,6 +25,7 @@ import { listBlocked, listDue, listMyWork, listQuiet, listUnassigned, listUnesti
 import { addFavorite, listFavorites, removeFavorite } from '../services/favorites';
 import { listRecent, recordRecent } from '../services/recent';
 import { archivedProjectIds } from '../services/projects';
+import { listActiveCycles } from '../services/cycles';
 import { listRoadmap } from '../services/milestones';
 import {
   acceptInvite,
@@ -280,6 +281,14 @@ workspaceRouter.get(
   requireWorkspace(),
   asyncHandler(async (req, res) => {
     res.json(await listUnestimated(req.params.workspaceId));
+  }),
+);
+
+workspaceRouter.get(
+  '/:workspaceId/cycles',
+  requireWorkspace(),
+  asyncHandler(async (req, res) => {
+    res.json(await listActiveCycles(req.params.workspaceId));
   }),
 );
 

@@ -62,6 +62,7 @@ export function IssuePage() {
       void queryClient.invalidateQueries({ queryKey: ['milestones'] });
       void queryClient.invalidateQueries({ queryKey: ['projects'] });
       void queryClient.invalidateQueries({ queryKey: ['cycles'] });
+      void queryClient.invalidateQueries({ queryKey: ['active-cycles'] });
       void queryClient.invalidateQueries({ queryKey: ['my-work'] });
       void queryClient.invalidateQueries({ queryKey: ['activity'] });
       void queryClient.invalidateQueries({ queryKey: ['analytics'] });

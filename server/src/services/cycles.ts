@@ -5,6 +5,9 @@ import { Issue } from '../models/Issue';
 import { Project } from '../models/Project';
 import type { Realtime } from '../realtime';
 import { recordActivity } from './activity';
+import { archivedProjectIds } from './projects';
+
+const ACTIVE_CYCLE_LIMIT = 12;
 
 export async function listCycles(projectId: string) {
   const cycles = await Cycle.find({ project: projectId }).sort({ createdAt: -1 });
@@ -32,6 +35,62 @@ export async function listCycles(projectId: string) {
     byCycle.set(id, current);
   }
   return cycles.map((cycle) => serializeCycle(cycle, byCycle.get(String(cycle._id)) ?? { total: 0, done: 0, points: 0, pointsDone: 0 }));
+}
+
+export async function listActiveCycles(workspaceId: string) {
+  const archived = await archivedProjectIds(workspaceId);
+  const cycles = await Cycle.find({
+    workspace: workspaceId,
+    status: 'active',
+    ...(archived.length ? { project: { $nin: archived } } : {}),
+  });
+  if (!cycles.length) return { total: 0, cycles: [] };
+
+  const [projects, counts] = await Promise.all([
+    Project.find({ _id: { $in: cycles.map((cycle) => cycle.project) } }).select('key name'),
+    Issue.aggregate<{ _id: { cycle: unknown; status: string }; count: number; points: number }>([
+      { $match: { cycle: { $in: cycles.map((cycle) => cycle._id) } } },
+      {
+        $group: {
+          _id: { cycle: '$cycle', status: '$status' },
+          count: { $sum: 1 },
+          points: { $sum: { $ifNull: ['$estimate', 0] } },
+        },
+      },
+    ]),
+  ]);
+  const byProject = new Map(projects.map((project) => [String(project._id), project]));
+  const byCycle = new Map<string, { total: number; done: number; points: number; pointsDone: number }>();
+  for (const row of counts) {
+    const id = String(row._id.cycle);
+    const current = byCycle.get(id) ?? { total: 0, done: 0, points: 0, pointsDone: 0 };
+    current.total += row.count;
+    current.points += row.points;
+    if (row._id.status === 'done') {
+      current.done += row.count;
+      current.pointsDone += row.points;
+    }
+    byCycle.set(id, current);
+  }
+
+  const rows = cycles.flatMap((cycle) => {
+    const project = byProject.get(String(cycle.project));
+    if (!project) return [];
+    const dto = serializeCycle(cycle, byCycle.get(String(cycle._id)) ?? { total: 0, done: 0, points: 0, pointsDone: 0 });
+    return [
+      {
+        ...dto,
+        overBudget: dto.capacity !== null && dto.points > dto.capacity,
+        project: { id: String(project._id), key: project.key, name: project.name },
+      },
+    ];
+  });
+  rows.sort((left, right) => {
+    if (left.overBudget !== right.overBudget) return left.overBudget ? -1 : 1;
+    if (left.endsAt !== right.endsAt) return left.endsAt < right.endsAt ? -1 : 1;
+    return left.project.key.localeCompare(right.project.key);
+  });
+  return { total: rows.length, cycles: rows.slice(0, ACTIVE_CYCLE_LIMIT) };
 }
 
 export async function activeCycleProgress(projectId: string) {
