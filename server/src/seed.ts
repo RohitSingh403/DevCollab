@@ -196,6 +196,7 @@ export async function seedDatabase() {
     startsAt: isoDaysFromNow(-1).slice(0, 10),
     endsAt: isoDaysFromNow(6).slice(0, 10),
     carryOpen: false,
+    capacity: 20,
   });
   for (const issueId of [session.id, roles.id, comments.id]) {
     await updateIssue({ issueId, actor, cycleId: apiCycle.id });

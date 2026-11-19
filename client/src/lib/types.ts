@@ -333,6 +333,7 @@ export interface Cycle {
   status: 'active' | 'completed';
   startsAt: string;
   endsAt: string;
+  capacity: number | null;
   total: number;
   done: number;
   points: number;

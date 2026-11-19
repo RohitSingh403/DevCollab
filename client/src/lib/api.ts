@@ -184,13 +184,13 @@ export const api = {
     ),
   deleteView: (projectId: string, viewId: string) => request<void>(`/api/projects/${projectId}/views/${viewId}`, { method: 'DELETE' }),
   cycles: (projectId: string) => request<{ cycles: Cycle[] }>(`/api/projects/${projectId}/cycles`).then((data) => data.cycles),
-  startCycle: (projectId: string, input: { name: string; startsAt: string; endsAt: string; carryOpen?: boolean }) =>
+  startCycle: (projectId: string, input: { name: string; startsAt: string; endsAt: string; carryOpen?: boolean; capacity?: number | null }) =>
     request<{ cycle: Cycle }>(`/api/projects/${projectId}/cycles`, { method: 'POST', body: JSON.stringify(input) }).then(
       (data) => data.cycle,
     ),
   endCycle: (projectId: string) =>
     request<{ cycle: Cycle }>(`/api/projects/${projectId}/cycles/end`, { method: 'POST' }).then((data) => data.cycle),
-  updateCycle: (projectId: string, cycleId: string, input: { name?: string; startsAt?: string; endsAt?: string }) =>
+  updateCycle: (projectId: string, cycleId: string, input: { name?: string; startsAt?: string; endsAt?: string; capacity?: number | null }) =>
     request<{ cycle: Cycle }>(`/api/projects/${projectId}/cycles/${cycleId}`, { method: 'PATCH', body: JSON.stringify(input) }).then(
       (data) => data.cycle,
     ),

@@ -58,6 +58,7 @@ export async function startCycle(
     startsAt: string;
     endsAt: string;
     carryOpen?: boolean;
+    capacity?: number | null;
   },
   rt?: Realtime,
 ) {
@@ -83,6 +84,7 @@ export async function startCycle(
     startsAt,
     endsAt,
     status: 'active',
+    capacity: input.capacity ?? null,
     createdBy: input.actor.id,
   });
 
@@ -134,7 +136,7 @@ export async function updateCycle(
   projectId: string,
   cycleId: string,
   actor: { id: string; name: string },
-  input: { name?: string; startsAt?: string; endsAt?: string },
+  input: { name?: string; startsAt?: string; endsAt?: string; capacity?: number | null },
   rt?: Realtime,
 ) {
   const project = await Project.findById(projectId);
@@ -154,11 +156,17 @@ export async function updateCycle(
   }
 
   const name = input.name ?? cycle.name;
-  const unchanged = name === cycle.name && dayKey(startsAt) === dayKey(cycle.startsAt) && dayKey(endsAt) === dayKey(cycle.endsAt);
+  const capacity = input.capacity !== undefined ? input.capacity : (cycle.capacity ?? null);
+  const unchanged =
+    name === cycle.name &&
+    dayKey(startsAt) === dayKey(cycle.startsAt) &&
+    dayKey(endsAt) === dayKey(cycle.endsAt) &&
+    capacity === (cycle.capacity ?? null);
   if (!unchanged) {
     cycle.name = name;
     cycle.startsAt = startsAt;
     cycle.endsAt = endsAt;
+    cycle.capacity = capacity;
     await cycle.save();
     await recordActivity(
       {
@@ -183,7 +191,7 @@ export async function closeFinishedCycles(now = new Date()) {
 }
 
 function serializeCycle(
-  cycle: { _id: unknown; name: string; status: 'active' | 'completed'; startsAt: Date; endsAt: Date },
+  cycle: { _id: unknown; name: string; status: 'active' | 'completed'; startsAt: Date; endsAt: Date; capacity?: number | null },
   counts: { total: number; done: number; points: number; pointsDone: number },
 ) {
   return {
@@ -192,6 +200,7 @@ function serializeCycle(
     status: cycle.status,
     startsAt: dayKey(cycle.startsAt),
     endsAt: dayKey(cycle.endsAt),
+    capacity: typeof cycle.capacity === 'number' ? cycle.capacity : null,
     total: counts.total,
     done: counts.done,
     points: counts.points,
