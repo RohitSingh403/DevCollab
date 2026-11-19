@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { ProjectColorPicker, ProjectSwatch } from '../components/ProjectColor';
 import { EmptyState, Modal, PageHeader, useDocumentTitle } from '../components/ui';
+import { colorForKey } from '../lib/color';
 import { api, errorMessage } from '../lib/api';
 import { suggestKey } from '../lib/format';
 
@@ -34,7 +36,7 @@ export function ProjectsPage() {
   );
 }
 
-function ProjectGroups({ workspaceId, projects }: { workspaceId: string; projects: { id: string; key: string; name: string; description: string; issueCount: number; openIssueCount: number; archived: boolean }[] }) {
+function ProjectGroups({ workspaceId, projects }: { workspaceId: string; projects: { id: string; key: string; name: string; description: string; color: string; issueCount: number; openIssueCount: number; archived: boolean }[] }) {
   const active = projects.filter((project) => !project.archived);
   const archived = projects.filter((project) => project.archived);
   return (
@@ -67,13 +69,16 @@ function ProjectCard({
   project,
 }: {
   workspaceId: string;
-  project: { id: string; key: string; name: string; description: string; issueCount: number; openIssueCount: number; archived: boolean };
+  project: { id: string; key: string; name: string; description: string; color: string; issueCount: number; openIssueCount: number; archived: boolean };
 }) {
   const progress = project.issueCount ? Math.round(((project.issueCount - project.openIssueCount) / project.issueCount) * 100) : 0;
   return (
     <Link to={`/w/${workspaceId}/projects/${project.id}`} className="panel block p-5 transition hover:-translate-y-px hover:shadow-pop">
       <div className="flex items-center justify-between">
-        <span className="rounded-md bg-brand-soft px-1.5 py-0.5 font-mono text-[11px] font-medium text-brand">{project.key}</span>
+        <span className="inline-flex items-center gap-1.5">
+          <ProjectSwatch color={project.color} />
+          <span className="rounded-md bg-brand-soft px-1.5 py-0.5 font-mono text-[11px] font-medium text-brand">{project.key}</span>
+        </span>
         <span className="text-[12px] text-muted">{project.archived ? 'Archived' : `${project.openIssueCount} open`}</span>
       </div>
       <h2 className="mt-3 text-[16px] font-semibold tracking-[-0.02em]">{project.name}</h2>
@@ -94,15 +99,19 @@ function CreateProjectModal({ workspaceId, open, onClose }: { workspaceId: strin
   const [key, setKey] = useState('');
   const [touchedKey, setTouchedKey] = useState(false);
   const [description, setDescription] = useState('');
+  const [color, setColor] = useState(colorForKey('PR'));
+  const [colorTouched, setColorTouched] = useState(false);
   const [error, setError] = useState('');
   const create = useMutation({
-    mutationFn: () => api.createProject(workspaceId, { name, key, description }),
+    mutationFn: () => api.createProject(workspaceId, { name, key, description, color }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['projects', workspaceId] });
       setName('');
       setKey('');
       setDescription('');
       setTouchedKey(false);
+      setColor(colorForKey('PR'));
+      setColorTouched(false);
       onClose();
     },
     onError: (reason) => setError(errorMessage(reason)),
@@ -124,7 +133,11 @@ function CreateProjectModal({ workspaceId, open, onClose }: { workspaceId: strin
             value={name}
             onChange={(event) => {
               setName(event.target.value);
-              if (!touchedKey) setKey(suggestKey(event.target.value));
+              if (!touchedKey) {
+                const nextKey = suggestKey(event.target.value);
+                setKey(nextKey);
+                if (!colorTouched) setColor(colorForKey(nextKey));
+              }
             }}
             required
           />
@@ -136,12 +149,26 @@ function CreateProjectModal({ workspaceId, open, onClose }: { workspaceId: strin
             value={key}
             onChange={(event) => {
               setTouchedKey(true);
-              setKey(event.target.value.toUpperCase());
+              const nextKey = event.target.value.toUpperCase();
+              setKey(nextKey);
+              if (!colorTouched) setColor(colorForKey(nextKey));
             }}
             required
             pattern="[A-Za-z][A-Za-z0-9]{1,5}"
           />
         </label>
+        <div>
+          <span className="label">Color</span>
+          <div className="mt-2">
+            <ProjectColorPicker
+              value={color}
+              onChange={(next) => {
+                setColorTouched(true);
+                setColor(next);
+              }}
+            />
+          </div>
+        </div>
         <label className="block">
           <span className="label">Description</span>
           <textarea className="field min-h-20" value={description} onChange={(event) => setDescription(event.target.value)} />

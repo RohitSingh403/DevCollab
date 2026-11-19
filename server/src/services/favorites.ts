@@ -1,3 +1,4 @@
+import { colorForKey } from '../constants';
 import { ApiError, isDuplicateKey } from '../errors';
 import { Favorite } from '../models/Favorite';
 import { Issue } from '../models/Issue';
@@ -7,10 +8,10 @@ const FAVORITE_LIMIT = 12;
 
 export async function listFavorites(workspaceId: string, userId: string) {
   const rows = await Favorite.find({ workspace: workspaceId, user: userId }).sort({ createdAt: 1 });
-  const projects = await Project.find({ _id: { $in: rows.filter((row) => row.kind === 'project').map((row) => row.target) } }).select('name key');
+  const projects = await Project.find({ _id: { $in: rows.filter((row) => row.kind === 'project').map((row) => row.target) } }).select('name key color');
   const issues = await Issue.find({ _id: { $in: rows.filter((row) => row.kind === 'issue').map((row) => row.target) } })
     .select('title number project')
-    .populate('project', 'key');
+    .populate('project', 'key color');
   const projectById = new Map(projects.map((project) => [String(project._id), project]));
   const issueById = new Map(issues.map((issue) => [String(issue._id), issue]));
   const favorites = [];
@@ -22,7 +23,14 @@ export async function listFavorites(workspaceId: string, userId: string) {
         await row.deleteOne();
         continue;
       }
-      favorites.push({ id: String(row._id), kind: 'project' as const, targetId: id, label: project.name, hint: project.key });
+      favorites.push({
+        id: String(row._id),
+        kind: 'project' as const,
+        targetId: id,
+        label: project.name,
+        hint: project.key,
+        color: project.color || colorForKey(project.key),
+      });
       continue;
     }
     const issue = issueById.get(id);
@@ -30,13 +38,14 @@ export async function listFavorites(workspaceId: string, userId: string) {
       await row.deleteOne();
       continue;
     }
-    const project = issue.project as { key?: string };
+    const project = issue.project as { key?: string; color?: string };
     favorites.push({
       id: String(row._id),
       kind: 'issue' as const,
       targetId: id,
       label: issue.title,
       hint: `${project.key ?? 'ISSUE'}-${issue.number}`,
+      color: project.color || colorForKey(project.key ?? ''),
     });
   }
   return favorites;

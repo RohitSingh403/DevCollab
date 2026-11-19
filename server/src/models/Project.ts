@@ -6,6 +6,7 @@ const projectSchema = new Schema(
     name: { type: String, required: true, trim: true, maxlength: 80 },
     key: { type: String, required: true, uppercase: true, trim: true },
     description: { type: String, default: '', maxlength: 500 },
+    color: { type: String, default: '' },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     nextIssueNumber: { type: Number, default: 0 },
     archivedAt: { type: Date, default: null },

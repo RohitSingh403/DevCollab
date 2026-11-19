@@ -56,6 +56,7 @@ function Favorites({ workspaceId, onNavigate }: { workspaceId?: string; onNaviga
             `flex items-center gap-2 rounded-lg px-2.5 py-[7px] text-[13px] ${isActive ? 'bg-white/10 font-medium text-white' : 'text-stone-400 hover:bg-white/5 hover:text-white'}`
           }
         >
+          {item.color ? <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: item.color }} aria-hidden="true" /> : null}
           <span className="w-10 shrink-0 font-mono text-[10px] text-stone-500">{item.hint}</span>
           <span className="truncate">{item.label}</span>
         </NavLink>

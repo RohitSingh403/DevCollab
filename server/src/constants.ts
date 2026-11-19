@@ -16,6 +16,14 @@ export type Priority = (typeof PRIORITIES)[number];
 export const REACTIONS = ['+1', 'eyes', 'tada', 'check', 'heart'] as const;
 export type Reaction = (typeof REACTIONS)[number];
 
+export const PROJECT_COLORS = ['#b42318', '#b54708', '#175cd3', '#0e7c66', '#6941c6', '#363f72', '#c4320a', '#067647'] as const;
+
+export function colorForKey(key: string) {
+  let sum = 0;
+  for (const char of key.toUpperCase()) sum += char.charCodeAt(0);
+  return PROJECT_COLORS[sum % PROJECT_COLORS.length];
+}
+
 export const ACTIVITY_KINDS = ['issues', 'comments', 'blockers', 'cycles', 'milestones', 'members'] as const;
 export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
 

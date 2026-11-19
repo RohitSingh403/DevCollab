@@ -152,12 +152,12 @@ export const api = {
   projects: (workspaceId: string) =>
     request<{ projects: Project[] }>(`/api/workspaces/${workspaceId}/projects`).then((data) => data.projects),
   project: (id: string) => request<{ project: Project }>(`/api/projects/${id}`).then((data) => data.project),
-  createProject: (workspaceId: string, input: { name: string; key: string; description?: string }) =>
+  createProject: (workspaceId: string, input: { name: string; key: string; description?: string; color?: string }) =>
     request<{ project: Project }>(`/api/workspaces/${workspaceId}/projects`, {
       method: 'POST',
       body: JSON.stringify(input),
     }).then((data) => data.project),
-  updateProject: (id: string, input: { name?: string; description?: string; archived?: boolean }) =>
+  updateProject: (id: string, input: { name?: string; description?: string; archived?: boolean; color?: string }) =>
     request<{ project: Project }>(`/api/projects/${id}`, { method: 'PATCH', body: JSON.stringify(input) }).then((data) => data.project),
   deleteProject: (id: string) => request<void>(`/api/projects/${id}`, { method: 'DELETE' }),
   templates: (projectId: string) =>
