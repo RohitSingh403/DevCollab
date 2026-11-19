@@ -73,6 +73,7 @@ Work:
 - Rename or recolor a label. Issues and templates keep it, and the board shows the new name and color
 - A board you can drag between columns, plus a list view
 - Filters, text search, and pagination. The board can also filter by label, by who is assigned, or by issues with nobody assigned, and sort by updated, newest, due date, or priority. A saved view keeps that choice
+- Export the current project view as CSV. The file uses the filters on the board, up to 1,000 issues, in the same order as the list
 - Bulk edit on the list. Select issues on the page and set their status, priority, assignee, due date, cycle, or milestone together. Choosing no assignee clears the people on those issues. Choosing no due date clears the date. Choosing no cycle or no milestone removes that link. Each issue keeps its own history, and an archived project stays closed
 - Saved project views, private or shared. A view assigned to “me” follows whoever opens it
 - My work, the open issues assigned to you: overdue, due this week, due later, and no due date. Snooze an issue until a later day to hide it from your list. The snooze is private, and the issue comes back on that day
@@ -260,6 +261,7 @@ Authenticated routes expect the session cookie. Collection responses are paginat
 | GET | `/api/workspaces/:id/quiet` | Open issues in active projects with no update for seven days. `days` can be 1–30 |
 | GET, PATCH, DELETE | `/api/projects/:id` | Read, update, or delete a project. An update can change the name, the description, or whether it is archived. The key stays the same |
 | GET, POST | `/api/projects/:id/issues` | Filtered, paginated issues. `assignee=me` means the signed-in user |
+| GET | `/api/projects/:id/issues/export` | CSV of that same view, up to 1,000 issues. The file is named with the project key |
 | GET | `/api/issues/:id` | One issue, including blockers and whether you follow it |
 | PATCH, DELETE | `/api/issues/:id` | Update or delete an issue |
 | POST, DELETE | `/api/issues/:id/snooze` | Hide an open issue from your My work until a future date, or bring it back |
@@ -305,7 +307,7 @@ Socket.IO authenticates with the same cookie. Clients emit `workspace:join` with
 
 ## Tests
 
-Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, snoozing an issue, unassigned issues, blockers, watchers, checklists, due reminders, cycles, ending a cycle, editing the active cycle, a point budget on a cycle, active cycles, milestones, editing a milestone, renaming a project, filtering workspace activity by project and by kind, quiet issues, issues coming due, blocked issues, issues with no estimate, workload by assignee, the workspace roadmap, estimates, moving an issue between projects, sub-issues, bulk status, priority, assignee, due date, cycle, and milestone edits, comment reactions, pinned comments, notifications, inbox preferences, analytics, recently opened issues, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, issue keys, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
+Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, snoozing an issue, unassigned issues, blockers, watchers, checklists, due reminders, cycles, ending a cycle, editing the active cycle, a point budget on a cycle, active cycles, milestones, editing a milestone, renaming a project, filtering workspace activity by project and by kind, quiet issues, issues coming due, blocked issues, issues with no estimate, workload by assignee, the workspace roadmap, estimates, moving an issue between projects, sub-issues, bulk status, priority, assignee, due date, cycle, and milestone edits, comment reactions, pinned comments, notifications, inbox preferences, exporting a project view, analytics, recently opened issues, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, issue keys, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
 
 ```bash
 npm test
@@ -367,6 +369,7 @@ COOKIE_SAMESITE=none
 - Comment markdown is not stored as HTML. The client parses a fixed subset and renders React elements.
 - Analytics use aggregation pipelines. Day buckets are UTC.
 - List endpoints are paginated. The board requests up to 100 issues and says when the filter still has more.
+- A project export uses the same filters as the issue list and keeps the same order. It includes at most 1,000 issues. A cell is quoted when it contains a comma, a quote, or a line break. A value that starts with `=`, `+`, `-`, or `@` is prefixed so a spreadsheet keeps it as text. An archived project can still be exported.
 
 ## License
 

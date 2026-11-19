@@ -17,7 +17,7 @@ import { Membership } from '../models/Membership';
 import { Project } from '../models/Project';
 import { archivedProjectIds } from './projects';
 import type { Realtime } from '../realtime';
-import { serializeComment, serializeIssue, serializeReactions, serializeUser } from '../serializers';
+import { serializeComment, serializeIssue, serializeReactions, serializeUser, type IssueDto } from '../serializers';
 import { escapeRegex, pageMeta } from '../utils';
 import { recordActivity } from './activity';
 import { clearTargetFavorites } from './favorites';
@@ -25,6 +25,7 @@ import { clearIssueRecent } from './recent';
 import { activeSnoozes, clearIssueSnoozes, snoozedUntil } from './snooze';
 import { clearBlockerRefs, relationsFor, syncDependents, toLink } from './blockers';
 import { clearRelatedRefs, relatedFor } from './related';
+import { issuesToCsv } from './csv';
 import { activeCycleId, assertProjectCycle } from './cycles';
 import { assertProjectMilestone } from './milestones';
 import { assertWorkspaceMembers, membershipFor } from './membership';
@@ -132,6 +133,21 @@ export async function listIssues(input: {
   ]);
 
   return { issues: await withSubissueCounts(issues, serializeIssue), ...pageMeta(input.page, input.limit, total) };
+}
+
+const EXPORT_LIMIT = 1000;
+
+export async function exportProjectIssues(input: Parameters<typeof listIssues>[0]) {
+  const project = await Project.findById(input.projectId).select('key');
+  if (!project) throw new ApiError(404, 'Project not found', 'not_found');
+  const listed = await listIssues({ ...input, page: 1, limit: EXPORT_LIMIT });
+  const key = project.key.replace(/[^A-Za-z0-9_-]/g, '') || 'issues';
+  return {
+    filename: `${key}.csv`,
+    total: listed.total,
+    count: listed.issues.length,
+    csv: issuesToCsv(listed.issues as unknown as IssueDto[]),
+  };
 }
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;

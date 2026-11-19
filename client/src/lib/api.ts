@@ -213,6 +213,21 @@ export const api = {
 
   issues: (projectId: string, params: URLSearchParams) =>
     request<IssueList>(`/api/projects/${projectId}/issues?${params.toString()}`),
+  exportIssues: async (projectId: string, params: URLSearchParams) => {
+    const response = await fetch(`${base}/api/projects/${projectId}/issues/export?${params.toString()}`, { credentials: 'include' });
+    if (!response.ok) {
+      const data = (await response.json().catch(() => null)) as { error?: { message?: string; code?: string } } | null;
+      throw new ApiError(response.status, data?.error?.message || 'Request failed', data?.error?.code);
+    }
+    const disposition = response.headers.get('Content-Disposition') ?? '';
+    const filename = /filename="([^"]+)"/.exec(disposition)?.[1] ?? 'issues.csv';
+    return {
+      blob: await response.blob(),
+      filename,
+      total: Number(response.headers.get('X-Export-Total') ?? '0'),
+      count: Number(response.headers.get('X-Export-Count') ?? '0'),
+    };
+  },
   issue: (id: string) => request<{ issue: Issue }>(`/api/issues/${id}`).then((data) => data.issue),
   createIssue: (projectId: string, input: IssueInput) =>
     request<{ issue: Issue }>(`/api/projects/${projectId}/issues`, { method: 'POST', body: JSON.stringify(input) }).then(
