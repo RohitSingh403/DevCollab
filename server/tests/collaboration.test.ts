@@ -2314,6 +2314,55 @@ describe('workspaces, issues, and authorization', () => {
     expect(listed.body.projects.find((item: { key: string }) => item.key === 'WEB').lead).toBeNull();
   });
 
+  it('filters a project by who reported the issue', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const member = await registerUser(authAgent(), 'Jonah Patel');
+    const outsider = await registerUser(authAgent(), 'Priya Nair');
+    const workspace = await createWorkspace(owner.agent, 'Northwind');
+    await owner.agent.post(`/api/workspaces/${workspace.id}/invites`).send({ email: member.email, role: 'member' });
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'Web Client', key: 'WEB' });
+    const projectId = project.body.project.id as string;
+    const mine = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Show unread notifications', status: 'done' });
+    const theirs = await member.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Drag issues between board columns' });
+    expect(mine.status).toBe(201);
+    expect(theirs.status).toBe(201);
+
+    const hidden = await outsider.agent.get(`/api/projects/${projectId}/issues?reporter=me`);
+    expect(hidden.status).toBe(404);
+
+    const reported = await owner.agent.get(`/api/projects/${projectId}/issues?reporter=me`);
+    expect(reported.status).toBe(200);
+    expect(reported.body.issues.map((item: { title: string }) => item.title)).toEqual(['Show unread notifications']);
+
+    const byJonah = await owner.agent.get(`/api/projects/${projectId}/issues`).query({ reporter: member.user.id });
+    expect(byJonah.body.issues.map((item: { title: string }) => item.title)).toEqual(['Drag issues between board columns']);
+
+    const saved = await owner.agent.post(`/api/projects/${projectId}/views`).send({
+      name: 'Jonah reported',
+      filters: { reporter: member.user.id },
+    });
+    expect(saved.status).toBe(201);
+    expect(saved.body.view.filters.reporter).toBe(member.user.id);
+    const own = await member.agent.post(`/api/projects/${projectId}/views`).send({
+      name: 'Mine',
+      filters: { reporter: 'me' },
+    });
+    expect(own.status).toBe(201);
+    expect(own.body.view.filters.reporter).toBe('me');
+    const stranger = await owner.agent.post(`/api/projects/${projectId}/views`).send({
+      name: 'Outsider',
+      filters: { reporter: outsider.user.id },
+    });
+    expect(stranger.status).toBe(400);
+    expect(stranger.body.error.code).toBe('invalid_reporter');
+
+    const file = await owner.agent.get(`/api/projects/${projectId}/issues/export`).query({ reporter: member.user.id });
+    expect(file.status).toBe(200);
+    expect(file.headers['content-type']).toContain('text/csv');
+    expect(file.text).toContain('Drag issues between board columns');
+    expect(file.text).not.toContain('Show unread notifications');
+  });
+
   it('limits workspace activity to one project and keeps issue links', async () => {
     const owner = await registerUser(authAgent(), 'Maya Chen');
     const outsider = await registerUser(authAgent(), 'Jonah Patel');

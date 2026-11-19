@@ -70,6 +70,7 @@ export interface ViewFilters {
   status: string;
   priority: string;
   assignee: string;
+  reporter: string;
   overdue: boolean;
   quiet: boolean;
   dueSoon: boolean;

@@ -1,6 +1,7 @@
 import { roleRank, type Role } from '../constants';
 import { ApiError, isDuplicateKey } from '../errors';
 import { Label } from '../models/Label';
+import { Membership } from '../models/Membership';
 import { Project } from '../models/Project';
 import { SavedView } from '../models/SavedView';
 import type { Realtime } from '../realtime';
@@ -12,6 +13,7 @@ export interface ViewFilters {
   status: string;
   priority: string;
   assignee: string;
+  reporter: string;
   overdue: boolean;
   quiet: boolean;
   dueSoon: boolean;
@@ -25,7 +27,7 @@ export interface ViewFilters {
 
 function hasFilter(filters: ViewFilters) {
   return Boolean(
-    filters.status || filters.priority || filters.assignee || filters.overdue || filters.quiet || filters.dueSoon || filters.blocked || filters.unestimated || filters.q || filters.layout === 'list' || filters.label || filters.sort !== 'updated',
+    filters.status || filters.priority || filters.assignee || filters.reporter || filters.overdue || filters.quiet || filters.dueSoon || filters.blocked || filters.unestimated || filters.q || filters.layout === 'list' || filters.label || filters.sort !== 'updated',
   );
 }
 
@@ -55,6 +57,7 @@ function serialize(
       status: view.filters.status ?? '',
       priority: view.filters.priority ?? '',
       assignee: view.filters.assignee ?? '',
+      reporter: view.filters.reporter ?? '',
       overdue: Boolean(view.filters.overdue),
       quiet: Boolean(view.filters.quiet),
       dueSoon: Boolean(view.filters.dueSoon),
@@ -99,6 +102,10 @@ export async function createView(
   const workspaceId = String(project.workspace);
   if (input.filters.assignee && input.filters.assignee !== 'me' && input.filters.assignee !== 'none') {
     await assertWorkspaceMembers(workspaceId, [input.filters.assignee]);
+  }
+  if (input.filters.reporter && input.filters.reporter !== 'me') {
+    const member = await Membership.exists({ workspace: workspaceId, user: input.filters.reporter });
+    if (!member) throw new ApiError(400, 'Choose a member of this workspace', 'invalid_reporter');
   }
   if (input.filters.label) {
     const known = await Label.exists({ _id: input.filters.label, workspace: workspaceId });

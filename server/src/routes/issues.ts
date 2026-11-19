@@ -40,7 +40,8 @@ issueRouterForProject.get(
   asyncHandler(async (req, res) => {
     const query = listIssueSchema.parse(req.query);
     const assignee = query.assignee === 'me' ? req.authUser!.id : query.assignee;
-    const file = await exportProjectIssues({ projectId: req.params.projectId, ...query, assignee });
+    const reporter = query.reporter === 'me' ? req.authUser!.id : query.reporter;
+    const file = await exportProjectIssues({ projectId: req.params.projectId, ...query, assignee, reporter });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${file.filename}"`);
     res.setHeader('X-Export-Total', String(file.total));
@@ -55,7 +56,8 @@ issueRouterForProject.get(
   asyncHandler(async (req, res) => {
     const query = listIssueSchema.parse(req.query);
     const assignee = query.assignee === 'me' ? req.authUser!.id : query.assignee;
-    res.json(await listIssues({ projectId: req.params.projectId, ...query, assignee }));
+    const reporter = query.reporter === 'me' ? req.authUser!.id : query.reporter;
+    res.json(await listIssues({ projectId: req.params.projectId, ...query, assignee, reporter }));
   }),
 );
 

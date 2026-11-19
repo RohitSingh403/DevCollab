@@ -4,11 +4,13 @@ const sorts = ['created', 'due', 'priority'] as const;
 
 export function currentFilters(params: URLSearchParams, userId: string): ViewFilters {
   const assignee = params.get('assignee') ?? '';
+  const reporter = params.get('reporter') ?? '';
   const sort = params.get('sort');
   return {
     status: params.get('status') ?? '',
     priority: params.get('priority') ?? '',
     assignee: assignee && assignee === userId ? 'me' : assignee,
+    reporter: reporter && reporter === userId ? 'me' : reporter,
     overdue: params.get('overdue') === 'true',
     quiet: params.get('quiet') === 'true',
     dueSoon: params.get('dueSoon') === 'true',
@@ -26,6 +28,7 @@ export function sameFilters(left: ViewFilters, right: ViewFilters) {
     left.status === right.status &&
     left.priority === right.priority &&
     left.assignee === right.assignee &&
+    left.reporter === right.reporter &&
     left.overdue === right.overdue &&
     left.quiet === right.quiet &&
     left.dueSoon === right.dueSoon &&
@@ -39,5 +42,5 @@ export function sameFilters(left: ViewFilters, right: ViewFilters) {
 }
 
 export function hasViewFilter(filters: ViewFilters) {
-  return Boolean(filters.status || filters.priority || filters.assignee || filters.overdue || filters.quiet || filters.dueSoon || filters.blocked || filters.unestimated || filters.q || filters.layout === 'list' || filters.label || filters.sort !== 'updated');
+  return Boolean(filters.status || filters.priority || filters.assignee || filters.reporter || filters.overdue || filters.quiet || filters.dueSoon || filters.blocked || filters.unestimated || filters.q || filters.layout === 'list' || filters.label || filters.sort !== 'updated');
 }

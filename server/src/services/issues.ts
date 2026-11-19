@@ -68,6 +68,7 @@ export async function listIssues(input: {
   status?: IssueStatus;
   priority?: Priority;
   assignee?: string;
+  reporter?: string;
   label?: string;
   q?: string;
   overdue?: 'true' | 'false';
@@ -94,6 +95,7 @@ export async function listIssues(input: {
   if (input.priority) filter.priority = input.priority;
   if (input.assignee === 'none') filter.assignees = { $size: 0 };
   else if (input.assignee) filter.assignees = input.assignee;
+  if (input.reporter) filter.reporter = input.reporter;
   if (input.label) filter.labels = input.label;
   if (input.q) filter.title = { $regex: escapeRegex(input.q), $options: 'i' };
   if (input.overdue === 'true') {
