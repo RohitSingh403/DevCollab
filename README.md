@@ -79,7 +79,7 @@ Work:
 - Workload. Open issues in active projects, counted for each person they are assigned to. A shared issue counts for everyone on it. The overview shows the counts, and the workload page lists the issues, with overdue ones first
 - Blockers inside one workspace. The issue, the board, and My work show the mark while a blocker is open, and clear it when that blocker is done
 - A checklist on an issue. Steps can be renamed, checked, and removed, and the board, list, and My work show how many are done
-- Cycles. A project has one active cycle, with a start and end date. The board can show just that cycle, My work names it, and the project totals include how much of it is done. The active cycle can be renamed or given new dates, and its issues stay on it. Ending the cycle leaves open issues on it. Starting the next cycle while one is still active moves those open issues forward
+- Cycles. A project has one active cycle, with a start and end date. The board can show just that cycle, My work names it, and the project totals include how much of it is done. The active cycle can be renamed, given new dates, or given a point budget, and its issues stay on it. The bar shows the points on the cycle against that budget. Ending the cycle leaves open issues on it. Starting the next cycle while one is still active moves those open issues forward
 - Milestones. A project can name up to 20 targets, each with an optional date. An issue belongs to one milestone, the board can show just that milestone, and the progress counts how many of its issues are done. The name and date can be changed later, and the issues stay on it
 - A roadmap for the workspace. It lists milestones from active projects, with overdue targets first, then upcoming dates, undated targets, and finished ones. The overview shows the next few
 - Needs an owner. The overview lists open issues in active projects that have no assignee, highest priority first. The project board can show just those issues
@@ -283,9 +283,9 @@ Authenticated routes expect the session cookie. Collection responses are paginat
 | GET | `/api/issues/:id/activity` | Issue history |
 | GET | `/api/workspaces/:id/analytics` | Workspace totals |
 | GET | `/api/projects/:id/analytics` | Project totals, including the active cycle when there is one |
-| GET, POST | `/api/projects/:id/cycles` | List cycles, or start one. Open issues from the active cycle move into the new one |
+| GET, POST | `/api/projects/:id/cycles` | List cycles, or start one. `capacity` is an optional point budget from 1 to 200. Open issues from the active cycle move into the new one |
 | POST | `/api/projects/:id/cycles/end` | End the active cycle. Open issues stay on it |
-| PATCH | `/api/projects/:id/cycles/:cycleId` | Rename the active cycle or change its dates. Issues stay on it. A finished cycle cannot be edited |
+| PATCH | `/api/projects/:id/cycles/:cycleId` | Rename the active cycle, change its dates, or set its point budget. Null clears the budget. Issues stay on it. A finished cycle cannot be edited |
 | GET, POST | `/api/projects/:id/milestones` | List milestones with done and total counts, or add one |
 | PATCH, DELETE | `/api/projects/:id/milestones/:milestoneId` | Rename a milestone, change its date, or remove it. Removing it clears the issues that used it |
 | GET | `/api/notifications` | Inbox |
@@ -301,7 +301,7 @@ Socket.IO authenticates with the same cookie. Clients emit `workspace:join` with
 
 ## Tests
 
-Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, snoozing an issue, unassigned issues, blockers, watchers, checklists, due reminders, cycles, ending a cycle, editing the active cycle, milestones, editing a milestone, renaming a project, filtering workspace activity by project and by kind, quiet issues, issues coming due, blocked issues, issues with no estimate, workload by assignee, the workspace roadmap, estimates, moving an issue between projects, sub-issues, bulk status, priority, assignee, due date, cycle, and milestone edits, comment reactions, pinned comments, notifications, analytics, recently opened issues, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, issue keys, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
+Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, snoozing an issue, unassigned issues, blockers, watchers, checklists, due reminders, cycles, ending a cycle, editing the active cycle, a point budget on a cycle, milestones, editing a milestone, renaming a project, filtering workspace activity by project and by kind, quiet issues, issues coming due, blocked issues, issues with no estimate, workload by assignee, the workspace roadmap, estimates, moving an issue between projects, sub-issues, bulk status, priority, assignee, due date, cycle, and milestone edits, comment reactions, pinned comments, notifications, analytics, recently opened issues, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, issue keys, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
 
 ```bash
 npm test
@@ -343,7 +343,7 @@ COOKIE_SAMESITE=none
 - `blocked` stays true while any linked blocker is still open. Adding, removing, completing, reopening, or deleting a blocker updates it.
 - Followers are stored on the issue. Removing someone from the workspace also removes their follows. The reporter and assignees are notified without having to follow.
 - Checklist steps are stored on the issue in the order they were added. Checking a step does not change the issue status. The activity log records adds, checks, renames, and removals.
-- A project has one active cycle. Starting another completes the previous one and moves open issues forward. Ending the active cycle leaves those issues where they are, so the next cycle starts empty. An issue keeps its cycle when that cycle ends. Editing the active cycle changes its name or dates and leaves every issue where it is. The end date is today or later. A finished cycle stays as it was.
+- A project has one active cycle. Starting another completes the previous one and moves open issues forward. Ending the active cycle leaves those issues where they are, so the next cycle starts empty. An issue keeps its cycle when that cycle ends. Editing the active cycle changes its name, dates, or point budget and leaves every issue where it is. The budget is 1 to 200 points, and null clears it. The same budget does not add another history row. The end date is today or later. A finished cycle stays as it was.
 
 - An estimate is optional. The cycle point total ignores issues that have none, and points on a finished issue count as done.
 - The roadmap skips archived projects. A milestone is overdue when its date is before today and an issue on it is still open. It is done when it has issues and every one of them is done. Renaming a milestone or moving its date leaves the issues on it, and the roadmap uses the new date.

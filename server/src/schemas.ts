@@ -241,12 +241,15 @@ export const updateMilestoneSchema = z
 
 export const snoozeSchema = z.object({ until: day }).strict();
 
+const capacity = z.number().int().min(1).max(200).nullable();
+
 export const startCycleSchema = z
   .object({
     name: z.string().trim().min(2).max(40),
     startsAt: day,
     endsAt: day,
     carryOpen: z.boolean().optional().default(true),
+    capacity: capacity.optional(),
   })
   .strict();
 
@@ -255,10 +258,11 @@ export const updateCycleSchema = z
     name: z.string().trim().min(2).max(40).optional(),
     startsAt: day.optional(),
     endsAt: day.optional(),
+    capacity: capacity.optional(),
   })
   .strict()
-  .refine((value) => value.name !== undefined || value.startsAt !== undefined || value.endsAt !== undefined, {
-    message: 'Choose a name or a date',
+  .refine((value) => value.name !== undefined || value.startsAt !== undefined || value.endsAt !== undefined || value.capacity !== undefined, {
+    message: 'Choose a name, a date, or a point budget',
   });
 
 export const paginationSchema = z.object({

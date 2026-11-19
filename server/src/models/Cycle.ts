@@ -8,6 +8,7 @@ const cycleSchema = new Schema(
     startsAt: { type: Date, required: true },
     endsAt: { type: Date, required: true },
     status: { type: String, enum: ['active', 'completed'], default: 'active', index: true },
+    capacity: { type: Number, default: null },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },
   { timestamps: true },

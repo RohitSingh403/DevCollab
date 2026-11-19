@@ -283,13 +283,13 @@ export function ProjectPage() {
   };
 
   const startCycle = useMutation({
-    mutationFn: (input: { name: string; startsAt: string; endsAt: string }) => api.startCycle(projectId, input),
+    mutationFn: (input: { name: string; startsAt: string; endsAt: string; capacity?: number | null }) => api.startCycle(projectId, input),
     onSuccess: refreshCycles,
     onError: (error) => pushToast(errorMessage(error)),
   });
 
   const updateCycle = useMutation({
-    mutationFn: (input: { name: string; startsAt: string; endsAt: string }) => {
+    mutationFn: (input: { name: string; startsAt: string; endsAt: string; capacity: number | null }) => {
       const active = (cycles.data ?? []).find((item) => item.status === 'active');
       if (!active) return Promise.reject(new Error('There is no active cycle'));
       return api.updateCycle(projectId, active.id, input);

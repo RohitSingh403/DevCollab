@@ -1839,6 +1839,58 @@ describe('workspaces, issues, and authorization', () => {
     expect(updates).toHaveLength(1);
   });
 
+  it('sets a point budget on the active cycle', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const outsider = await registerUser(authAgent(), 'Jonah Patel');
+    const workspace = await createWorkspace(owner.agent, 'Northwind');
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'API Platform', key: 'API' });
+    const projectId = project.body.project.id;
+    const day = (offset: number) => new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate() + offset)).toISOString().slice(0, 10);
+
+    const started = await owner.agent.post(`/api/projects/${projectId}/cycles`).send({
+      name: 'Cycle 12',
+      startsAt: day(-1),
+      endsAt: day(6),
+      capacity: 20,
+    });
+    expect(started.status).toBe(201);
+    expect(started.body.cycle.capacity).toBe(20);
+    const cycleId = started.body.cycle.id;
+
+    const hidden = await outsider.agent.patch(`/api/projects/${projectId}/cycles/${cycleId}`).send({ capacity: 10 });
+    expect(hidden.status).toBe(404);
+    const zero = await owner.agent.patch(`/api/projects/${projectId}/cycles/${cycleId}`).send({ capacity: 0 });
+    expect(zero.status).toBe(400);
+    const huge = await owner.agent.post(`/api/projects/${projectId}/cycles`).send({
+      name: 'Too big',
+      startsAt: day(0),
+      endsAt: day(6),
+      capacity: 201,
+    });
+    expect(huge.status).toBe(400);
+
+    const issue = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Keep this on the cycle', estimate: 8 });
+    await owner.agent.patch(`/api/issues/${issue.body.issue.id}`).send({ cycleId });
+    const tightened = await owner.agent.patch(`/api/projects/${projectId}/cycles/${cycleId}`).send({ capacity: 5 });
+    expect(tightened.status).toBe(200);
+    expect(tightened.body.cycle).toMatchObject({ capacity: 5, points: 8 });
+
+    const again = await owner.agent.patch(`/api/projects/${projectId}/cycles/${cycleId}`).send({ capacity: 5 });
+    expect(again.status).toBe(200);
+    const activity = await owner.agent.get(`/api/projects/${projectId}/activity`);
+    const notes = activity.body.activities.filter((item: { message: string }) => item.message.includes('updated Cycle 12 on API'));
+    expect(notes).toHaveLength(1);
+
+    const cleared = await owner.agent.patch(`/api/projects/${projectId}/cycles/${cycleId}`).send({ capacity: null });
+    expect(cleared.status).toBe(200);
+    expect(cleared.body.cycle.capacity).toBeNull();
+
+    await owner.agent.post(`/api/projects/${projectId}/cycles/end`);
+    const closed = await owner.agent.patch(`/api/projects/${projectId}/cycles/${cycleId}`).send({ capacity: 12 });
+    expect(closed.status).toBe(409);
+    expect(closed.body.error.code).toBe('cycle_closed');
+  });
+
   it('renames a milestone and moves its date without dropping issues', async () => {
     const owner = await registerUser(authAgent(), 'Maya Chen');
     const outsider = await registerUser(authAgent(), 'Jonah Patel');

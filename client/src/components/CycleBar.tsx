@@ -33,9 +33,9 @@ export function CycleBar({
   filtered: boolean;
   pending: boolean;
   onToggle: () => void;
-  onStart: (input: { name: string; startsAt: string; endsAt: string }) => void;
+  onStart: (input: { name: string; startsAt: string; endsAt: string; capacity?: number | null }) => void;
   onEnd?: () => void;
-  onUpdate?: (input: { name: string; startsAt: string; endsAt: string }) => void;
+  onUpdate?: (input: { name: string; startsAt: string; endsAt: string; capacity: number | null }) => void;
   canStart?: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -61,6 +61,11 @@ export function CycleBar({
               {done} of {total} done
               {points > 0 ? ` · ${pointsDone} of ${points} points` : ''}
             </p>
+            {typeof cycle.capacity === 'number' ? (
+              <p className={`mt-0.5 text-[12px] ${points > cycle.capacity ? 'font-medium text-danger' : 'text-muted'}`}>
+                {points} of {cycle.capacity} point budget
+              </p>
+            ) : null}
             <div className="mt-2 h-1.5 max-w-xs overflow-hidden rounded-full bg-slate-100" aria-hidden="true">
               <div className="h-full rounded-full bg-brand" style={{ width: `${progress * 100}%` }} />
             </div>
@@ -154,21 +159,25 @@ function EditCycleModal({
 }: {
   open: boolean;
   pending: boolean;
-  cycle: { name: string; startsAt: string; endsAt: string };
+  cycle: { name: string; startsAt: string; endsAt: string; capacity: number | null };
   onClose: () => void;
-  onSave: (input: { name: string; startsAt: string; endsAt: string }) => void;
+  onSave: (input: { name: string; startsAt: string; endsAt: string; capacity: number | null }) => void;
 }) {
   const [name, setName] = useState(cycle.name);
   const [startsAt, setStartsAt] = useState(cycle.startsAt);
   const [endsAt, setEndsAt] = useState(cycle.endsAt);
+  const [budget, setBudget] = useState(cycle.capacity ? String(cycle.capacity) : '');
   useEffect(() => {
     if (!open) return;
     setName(cycle.name);
     setStartsAt(cycle.startsAt);
     setEndsAt(cycle.endsAt);
-  }, [open, cycle.name, cycle.startsAt, cycle.endsAt]);
+    setBudget(cycle.capacity ? String(cycle.capacity) : '');
+  }, [open, cycle.name, cycle.startsAt, cycle.endsAt, cycle.capacity]);
   const today = dayFromNow(0);
-  const ready = name.trim().length >= 2 && startsAt <= endsAt && endsAt >= today;
+  const capacity = budget.trim() === '' ? null : Number(budget);
+  const budgetReady = capacity === null || (Number.isInteger(capacity) && capacity >= 1 && capacity <= 200);
+  const ready = name.trim().length >= 2 && startsAt <= endsAt && endsAt >= today && budgetReady;
   return (
     <Modal open={open} title="Edit cycle" onClose={onClose}>
       <form
@@ -176,7 +185,7 @@ function EditCycleModal({
         onSubmit={(event) => {
           event.preventDefault();
           if (!ready) return;
-          onSave({ name: name.trim(), startsAt, endsAt });
+          onSave({ name: name.trim(), startsAt, endsAt, capacity });
         }}
       >
         <label className="block text-sm">
@@ -191,7 +200,18 @@ function EditCycleModal({
           <span className="text-muted">Ends</span>
           <input className="field mt-1" aria-label="Cycle end" type="date" value={endsAt} min={startsAt > today ? startsAt : today} onChange={(event) => setEndsAt(event.target.value)} required />
         </label>
-        <p className="text-[12px] text-muted">Issues stay on this cycle. A finished cycle cannot be changed.</p>
+        <label className="block text-sm">
+          <span className="text-muted">Point budget</span>
+          <input
+            className="field mt-1"
+            aria-label="Point budget"
+            inputMode="numeric"
+            value={budget}
+            placeholder="No budget"
+            onChange={(event) => setBudget(event.target.value)}
+          />
+        </label>
+        <p className="text-[12px] text-muted">Leave the budget empty to clear it. Issues stay on this cycle. A finished cycle cannot be changed.</p>
         <div className="flex justify-end gap-2">
           <button className="btn-ghost" type="button" onClick={onClose}>
             Cancel
@@ -216,10 +236,11 @@ function StartCycleModal({
   pending: boolean;
   replacing: boolean;
   onClose: () => void;
-  onStart: (input: { name: string; startsAt: string; endsAt: string }) => void;
+  onStart: (input: { name: string; startsAt: string; endsAt: string; capacity?: number | null }) => void;
 }) {
   const [name, setName] = useState('');
   const [endsAt, setEndsAt] = useState(dayFromNow(13));
+  const [budget, setBudget] = useState('');
   return (
     <Modal
       open={open}
@@ -230,9 +251,12 @@ function StartCycleModal({
         className="space-y-3"
         onSubmit={(event) => {
           event.preventDefault();
+          const capacity = budget.trim() === '' ? null : Number(budget);
           if (name.trim().length < 2) return;
-          onStart({ name: name.trim(), startsAt: dayFromNow(0), endsAt });
+          if (capacity !== null && (!Number.isInteger(capacity) || capacity < 1 || capacity > 200)) return;
+          onStart({ name: name.trim(), startsAt: dayFromNow(0), endsAt, ...(capacity ? { capacity } : {}) });
           setName('');
+          setBudget('');
         }}
       >
         <label className="block text-sm">
@@ -242,6 +266,10 @@ function StartCycleModal({
         <label className="block text-sm">
           <span className="text-muted">Ends</span>
           <input className="field mt-1" type="date" value={endsAt} min={dayFromNow(0)} onChange={(event) => setEndsAt(event.target.value)} required />
+        </label>
+        <label className="block text-sm">
+          <span className="text-muted">Point budget</span>
+          <input className="field mt-1" aria-label="Point budget" inputMode="numeric" value={budget} placeholder="No budget" onChange={(event) => setBudget(event.target.value)} />
         </label>
         {replacing ? <p className="text-[12px] text-muted">Open issues in the current cycle move into this one. Finished issues stay behind.</p> : null}
         <div className="flex justify-end gap-2">
