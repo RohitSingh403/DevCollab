@@ -89,6 +89,7 @@ export const createProjectSchema = z
       .regex(/^[A-Z][A-Z0-9]{1,5}$/, 'Key must be 2–6 letters or digits and start with a letter'),
     description: z.string().trim().max(500).optional().default(''),
     color: z.enum(PROJECT_COLORS).optional(),
+    leadId: objectId.optional(),
   })
   .strict();
 
@@ -98,6 +99,7 @@ export const updateProjectSchema = z
     description: z.string().trim().max(500).optional(),
     archived: z.boolean().optional(),
     color: z.enum(PROJECT_COLORS).optional(),
+    leadId: objectId.nullable().optional(),
   })
   .strict();
 

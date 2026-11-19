@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ProjectColorPicker, ProjectSwatch } from '../components/ProjectColor';
-import { EmptyState, Modal, PageHeader, useDocumentTitle } from '../components/ui';
+import { Avatar, EmptyState, Modal, PageHeader, useDocumentTitle } from '../components/ui';
 import { colorForKey } from '../lib/color';
 import { api, errorMessage } from '../lib/api';
 import { suggestKey } from '../lib/format';
@@ -36,7 +36,7 @@ export function ProjectsPage() {
   );
 }
 
-function ProjectGroups({ workspaceId, projects }: { workspaceId: string; projects: { id: string; key: string; name: string; description: string; color: string; issueCount: number; openIssueCount: number; archived: boolean }[] }) {
+function ProjectGroups({ workspaceId, projects }: { workspaceId: string; projects: { id: string; key: string; name: string; description: string; color: string; lead: { id: string; name: string; avatarColor: string } | null; issueCount: number; openIssueCount: number; archived: boolean }[] }) {
   const active = projects.filter((project) => !project.archived);
   const archived = projects.filter((project) => project.archived);
   return (
@@ -69,7 +69,7 @@ function ProjectCard({
   project,
 }: {
   workspaceId: string;
-  project: { id: string; key: string; name: string; description: string; color: string; issueCount: number; openIssueCount: number; archived: boolean };
+  project: { id: string; key: string; name: string; description: string; color: string; lead: { id: string; name: string; avatarColor: string } | null; issueCount: number; openIssueCount: number; archived: boolean };
 }) {
   const progress = project.issueCount ? Math.round(((project.issueCount - project.openIssueCount) / project.issueCount) * 100) : 0;
   return (
@@ -84,6 +84,14 @@ function ProjectCard({
       <h2 className="mt-3 text-[16px] font-semibold tracking-[-0.02em]">{project.name}</h2>
       <p className="mt-1 line-clamp-2 min-h-10 text-[13px] leading-5 text-muted">{project.description || 'No description yet.'}</p>
       <div className="mt-4 flex items-center gap-3">
+        {project.lead ? (
+          <span className="inline-flex items-center gap-1.5 text-[12px] text-muted">
+            <Avatar name={project.lead.name} color={project.lead.avatarColor} size="sm" />
+            {project.lead.name}
+          </span>
+        ) : (
+          <span className="text-[12px] text-faint">No lead</span>
+        )}
         <div className="h-1 flex-1 rounded-full bg-slate-100">
           <div className="h-1 rounded-full bg-brand" style={{ width: `${progress}%` }} />
         </div>

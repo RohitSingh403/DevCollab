@@ -59,11 +59,13 @@ export async function seedDatabase() {
     name: 'API Platform',
     key: 'API',
     description: 'Auth, workspaces, and the issue API.',
+    leadId: String(maya._id),
   });
   const web = await createProject(workspace.id, actor, {
     name: 'Web Client',
     key: 'WEB',
     description: 'The workspace interface teams live in all day.',
+    leadId: String(jonah._id),
   });
   await createTemplate(api.id, actor, {
     name: 'Bug',

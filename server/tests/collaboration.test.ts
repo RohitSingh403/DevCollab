@@ -2256,6 +2256,64 @@ describe('workspaces, issues, and authorization', () => {
     });
   });
 
+  it('names a project lead and clears that lead when they leave', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const member = await registerUser(authAgent(), 'Jonah Patel');
+    const teammate = await registerUser(authAgent(), 'Priya Nair');
+    const outsider = await registerUser(authAgent(), 'Sam Cole');
+    const workspace = await createWorkspace(owner.agent, 'Northwind');
+    await owner.agent.post(`/api/workspaces/${workspace.id}/invites`).send({ email: member.email, role: 'member' });
+    await owner.agent.post(`/api/workspaces/${workspace.id}/invites`).send({ email: teammate.email, role: 'member' });
+    const api = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'API Platform', key: 'API', leadId: owner.user.id });
+    const web = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'Web Client', key: 'WEB', leadId: member.user.id });
+    expect(api.body.project.lead).toMatchObject({ id: owner.user.id, name: 'Maya Chen' });
+    expect(web.body.project.lead).toMatchObject({ id: member.user.id, name: 'Jonah Patel' });
+    const projectId = web.body.project.id as string;
+
+    const hidden = await outsider.agent.patch(`/api/projects/${projectId}`).send({ leadId: owner.user.id });
+    expect(hidden.status).toBe(404);
+    const denied = await member.agent.patch(`/api/projects/${projectId}`).send({ leadId: owner.user.id });
+    expect(denied.status).toBe(403);
+    const stranger = await owner.agent.patch(`/api/projects/${projectId}`).send({ leadId: 'aaaaaaaaaaaaaaaaaaaaaaaa' });
+    expect(stranger.status).toBe(400);
+    expect(stranger.body.error.code).toBe('invalid_lead');
+
+    const named = await owner.agent.patch(`/api/projects/${projectId}`).send({ leadId: teammate.user.id });
+    expect(named.status).toBe(200);
+    expect(named.body.project.lead).toMatchObject({ id: teammate.user.id, name: 'Priya Nair' });
+    const again = await owner.agent.patch(`/api/projects/${projectId}`).send({ leadId: teammate.user.id });
+    expect(again.status).toBe(200);
+    const renamed = await owner.agent.patch(`/api/projects/${projectId}`).send({ name: 'Web App', leadId: member.user.id });
+    expect(renamed.status).toBe(200);
+    expect(renamed.body.project.lead).toMatchObject({ name: 'Jonah Patel' });
+    const activity = await owner.agent.get(`/api/projects/${projectId}/activity`);
+    const notes = activity.body.activities.filter((item: { message: string }) => item.message.includes('the lead of WEB'));
+    expect(notes).toHaveLength(1);
+    expect(notes[0].message).toContain('Priya Nair');
+    expect(activity.body.activities.some((item: { message: string }) => item.message.includes('renamed WEB to Web App'))).toBe(true);
+
+    const colored = await owner.agent.patch(`/api/projects/${projectId}`).send({ color: '#0e7c66' });
+    expect(colored.body.project.lead.name).toBe('Jonah Patel');
+
+    const left = await member.agent.delete(`/api/workspaces/${workspace.id}/members/${member.user.id}`);
+    expect(left.status).toBe(204);
+    const cleared = await owner.agent.get(`/api/projects/${projectId}`);
+    expect(cleared.body.project.lead).toBeNull();
+
+    const restored = await owner.agent.patch(`/api/projects/${projectId}`).send({ leadId: teammate.user.id });
+    expect(restored.body.project.lead.name).toBe('Priya Nair');
+    const empty = await owner.agent.patch(`/api/projects/${projectId}`).send({ leadId: null });
+    expect(empty.status).toBe(200);
+    expect(empty.body.project.lead).toBeNull();
+    const history = await owner.agent.get(`/api/projects/${projectId}/activity`);
+    const clears = history.body.activities.filter((item: { message: string }) => item.message.includes('cleared the lead of WEB'));
+    expect(clears).toHaveLength(1);
+
+    const listed = await owner.agent.get(`/api/workspaces/${workspace.id}/projects`);
+    expect(listed.body.projects.find((item: { key: string }) => item.key === 'API').lead.name).toBe('Maya Chen');
+    expect(listed.body.projects.find((item: { key: string }) => item.key === 'WEB').lead).toBeNull();
+  });
+
   it('limits workspace activity to one project and keeps issue links', async () => {
     const owner = await registerUser(authAgent(), 'Maya Chen');
     const outsider = await registerUser(authAgent(), 'Jonah Patel');

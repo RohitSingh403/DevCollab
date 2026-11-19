@@ -7,6 +7,7 @@ const projectSchema = new Schema(
     key: { type: String, required: true, uppercase: true, trim: true },
     description: { type: String, default: '', maxlength: 500 },
     color: { type: String, default: '' },
+    lead: { type: Schema.Types.ObjectId, ref: 'User', default: null },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     nextIssueNumber: { type: Number, default: 0 },
     archivedAt: { type: Date, default: null },
