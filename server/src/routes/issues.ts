@@ -18,6 +18,7 @@ import {
   deleteIssue,
   getIssue,
   listComments,
+  exportProjectIssues,
   listIssues,
   setCommentPin,
   toggleReaction,
@@ -32,6 +33,21 @@ export const issueRouter = Router();
 export const commentRouter = Router();
 
 issueRouterForProject.use(requireAuth);
+
+issueRouterForProject.get(
+  '/export',
+  requireProject(),
+  asyncHandler(async (req, res) => {
+    const query = listIssueSchema.parse(req.query);
+    const assignee = query.assignee === 'me' ? req.authUser!.id : query.assignee;
+    const file = await exportProjectIssues({ projectId: req.params.projectId, ...query, assignee });
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${file.filename}"`);
+    res.setHeader('X-Export-Total', String(file.total));
+    res.setHeader('X-Export-Count', String(file.count));
+    res.send(file.csv);
+  }),
+);
 
 issueRouterForProject.get(
   '/',

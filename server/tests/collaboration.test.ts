@@ -787,6 +787,59 @@ describe('workspaces, issues, and authorization', () => {
     expect(restored.body.notifications.some((item: { message: string }) => item.message.includes('commented on API-1'))).toBe(true);
   });
 
+  it('exports the issues in the current project view', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const outsider = await registerUser(authAgent(), 'Jonah Patel');
+    const anonymous = authAgent();
+    const workspace = await createWorkspace(owner.agent, 'Northwind');
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'API Platform', key: 'API' });
+    const projectId = project.body.project.id as string;
+    const quoted = await owner.agent.post(`/api/projects/${projectId}/issues`).send({
+      title: 'Say "hello", team',
+      status: 'todo',
+      priority: 'high',
+    });
+    expect(quoted.status).toBe(201);
+    const formula = await owner.agent.post(`/api/projects/${projectId}/issues`).send({
+      title: '=SUM(1)',
+      status: 'done',
+      estimate: 3,
+    });
+    expect(formula.status).toBe(201);
+
+    const hidden = await outsider.agent.get(`/api/projects/${projectId}/issues/export`);
+    expect(hidden.status).toBe(404);
+    const signedOut = await anonymous.get(`/api/projects/${projectId}/issues/export`);
+    expect(signedOut.status).toBe(401);
+
+    const exported = await owner.agent.get(`/api/projects/${projectId}/issues/export`);
+    expect(exported.status).toBe(200);
+    expect(exported.headers['content-type']).toContain('text/csv');
+    expect(exported.headers['content-disposition']).toContain('filename="API.csv"');
+    expect(exported.headers['x-export-total']).toBe('2');
+    expect(exported.headers['x-export-count']).toBe('2');
+    expect(exported.text.startsWith('\uFEFFKey,Title,Status,Priority,Estimate,Assignees,Labels,Due,Cycle,Milestone,Blocked,Updated')).toBe(true);
+    expect(exported.text).toContain('"Say ""hello"", team"');
+    expect(exported.text).toContain("'=SUM(1)");
+    expect(exported.text).toContain('API-1');
+    expect(exported.text).toContain('API-2');
+
+    const done = await owner.agent.get(`/api/projects/${projectId}/issues/export`).query({ status: 'done' });
+    expect(done.status).toBe(200);
+    expect(done.text).toContain('API-2');
+    expect(done.text).not.toContain('API-1');
+    expect(done.headers['x-export-count']).toBe('1');
+
+    const unsized = await owner.agent.get(`/api/projects/${projectId}/issues/export`).query({ unestimated: 'true' });
+    expect(unsized.text).toContain('API-1');
+    expect(unsized.text).not.toContain('=SUM(1)');
+
+    await owner.agent.patch(`/api/projects/${projectId}`).send({ archived: true });
+    const archived = await owner.agent.get(`/api/projects/${projectId}/issues/export`);
+    expect(archived.status).toBe(200);
+    expect(archived.headers['x-export-total']).toBe('2');
+  });
+
   it('keeps one active cycle per project and can filter the board to it', async () => {
     const owner = await registerUser(authAgent(), 'Maya Chen');
     const outsider = await registerUser(authAgent(), 'Outsider');

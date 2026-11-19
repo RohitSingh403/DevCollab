@@ -66,6 +66,7 @@ export function ProjectPage() {
   const cycles = useQuery({ queryKey: ['cycles', projectId], queryFn: () => api.cycles(projectId) });
   const milestones = useQuery({ queryKey: ['milestones', projectId], queryFn: () => api.milestones(projectId) });
   const [creating, setCreating] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [editingProject, setEditingProject] = useState(false);
   const [labelsOpen, setLabelsOpen] = useState(false);
   const [savingView, setSavingView] = useState(false);
@@ -360,6 +361,31 @@ export function ProjectPage() {
                 Delete project
               </button>
             ) : null}
+            <button
+              className="btn-ghost"
+              type="button"
+              disabled={exporting}
+              onClick={() => {
+                const exportQuery = new URLSearchParams(query);
+                exportQuery.delete('page');
+                exportQuery.delete('limit');
+                setExporting(true);
+                api.exportIssues(projectId, exportQuery)
+                  .then((file) => {
+                    const url = URL.createObjectURL(file.blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = file.filename;
+                    link.click();
+                    URL.revokeObjectURL(url);
+                    pushToast(file.total > file.count ? `Exported the first ${file.count} issues` : `Exported ${file.count} issues`);
+                  })
+                  .catch((error) => pushToast(errorMessage(error)))
+                  .finally(() => setExporting(false));
+              }}
+            >
+              {exporting ? 'Exporting…' : 'Export'}
+            </button>
             {project.data?.archived ? null : (
               <button className="btn-primary" type="button" onClick={() => setCreating(true)}>
                 New issue
