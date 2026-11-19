@@ -6,6 +6,15 @@ const userSchema = new Schema(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true, maxlength: 120 },
     passwordHash: { type: String, required: true, select: false },
     avatarColor: { type: String, required: true },
+    sessions: {
+      type: [
+        {
+          sid: { type: String, required: true },
+          createdAt: { type: Date, required: true },
+        },
+      ],
+      default: [],
+    },
   },
   { timestamps: true },
 );

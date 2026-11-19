@@ -88,7 +88,7 @@ function PasswordForm() {
       setNewPassword('');
       setConfirmPassword('');
       setError('');
-      pushToast('Password updated');
+      pushToast('Password updated. Other sessions were signed out.');
     },
     onError: (reason) => setError(errorMessage(reason)),
   });
@@ -115,6 +115,7 @@ function PasswordForm() {
       }}
     >
       <h3 className="text-sm font-semibold">Password</h3>
+      <p className="text-sm text-muted">This browser stays signed in. Every other session for this account ends.</p>
       <label className="block">
         <span className="label">Current password</span>
         <input className="field" type="password" autoComplete="current-password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} required />
