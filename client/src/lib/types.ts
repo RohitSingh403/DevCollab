@@ -340,6 +340,16 @@ export interface Cycle {
   pointsDone: number;
 }
 
+export interface ActiveCycle extends Cycle {
+  overBudget: boolean;
+  project: { id: string; key: string; name: string };
+}
+
+export interface ActiveCycles {
+  total: number;
+  cycles: ActiveCycle[];
+}
+
 export interface Analytics {
   totals: {
     issues: number;

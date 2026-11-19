@@ -29,6 +29,7 @@ export function useRealtime(workspaceId?: string) {
       void queryClient.invalidateQueries({ queryKey: ['roadmap'] });
       void queryClient.invalidateQueries({ queryKey: ['milestones'] });
       void queryClient.invalidateQueries({ queryKey: ['cycles'] });
+      void queryClient.invalidateQueries({ queryKey: ['active-cycles'] });
     };
     const refreshProject = () => {
       void queryClient.invalidateQueries({ queryKey: ['project'] });

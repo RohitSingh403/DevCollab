@@ -222,6 +222,7 @@ export async function seedDatabase() {
     startsAt: isoDaysFromNow(0).slice(0, 10),
     endsAt: isoDaysFromNow(13).slice(0, 10),
     carryOpen: false,
+    capacity: 6,
   });
   for (const issueId of [drag.id, notifications.id]) {
     await updateIssue({ issueId, actor, cycleId: webCycle.id });
