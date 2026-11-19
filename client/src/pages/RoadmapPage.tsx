@@ -39,6 +39,8 @@ export function RoadmapRow({ workspaceId, milestone }: { workspaceId: string; mi
             {milestone.targetDate ? formatDay(milestone.targetDate) : 'No date'}
             <span className="ml-2 tabular-nums">
               {milestone.done} of {milestone.total}
+              <span className="text-faint"> · </span>
+              {milestone.pointsDone} of {milestone.points} points
             </span>
           </span>
         </span>

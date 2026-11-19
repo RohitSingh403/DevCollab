@@ -147,6 +147,8 @@ export interface RoadmapMilestone {
   targetDate: string | null;
   total: number;
   done: number;
+  points: number;
+  pointsDone: number;
   state: 'overdue' | 'upcoming' | 'undated' | 'complete';
   project: { id: string; name: string; key: string };
 }
@@ -157,6 +159,8 @@ export interface Milestone {
   targetDate: string | null;
   total: number;
   done: number;
+  points: number;
+  pointsDone: number;
   canDelete: boolean;
 }
 

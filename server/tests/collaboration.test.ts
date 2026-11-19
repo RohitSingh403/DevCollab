@@ -1550,7 +1550,7 @@ describe('workspaces, issues, and authorization', () => {
 
     const created = await owner.agent.post(`/api/projects/${projectId}/milestones`).send({ name: 'Cookie cutover', targetDate: '2026-12-01' });
     expect(created.status).toBe(201);
-    expect(created.body.milestone).toMatchObject({ name: 'Cookie cutover', targetDate: '2026-12-01', total: 0, done: 0, canDelete: true });
+    expect(created.body.milestone).toMatchObject({ name: 'Cookie cutover', targetDate: '2026-12-01', total: 0, done: 0, points: 0, pointsDone: 0, canDelete: true });
     const duplicate = await owner.agent.post(`/api/projects/${projectId}/milestones`).send({ name: 'cookie cutover' });
     expect(duplicate.status).toBe(409);
     const milestoneId = created.body.milestone.id;
@@ -1561,8 +1561,12 @@ describe('workspaces, issues, and authorization', () => {
     expect(attached.body.issue.milestone).toEqual({ id: milestoneId, name: 'Cookie cutover' });
     await owner.agent.patch(`/api/issues/${second.body.issue.id}`).send({ milestoneId });
 
+    const open = await owner.agent.get(`/api/projects/${projectId}/milestones`);
+    expect(open.body.milestones[0]).toMatchObject({ id: milestoneId, total: 2, done: 1, points: 0, pointsDone: 0 });
+    await owner.agent.patch(`/api/issues/${first.body.issue.id}`).send({ estimate: 5 });
+    await owner.agent.patch(`/api/issues/${second.body.issue.id}`).send({ estimate: 3 });
     const listed = await owner.agent.get(`/api/projects/${projectId}/milestones`);
-    expect(listed.body.milestones[0]).toMatchObject({ id: milestoneId, total: 2, done: 1 });
+    expect(listed.body.milestones[0]).toMatchObject({ id: milestoneId, total: 2, done: 1, points: 8, pointsDone: 3 });
     const filtered = await owner.agent.get(`/api/projects/${projectId}/issues?milestone=${milestoneId}`);
     expect(filtered.body.issues.map((item: { key: string }) => item.key).sort()).toEqual(['API-1', 'API-2']);
 
@@ -1598,11 +1602,11 @@ describe('workspaces, issues, and authorization', () => {
     const finished = await owner.agent.post(`/api/projects/${api.body.project.id}/milestones`).send({ name: 'Session notes', targetDate: shift(-10) });
     const hidden = await owner.agent.post(`/api/projects/${old.body.project.id}/milestones`).send({ name: 'Retired' });
 
-    const lateIssue = await owner.agent.post(`/api/projects/${api.body.project.id}/issues`).send({ title: 'Sign the cookie' });
+    const lateIssue = await owner.agent.post(`/api/projects/${api.body.project.id}/issues`).send({ title: 'Sign the cookie', estimate: 5 });
     await owner.agent.patch(`/api/issues/${lateIssue.body.issue.id}`).send({ milestoneId: late.body.milestone.id });
     const soonIssue = await owner.agent.post(`/api/projects/${web.body.project.id}/issues`).send({ title: 'Smooth the drag' });
     await owner.agent.patch(`/api/issues/${soonIssue.body.issue.id}`).send({ milestoneId: soon.body.milestone.id });
-    const doneIssue = await owner.agent.post(`/api/projects/${api.body.project.id}/issues`).send({ title: 'Write the notes', status: 'done' });
+    const doneIssue = await owner.agent.post(`/api/projects/${api.body.project.id}/issues`).send({ title: 'Write the notes', status: 'done', estimate: 2 });
     await owner.agent.patch(`/api/issues/${doneIssue.body.issue.id}`).send({ milestoneId: finished.body.milestone.id });
     const buried = await owner.agent.post(`/api/projects/${old.body.project.id}/issues`).send({ title: 'Leave it' });
     await owner.agent.patch(`/api/issues/${buried.body.issue.id}`).send({ milestoneId: hidden.body.milestone.id });
@@ -1619,7 +1623,8 @@ describe('workspaces, issues, and authorization', () => {
       'undated:Design notes',
       'complete:Session notes',
     ]);
-    expect(roadmap.body.milestones[0]).toMatchObject({ total: 1, done: 0, project: { key: 'API' } });
+    expect(roadmap.body.milestones[0]).toMatchObject({ total: 1, done: 0, points: 5, pointsDone: 0, project: { key: 'API' } });
+    expect(roadmap.body.milestones.find((item: { name: string }) => item.name === 'Session notes')).toMatchObject({ points: 2, pointsDone: 2 });
     expect(roadmap.body.milestones.some((item: { name: string }) => item.name === 'Retired')).toBe(false);
     expect(openEnded.body.milestone.targetDate).toBeNull();
   });

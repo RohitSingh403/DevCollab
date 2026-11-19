@@ -73,6 +73,8 @@ export function Milestones({
                     </span>
                     <span className="tabular-nums text-[12px] text-muted">
                       {milestone.done} of {milestone.total}
+                      <span className="text-faint"> · </span>
+                      {milestone.pointsDone} of {milestone.points} points
                     </span>
                   </span>
                   <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-slate-100" aria-hidden="true">
