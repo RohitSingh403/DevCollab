@@ -6,6 +6,7 @@ const filtersSchema = new Schema(
     status: { type: String, enum: ['', ...STATUSES], default: '' },
     priority: { type: String, enum: ['', ...PRIORITIES], default: '' },
     assignee: { type: String, default: '' },
+    reporter: { type: String, default: '' },
     overdue: { type: Boolean, default: false },
     quiet: { type: Boolean, default: false },
     dueSoon: { type: Boolean, default: false },
