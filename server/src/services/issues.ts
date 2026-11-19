@@ -73,6 +73,7 @@ export async function listIssues(input: {
   quiet?: 'true' | 'false';
   dueSoon?: 'true' | 'false';
   blocked?: 'true' | 'false';
+  unestimated?: 'true' | 'false';
   page: number;
   limit: number;
   sort: 'updated' | 'created' | 'due' | 'priority';
@@ -110,6 +111,7 @@ export async function listIssues(input: {
     filter.blocked = true;
     if (!input.status && !filter.status) filter.status = { $ne: 'done' };
   }
+  if (input.unestimated === 'true') filter.estimate = null;
 
   const sort: Record<string, 1 | -1> =
     input.sort === 'created'
@@ -152,6 +154,21 @@ export async function listUnassigned(workspaceId: string) {
     workspace: workspaceId,
     status: { $ne: 'done' },
     assignees: { $size: 0 },
+    ...(archived.length ? { project: { $nin: archived } } : {}),
+  };
+  const [total, issues] = await Promise.all([
+    Issue.countDocuments(filter),
+    Issue.find(filter).sort({ priorityRank: -1, updatedAt: -1 }).limit(8).populate(ISSUE_POPULATE),
+  ]);
+  return { total, issues: await withSubissueCounts(issues, serializeIssue) };
+}
+
+export async function listUnestimated(workspaceId: string) {
+  const archived = await archivedProjectIds(workspaceId);
+  const filter: FilterQuery<unknown> = {
+    workspace: workspaceId,
+    status: { $ne: 'done' },
+    estimate: null,
     ...(archived.length ? { project: { $nin: archived } } : {}),
   };
   const [total, issues] = await Promise.all([

@@ -21,7 +21,7 @@ import {
 } from '../schemas';
 import { buildAnalytics } from '../services/analytics';
 import { listActivity } from '../services/feed';
-import { listBlocked, listDue, listMyWork, listQuiet, listUnassigned, listWorkload, resolveIssueKeys, searchWorkspaceIssues } from '../services/issues';
+import { listBlocked, listDue, listMyWork, listQuiet, listUnassigned, listUnestimated, listWorkload, resolveIssueKeys, searchWorkspaceIssues } from '../services/issues';
 import { addFavorite, listFavorites, removeFavorite } from '../services/favorites';
 import { listRecent, recordRecent } from '../services/recent';
 import { archivedProjectIds } from '../services/projects';
@@ -272,6 +272,14 @@ workspaceRouter.get(
   requireWorkspace(),
   asyncHandler(async (req, res) => {
     res.json(await listUnassigned(req.params.workspaceId));
+  }),
+);
+
+workspaceRouter.get(
+  '/:workspaceId/unestimated',
+  requireWorkspace(),
+  asyncHandler(async (req, res) => {
+    res.json(await listUnestimated(req.params.workspaceId));
   }),
 );
 

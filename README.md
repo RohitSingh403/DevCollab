@@ -83,6 +83,7 @@ Work:
 - Milestones. A project can name up to 20 targets, each with an optional date. An issue belongs to one milestone, the board can show just that milestone, and the progress counts how many of its issues are done. The name and date can be changed later, and the issues stay on it
 - A roadmap for the workspace. It lists milestones from active projects, with overdue targets first, then upcoming dates, undated targets, and finished ones. The overview shows the next few
 - Needs an owner. The overview lists open issues in active projects that have no assignee, highest priority first. The project board can show just those issues
+- Needs an estimate. The overview lists open issues in active projects with no point estimate, highest priority first. The project board can show just those issues, and a saved view can keep that choice. Setting an estimate removes the issue from the list
 - Coming due. The overview lists open issues in active projects that are overdue or due within seven days, soonest first. The project board can show just those issues, and a saved view can keep that choice
 - Blocked. The overview lists open issues in active projects that are still blocked, with the open blocker on each row. The mark clears when every blocker is done. The project board can show just those issues, and a saved view can keep that choice
 - Gone quiet. The overview lists open issues in active projects with no update for seven days, oldest first. A comment counts as an update. The project board can show just those issues, and a saved view can keep that choice
@@ -250,6 +251,7 @@ Authenticated routes expect the session cookie. Collection responses are paginat
 | GET, POST | `/api/workspaces/:id/projects` | Projects in a workspace |
 | GET | `/api/workspaces/:id/roadmap` | Milestones on active projects, with progress and a date group |
 | GET | `/api/workspaces/:id/unassigned` | Open issues in active projects with no assignee |
+| GET | `/api/workspaces/:id/unestimated` | Open issues in active projects with no point estimate |
 | GET | `/api/workspaces/:id/due` | Open issues in active projects that are overdue or due within seven days. `days` can be 1–30 |
 | GET | `/api/workspaces/:id/blocked` | Open issues in active projects that are still blocked by an open issue |
 | GET | `/api/workspaces/:id/quiet` | Open issues in active projects with no update for seven days. `days` can be 1–30 |
@@ -299,7 +301,7 @@ Socket.IO authenticates with the same cookie. Clients emit `workspace:join` with
 
 ## Tests
 
-Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, snoozing an issue, unassigned issues, blockers, watchers, checklists, due reminders, cycles, ending a cycle, editing the active cycle, milestones, editing a milestone, renaming a project, filtering workspace activity by project and by kind, quiet issues, issues coming due, blocked issues, workload by assignee, the workspace roadmap, estimates, moving an issue between projects, sub-issues, bulk status, priority, assignee, due date, cycle, and milestone edits, comment reactions, pinned comments, notifications, analytics, recently opened issues, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, issue keys, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
+Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, snoozing an issue, unassigned issues, blockers, watchers, checklists, due reminders, cycles, ending a cycle, editing the active cycle, milestones, editing a milestone, renaming a project, filtering workspace activity by project and by kind, quiet issues, issues coming due, blocked issues, issues with no estimate, workload by assignee, the workspace roadmap, estimates, moving an issue between projects, sub-issues, bulk status, priority, assignee, due date, cycle, and milestone edits, comment reactions, pinned comments, notifications, analytics, recently opened issues, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, issue keys, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
 
 ```bash
 npm test
@@ -348,6 +350,7 @@ COOKIE_SAMESITE=none
 - A snooze belongs to one person and one issue. It hides that issue from their My work until the chosen day, then it returns. Other members still see the issue.
 - A recent issue belongs to one person and one workspace. Opening it again moves it to the top. The list keeps eight. Deleting the issue removes it. Other members keep their own list.
 - Unassigned means the issue has no assignees. Finished issues and archived projects stay off the workspace list. The project filter still includes finished issues when you ask for nobody assigned.
+- Unestimated means an open issue has no point estimate. Finished issues and archived projects stay off the workspace list. Setting an estimate removes the issue from the list. The project filter still includes finished issues when you ask for no estimate.
 - Quiet means an open issue has not changed for the chosen number of days, seven unless the request says otherwise. Finished issues and archived projects stay off the workspace list. A comment moves the issue out of the list.
 - Coming due means an open issue is overdue or its date falls within the chosen number of days, seven unless the request says otherwise. Finished issues, issues with no date, and archived projects stay off the workspace list. The soonest date is first.
 - Blocked means an open issue still has an open blocker. Finished issues and archived projects stay off the workspace list. Finishing every blocker removes the issue from the list.

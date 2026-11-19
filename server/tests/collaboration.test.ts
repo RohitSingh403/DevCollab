@@ -2282,4 +2282,44 @@ describe('workspaces, issues, and authorization', () => {
     expect(after.body.recent.map((item: { title: string }) => item.title)).not.toContain('Follow up 6');
     expect(after.body.recent[0].title).toBe('Follow up 5');
   });
+
+  it('lists open issues that have no estimate', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const outsider = await registerUser(authAgent(), 'Jonah Patel');
+    const workspace = await createWorkspace(owner.agent, 'Northwind');
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'API Platform', key: 'API' });
+    const projectId = project.body.project.id;
+    const archived = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'Old', key: 'OLD' });
+    const urgent = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Sign the cookie', priority: 'urgent' });
+    await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Write the empty states', priority: 'low' });
+    const sized = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Store the signing key', estimate: 3 });
+    const finished = await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Ship the notes', status: 'done' });
+    const buried = await owner.agent.post(`/api/projects/${archived.body.project.id}/issues`).send({ title: 'Leave it' });
+    await owner.agent.patch(`/api/projects/${archived.body.project.id}`).send({ archived: true });
+
+    const hidden = await outsider.agent.get(`/api/workspaces/${workspace.id}/unestimated`);
+    expect(hidden.status).toBe(404);
+
+    const board = await owner.agent.get(`/api/projects/${projectId}/issues?unestimated=true`);
+    expect(board.body.issues.map((item: { title: string }) => item.title).sort()).toEqual(['Ship the notes', 'Sign the cookie', 'Write the empty states']);
+
+    const saved = await owner.agent.post(`/api/projects/${projectId}/views`).send({
+      name: 'No estimate',
+      filters: { unestimated: true },
+    });
+    expect(saved.status).toBe(201);
+    expect(saved.body.view.filters.unestimated).toBe(true);
+
+    const listed = await owner.agent.get(`/api/workspaces/${workspace.id}/unestimated`);
+    expect(listed.status).toBe(200);
+    expect(listed.body.total).toBe(2);
+    expect(listed.body.issues.map((item: { title: string }) => item.title)).toEqual(['Sign the cookie', 'Write the empty states']);
+    expect(sized.body.issue.estimate).toBe(3);
+    expect(finished.body.issue.status).toBe('done');
+    expect(buried.body.issue.title).toBe('Leave it');
+
+    await owner.agent.patch(`/api/issues/${urgent.body.issue.id}`).send({ estimate: 5 });
+    const after = await owner.agent.get(`/api/workspaces/${workspace.id}/unestimated`);
+    expect(after.body.issues.map((item: { title: string }) => item.title)).toEqual(['Write the empty states']);
+  });
 });

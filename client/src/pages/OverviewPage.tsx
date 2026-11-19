@@ -80,6 +80,7 @@ export function OverviewPage() {
   const projects = useQuery({ queryKey: ['projects', workspaceId], queryFn: () => api.projects(workspaceId) });
   const roadmap = useQuery({ queryKey: ['roadmap', workspaceId], queryFn: () => api.roadmap(workspaceId) });
   const unassigned = useQuery({ queryKey: ['unassigned', workspaceId], queryFn: () => api.unassigned(workspaceId) });
+  const unestimated = useQuery({ queryKey: ['unestimated', workspaceId], queryFn: () => api.unestimated(workspaceId) });
   const due = useQuery({ queryKey: ['due', workspaceId], queryFn: () => api.due(workspaceId) });
   const blocked = useQuery({ queryKey: ['blocked', workspaceId], queryFn: () => api.blocked(workspaceId) });
   const quiet = useQuery({ queryKey: ['quiet', workspaceId], queryFn: () => api.quiet(workspaceId) });
@@ -234,6 +235,28 @@ export function OverviewPage() {
         </ul>
         {unassigned.data && unassigned.data.total > unassigned.data.issues.length ? (
           <p className="mt-2 text-[12px] text-muted">Showing {unassigned.data.issues.length} of {unassigned.data.total}.</p>
+        ) : null}
+      </section>
+      <section>
+        <h2 className="text-sm font-semibold">Needs an estimate</h2>
+        <p className="mb-2 mt-1 text-[12px] text-muted">Open issues in active projects with no point estimate. Highest priority first.</p>
+        <ul className="panel divide-y divide-line">
+          {(unestimated.data?.issues ?? []).map((issue) => (
+            <li key={issue.id}>
+              <Link to={`/w/${workspaceId}/issues/${issue.id}`} className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-brand-soft">
+                <span className="min-w-0">
+                  <span className="font-mono text-[11px] text-muted">{issue.key}</span>
+                  <span className="mt-0.5 block truncate text-sm font-medium">{issue.title}</span>
+                  <span className="mt-0.5 block text-[12px] text-faint">{issue.project.name}</span>
+                </span>
+                <span className="shrink-0 text-[12px] text-muted">{PRIORITY_LABEL[issue.priority]}</span>
+              </Link>
+            </li>
+          ))}
+          {unestimated.data && unestimated.data.total === 0 ? <li className="px-4 py-6 text-sm text-muted">Every open issue has an estimate.</li> : null}
+        </ul>
+        {unestimated.data && unestimated.data.total > unestimated.data.issues.length ? (
+          <p className="mt-2 text-[12px] text-muted">Showing {unestimated.data.issues.length} of {unestimated.data.total}.</p>
         ) : null}
       </section>
       <section>
