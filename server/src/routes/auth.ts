@@ -4,7 +4,7 @@ import rateLimit from 'express-rate-limit';
 import { COOKIE_NAME, cookieOptions, env } from '../config';
 import { asyncHandler } from '../asyncHandler';
 import { ApiError } from '../errors';
-import { requireAuth, signToken, toAuthUser } from '../middleware/auth';
+import { newSessionId, readSession, readToken, rememberSession, requireAuth, signToken, toAuthUser } from '../middleware/auth';
 import { User } from '../models/User';
 import { changePasswordSchema, loginSchema, registerSchema, updateProfileSchema } from '../schemas';
 import { serializeUser } from '../serializers';
@@ -14,36 +14,44 @@ import { parseBody } from '../validate';
 
 export const authRouter = Router();
 
-if (env.nodeEnv !== 'test') {
-  authRouter.use(
-    rateLimit({
-      windowMs: 15 * 60 * 1000,
-      max: 30,
-      standardHeaders: true,
-      legacyHeaders: false,
-      message: { error: { message: 'Too many attempts. Try again later.', code: 'rate_limited' } },
-    }),
-  );
-}
+const credentialLimiter =
+  env.nodeEnv === 'test'
+    ? (_req: import('express').Request, _res: import('express').Response, next: import('express').NextFunction) => next()
+    : rateLimit({
+        windowMs: 15 * 60 * 1000,
+        max: 20,
+        standardHeaders: true,
+        legacyHeaders: false,
+        message: { error: { message: 'Too many attempts. Try again later.', code: 'rate_limited' } },
+      });
 
-function sendSession(res: import('express').Response, user: { _id: unknown; name: string; email: string; avatarColor: string }) {
-  const token = signToken(String(user._id));
+const dummyPasswordHash = bcrypt.hashSync('devcollab-login-timing', env.bcryptRounds);
+
+function sendSession(
+  res: import('express').Response,
+  user: { _id: unknown; name: string; email: string; avatarColor: string },
+  sid: string,
+) {
+  const token = signToken(String(user._id), sid);
   res.cookie(COOKIE_NAME, token, cookieOptions);
   return serializeUser(user);
 }
 
 authRouter.post(
   '/register',
+  credentialLimiter,
   asyncHandler(async (req, res) => {
     const input = parseBody<ReturnType<typeof registerSchema.parse>>(registerSchema, req.body);
     const existing = await User.findOne({ email: input.email }).lean();
     if (existing) throw new ApiError(409, 'An account with that email already exists', 'email_taken');
     const passwordHash = await bcrypt.hash(input.password, env.bcryptRounds);
+    const sid = newSessionId();
     const user = await User.create({
       name: input.name,
       email: input.email,
       passwordHash,
       avatarColor: colorFromString(input.email),
+      sessions: [{ sid, createdAt: new Date() }],
     });
     try {
       await provisionStarter({ id: String(user._id), name: user.name });
@@ -51,30 +59,42 @@ authRouter.post(
       await User.deleteOne({ _id: user._id });
       throw error;
     }
-    res.status(201).json({ user: sendSession(res, user) });
+    res.status(201).json({ user: sendSession(res, user, sid) });
   }),
 );
 
 authRouter.post(
   '/login',
+  credentialLimiter,
   asyncHandler(async (req, res) => {
     const input = parseBody<ReturnType<typeof loginSchema.parse>>(loginSchema, req.body);
     const user = await User.findOne({ email: input.email }).select('+passwordHash');
-    const matches = user ? await bcrypt.compare(input.password, user.passwordHash) : false;
+    const matches = await bcrypt.compare(input.password, user?.passwordHash ?? dummyPasswordHash);
     if (!user || !matches) throw new ApiError(401, 'Email or password is incorrect', 'invalid_credentials');
-    res.json({ user: sendSession(res, user) });
+    const sid = newSessionId();
+    user.set('sessions', rememberSession(user.sessions, sid));
+    await user.save();
+    res.json({ user: sendSession(res, user, sid) });
   }),
 );
 
-authRouter.post('/logout', (_req, res) => {
-  res.clearCookie(COOKIE_NAME, {
-    path: cookieOptions.path,
-    sameSite: cookieOptions.sameSite,
-    secure: cookieOptions.secure,
-    httpOnly: true,
-  });
-  res.status(204).send();
-});
+authRouter.post(
+  '/logout',
+  asyncHandler(async (req, res) => {
+    const token = readToken(req);
+    const session = token ? readSession(token) : null;
+    if (session) {
+      await User.updateOne({ _id: session.userId }, { $pull: { sessions: { sid: session.sid } } });
+    }
+    res.clearCookie(COOKIE_NAME, {
+      path: cookieOptions.path,
+      sameSite: cookieOptions.sameSite,
+      secure: cookieOptions.secure,
+      httpOnly: true,
+    });
+    res.status(204).send();
+  }),
+);
 
 authRouter.get(
   '/me',
@@ -100,6 +120,7 @@ authRouter.patch(
 authRouter.post(
   '/password',
   requireAuth,
+  credentialLimiter,
   asyncHandler(async (req, res) => {
     const input = parseBody<ReturnType<typeof changePasswordSchema.parse>>(changePasswordSchema, req.body);
     if (input.newPassword === input.currentPassword) {
@@ -109,8 +130,11 @@ authRouter.post(
     if (!user) throw new ApiError(401, 'Invalid session', 'unauthorized');
     const matches = await bcrypt.compare(input.currentPassword, user.passwordHash);
     if (!matches) throw new ApiError(401, 'Current password is incorrect', 'invalid_password');
+    const sid = newSessionId();
     user.passwordHash = await bcrypt.hash(input.newPassword, env.bcryptRounds);
+    user.set('sessions', [{ sid, createdAt: new Date() }]);
     await user.save();
+    sendSession(res, user, sid);
     res.status(204).send();
   }),
 );

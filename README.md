@@ -60,7 +60,7 @@ Sign in as `maya@devcollab.dev` / `Password123!`. Jonah Patel (`jonah@devcollab.
 
 Accounts and access:
 
-- Email and password accounts, bcrypt hashing, and an httpOnly JWT cookie. Account settings can change the password after checking the current one
+- Email and password accounts, bcrypt hashing, and an httpOnly JWT cookie. Account settings can change the password after checking the current one. That signs every other browser out. Logging out ends that browser's session, so a copied cookie stops working
 - Workspaces with owner, admin, and member roles
 - Email invites for people who already have an account, and one-time links for everyone else
 - A starter workspace on signup, so the first session is not an empty board
@@ -180,7 +180,7 @@ The production server can also serve `client/dist`, so cookies stay on one origi
 
 A workspace always keeps at least one owner. Someone who is not a member gets a 404 for that workspace, project, or issue, so private ids are not confirmed. A member who lacks the role gets a 403.
 
-Passwords are hashed with bcrypt (12 rounds in production, fewer in tests). The session cookie is `HttpOnly`. `SameSite=Lax` is the default, which blocks cross-site form posts. Cross-site deployments (Vercel frontend, API on another host) need `COOKIE_SAMESITE=none` and `COOKIE_SECURE=true`. Invite tokens are stored as SHA-256 hashes and shown once.
+Passwords are hashed with bcrypt (12 rounds in production, fewer in tests). A missing account takes the same check as a wrong password. The session cookie is `HttpOnly` and names one server-side session. `SameSite=Lax` is the default, which blocks cross-site form posts. Cross-site deployments (Vercel frontend, API on another host) need `COOKIE_SAMESITE=none` and `COOKIE_SECURE=true`. The live connection uses that cookie. Login and registration are rate limited. Invite tokens are stored as SHA-256 hashes and shown once.
 
 ## Local setup
 

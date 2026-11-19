@@ -1,6 +1,6 @@
 import type { Server } from 'socket.io';
 import { COOKIE_NAME } from './config';
-import { verifyToken } from './middleware/auth';
+import { userFromToken } from './middleware/auth';
 import { Membership } from './models/Membership';
 import { assertObjectId } from './utils';
 
@@ -14,17 +14,19 @@ function readCookie(header: string | undefined, name: string) {
 }
 
 export function registerSocket(io: Server) {
-  io.use((socket, next) => {
-    const token =
-      readCookie(socket.handshake.headers.cookie, COOKIE_NAME) ||
-      (typeof socket.handshake.auth?.token === 'string' ? socket.handshake.auth.token : undefined);
-    const userId = token ? verifyToken(token) : null;
-    if (!userId) {
-      next(new Error('Unauthorized'));
-      return;
+  io.use(async (socket, next) => {
+    try {
+      const token = readCookie(socket.handshake.headers.cookie, COOKIE_NAME);
+      const user = token ? await userFromToken(token) : null;
+      if (!user) {
+        next(new Error('Unauthorized'));
+        return;
+      }
+      socket.data.userId = String(user._id);
+      next();
+    } catch (error) {
+      next(error instanceof Error ? error : new Error('Unauthorized'));
     }
-    socket.data.userId = userId;
-    next();
   });
 
   io.on('connection', (socket) => {

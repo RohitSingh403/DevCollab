@@ -104,6 +104,10 @@ describe('authentication', () => {
     });
     expect(weak.status).toBe(400);
 
+    const other = authAgent();
+    const otherLogin = await other.post('/api/auth/login').send({ email, password });
+    expect(otherLogin.status).toBe(200);
+
     const changed = await agent.post('/api/auth/password').send({
       currentPassword: password,
       newPassword: 'Newpass123!',
@@ -113,12 +117,40 @@ describe('authentication', () => {
 
     const still = await agent.get('/api/auth/me');
     expect(still.status).toBe(200);
+    const signedOut = await other.get('/api/auth/me');
+    expect(signedOut.status).toBe(401);
 
     const oldLogin = await authAgent().post('/api/auth/login').send({ email, password });
     expect(oldLogin.status).toBe(401);
     const nextLogin = await authAgent().post('/api/auth/login').send({ email, password: 'Newpass123!' });
     expect(nextLogin.status).toBe(200);
     expect(nextLogin.body.user.passwordHash).toBeUndefined();
+  });
+
+  it('ends a copied session on logout and leaves the other browser signed in', async () => {
+    const agent = authAgent();
+    const registered = await agent.post('/api/auth/register').send({
+      name: 'Grace Hopper',
+      email: 'grace-sessions@example.com',
+      password: 'Password123!',
+    });
+    expect(registered.status).toBe(201);
+    const cookie = (registered.headers['set-cookie'] as string[]).map((value) => value.split(';')[0]).join('; ');
+
+    const other = authAgent();
+    const otherLogin = await other.post('/api/auth/login').send({
+      email: 'grace-sessions@example.com',
+      password: 'Password123!',
+    });
+    expect(otherLogin.status).toBe(200);
+
+    await agent.post('/api/auth/logout').expect(204);
+    const replay = await request(app).get('/api/auth/me').set('Cookie', cookie);
+    expect(replay.status).toBe(401);
+    const after = await agent.get('/api/auth/me');
+    expect(after.status).toBe(401);
+    const still = await other.get('/api/auth/me');
+    expect(still.status).toBe(200);
   });
 
   it('reports database health', async () => {
