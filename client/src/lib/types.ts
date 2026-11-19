@@ -74,6 +74,7 @@ export interface ViewFilters {
   quiet: boolean;
   dueSoon: boolean;
   blocked: boolean;
+  unestimated: boolean;
   q: string;
   layout: 'board' | 'list';
   label: string;
@@ -218,6 +219,11 @@ export interface MyWorkGroup {
 }
 
 export interface UnassignedWork {
+  total: number;
+  issues: Issue[];
+}
+
+export interface UnestimatedWork {
   total: number;
   issues: Issue[];
 }

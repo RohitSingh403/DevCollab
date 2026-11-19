@@ -65,6 +65,7 @@ export function IssuePage() {
       void queryClient.invalidateQueries({ queryKey: ['my-work'] });
       void queryClient.invalidateQueries({ queryKey: ['activity'] });
       void queryClient.invalidateQueries({ queryKey: ['analytics'] });
+      void queryClient.invalidateQueries({ queryKey: ['unestimated'] });
     },
     onError: (error) => pushToast(errorMessage(error)),
   });

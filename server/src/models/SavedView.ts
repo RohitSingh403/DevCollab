@@ -10,6 +10,7 @@ const filtersSchema = new Schema(
     quiet: { type: Boolean, default: false },
     dueSoon: { type: Boolean, default: false },
     blocked: { type: Boolean, default: false },
+    unestimated: { type: Boolean, default: false },
     q: { type: String, default: '', maxlength: 80 },
     layout: { type: String, enum: ['board', 'list'], default: 'board' },
     label: { type: String, default: '' },

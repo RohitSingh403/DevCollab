@@ -13,6 +13,7 @@ export function currentFilters(params: URLSearchParams, userId: string): ViewFil
     quiet: params.get('quiet') === 'true',
     dueSoon: params.get('dueSoon') === 'true',
     blocked: params.get('blocked') === 'true',
+    unestimated: params.get('unestimated') === 'true',
     q: params.get('q') ?? '',
     layout: params.get('view') === 'list' ? 'list' : 'board',
     label: params.get('label') ?? '',
@@ -29,6 +30,7 @@ export function sameFilters(left: ViewFilters, right: ViewFilters) {
     left.quiet === right.quiet &&
     left.dueSoon === right.dueSoon &&
     left.blocked === right.blocked &&
+    left.unestimated === right.unestimated &&
     left.q === right.q &&
     left.layout === right.layout &&
     left.label === right.label &&
@@ -37,5 +39,5 @@ export function sameFilters(left: ViewFilters, right: ViewFilters) {
 }
 
 export function hasViewFilter(filters: ViewFilters) {
-  return Boolean(filters.status || filters.priority || filters.assignee || filters.overdue || filters.quiet || filters.dueSoon || filters.blocked || filters.q || filters.layout === 'list' || filters.label || filters.sort !== 'updated');
+  return Boolean(filters.status || filters.priority || filters.assignee || filters.overdue || filters.quiet || filters.dueSoon || filters.blocked || filters.unestimated || filters.q || filters.layout === 'list' || filters.label || filters.sort !== 'updated');
 }

@@ -21,6 +21,7 @@ export function useRealtime(workspaceId?: string) {
       void queryClient.invalidateQueries({ queryKey: ['views'] });
       void queryClient.invalidateQueries({ queryKey: ['my-work'] });
       void queryClient.invalidateQueries({ queryKey: ['unassigned'] });
+      void queryClient.invalidateQueries({ queryKey: ['unestimated'] });
       void queryClient.invalidateQueries({ queryKey: ['quiet'] });
       void queryClient.invalidateQueries({ queryKey: ['due'] });
       void queryClient.invalidateQueries({ queryKey: ['blocked'] });

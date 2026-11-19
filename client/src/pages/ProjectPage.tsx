@@ -36,6 +36,7 @@ export function ProjectPage() {
   const quiet = params.get('quiet') ?? '';
   const dueSoon = params.get('dueSoon') ?? '';
   const blocked = params.get('blocked') ?? '';
+  const unestimated = params.get('unestimated') ?? '';
   const label = params.get('label') ?? '';
   const sort = params.get('sort') ?? '';
   const cycleFilter = params.get('cycle') === 'active';
@@ -48,6 +49,7 @@ export function ProjectPage() {
   if (quiet) query.set('quiet', quiet);
   if (dueSoon) query.set('dueSoon', dueSoon);
   if (blocked) query.set('blocked', blocked);
+  if (unestimated) query.set('unestimated', unestimated);
   if (label) query.set('label', label);
   if (sort) query.set('sort', sort);
   if (cycleFilter) query.set('cycle', 'active');
@@ -201,13 +203,14 @@ export function ProjectPage() {
   const filters = currentFilters(params, user?.id ?? '');
   const matchedView = (views.data ?? []).find((item) => sameFilters(item.filters, filters));
   const otherFilters = Boolean(filters.status || filters.priority || filters.overdue || filters.q || filters.label || filters.sort !== 'updated');
-  const attention = !filters.quiet && !filters.dueSoon && !filters.blocked;
+  const attention = !filters.quiet && !filters.dueSoon && !filters.blocked && !filters.unestimated;
   const allActive = !matchedView && !otherFilters && !filters.assignee && attention;
   const mineActive = !matchedView && (filters.assignee === 'me' || filters.assignee === user?.id) && !otherFilters && attention;
   const unassignedActive = !matchedView && filters.assignee === 'none' && !otherFilters && attention;
-  const quietActive = !matchedView && filters.quiet && !filters.assignee && !otherFilters && !filters.dueSoon && !filters.blocked;
-  const dueSoonActive = !matchedView && filters.dueSoon && !filters.assignee && !otherFilters && !filters.quiet && !filters.blocked;
-  const blockedActive = !matchedView && filters.blocked && !filters.assignee && !otherFilters && !filters.quiet && !filters.dueSoon;
+  const quietActive = !matchedView && filters.quiet && !filters.assignee && !otherFilters && !filters.dueSoon && !filters.blocked && !filters.unestimated;
+  const dueSoonActive = !matchedView && filters.dueSoon && !filters.assignee && !otherFilters && !filters.quiet && !filters.blocked && !filters.unestimated;
+  const blockedActive = !matchedView && filters.blocked && !filters.assignee && !otherFilters && !filters.quiet && !filters.dueSoon && !filters.unestimated;
+  const unestimatedActive = !matchedView && filters.unestimated && !filters.assignee && !otherFilters && !filters.quiet && !filters.dueSoon && !filters.blocked;
 
   function applyFilters(nextFilters: ViewFilters) {
     const next = new URLSearchParams();
@@ -218,6 +221,7 @@ export function ProjectPage() {
     if (nextFilters.quiet) next.set('quiet', 'true');
     if (nextFilters.dueSoon) next.set('dueSoon', 'true');
     if (nextFilters.blocked) next.set('blocked', 'true');
+    if (nextFilters.unestimated) next.set('unestimated', 'true');
     if (nextFilters.q) next.set('q', nextFilters.q);
     if (nextFilters.label) next.set('label', nextFilters.label);
     if (nextFilters.sort && nextFilters.sort !== 'updated') next.set('sort', nextFilters.sort);
@@ -391,38 +395,44 @@ export function ProjectPage() {
       />
       <div className="panel">
         <div className="flex flex-wrap items-center gap-1.5 border-b border-line px-2 py-2">
-          <FilterChip active={allActive} onClick={() => applyFilters({ status: '', priority: '', assignee: '', overdue: false, quiet: false, dueSoon: false, blocked: false, q: '', layout: filters.layout, label: '', sort: 'updated' })}>
+          <FilterChip active={allActive} onClick={() => applyFilters({ status: '', priority: '', assignee: '', overdue: false, quiet: false, dueSoon: false, blocked: false, unestimated: false, q: '', layout: filters.layout, label: '', sort: 'updated' })}>
             All issues
           </FilterChip>
           <FilterChip
             active={mineActive}
-            onClick={() => applyFilters({ status: '', priority: '', assignee: 'me', overdue: false, quiet: false, dueSoon: false, blocked: false, q: '', layout: filters.layout, label: '', sort: 'updated' })}
+            onClick={() => applyFilters({ status: '', priority: '', assignee: 'me', overdue: false, quiet: false, dueSoon: false, blocked: false, unestimated: false, q: '', layout: filters.layout, label: '', sort: 'updated' })}
           >
             Assigned to me
           </FilterChip>
           <FilterChip
             active={unassignedActive}
-            onClick={() => applyFilters({ status: '', priority: '', assignee: 'none', overdue: false, quiet: false, dueSoon: false, blocked: false, q: '', layout: filters.layout, label: '', sort: 'updated' })}
+            onClick={() => applyFilters({ status: '', priority: '', assignee: 'none', overdue: false, quiet: false, dueSoon: false, blocked: false, unestimated: false, q: '', layout: filters.layout, label: '', sort: 'updated' })}
           >
             Unassigned
           </FilterChip>
           <FilterChip
             active={quietActive}
-            onClick={() => applyFilters({ status: '', priority: '', assignee: '', overdue: false, quiet: true, dueSoon: false, blocked: false, q: '', layout: filters.layout, label: '', sort: 'updated' })}
+            onClick={() => applyFilters({ status: '', priority: '', assignee: '', overdue: false, quiet: true, dueSoon: false, blocked: false, unestimated: false, q: '', layout: filters.layout, label: '', sort: 'updated' })}
           >
             Quiet
           </FilterChip>
           <FilterChip
             active={dueSoonActive}
-            onClick={() => applyFilters({ status: '', priority: '', assignee: '', overdue: false, quiet: false, dueSoon: true, blocked: false, q: '', layout: filters.layout, label: '', sort: 'updated' })}
+            onClick={() => applyFilters({ status: '', priority: '', assignee: '', overdue: false, quiet: false, dueSoon: true, blocked: false, unestimated: false, q: '', layout: filters.layout, label: '', sort: 'updated' })}
           >
             Due soon
           </FilterChip>
           <FilterChip
             active={blockedActive}
-            onClick={() => applyFilters({ status: '', priority: '', assignee: '', overdue: false, quiet: false, dueSoon: false, blocked: true, q: '', layout: filters.layout, label: '', sort: 'updated' })}
+            onClick={() => applyFilters({ status: '', priority: '', assignee: '', overdue: false, quiet: false, dueSoon: false, blocked: true, unestimated: false, q: '', layout: filters.layout, label: '', sort: 'updated' })}
           >
             Blocked
+          </FilterChip>
+          <FilterChip
+            active={unestimatedActive}
+            onClick={() => applyFilters({ status: '', priority: '', assignee: '', overdue: false, quiet: false, dueSoon: false, blocked: false, unestimated: true, q: '', layout: filters.layout, label: '', sort: 'updated' })}
+          >
+            No estimate
           </FilterChip>
           {(views.data ?? []).map((item) => (
             <span
