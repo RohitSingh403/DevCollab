@@ -43,6 +43,15 @@ export function CommandMenu({ open, workspaceId, onClose }: { open: boolean; wor
     hint: issue.key,
     to: `/w/${workspaceId}/issues/${issue.issueId}`,
   }));
+  const createItems: CommandItem[] = (projects.data ?? [])
+    .filter((project) => !project.archived)
+    .map((project) => ({
+      id: `new-${project.id}`,
+      group: 'Create' as const,
+      label: `New issue in ${project.key}`,
+      hint: project.name,
+      to: `/w/${workspaceId}/projects/${project.id}?new=1`,
+    }));
   const projectItems: CommandItem[] = (projects.data ?? []).map((project) => ({
     id: `project-${project.id}`,
     group: 'Projects',
@@ -57,7 +66,7 @@ export function CommandMenu({ open, workspaceId, onClose }: { open: boolean; wor
     hint: `${issue.key} · ${issue.project.name}`,
     to: `/w/${workspaceId}/issues/${issue.id}`,
   }));
-  const items = [...filterCommands([...recentItems, ...places, ...projectItems], query), ...(trimmed.length >= 2 ? issueItems : [])];
+  const items = [...filterCommands([...recentItems, ...places, ...createItems, ...projectItems], query), ...(trimmed.length >= 2 ? issueItems : [])];
   const selected = items[Math.min(active, Math.max(items.length - 1, 0))];
 
   useEffect(() => {

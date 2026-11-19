@@ -97,7 +97,11 @@ export async function listIssues(input: {
   else if (input.assignee) filter.assignees = input.assignee;
   if (input.reporter) filter.reporter = input.reporter;
   if (input.label) filter.labels = input.label;
-  if (input.q) filter.title = { $regex: escapeRegex(input.q), $options: 'i' };
+  if (input.q) {
+    const pattern = { $regex: escapeRegex(input.q), $options: 'i' };
+    const commented = await Comment.distinct('issue', { project: input.projectId, body: pattern });
+    filter.$or = [{ title: pattern }, { description: pattern }, { _id: { $in: commented } }];
+  }
   if (input.overdue === 'true') {
     filter.dueDate = { $lt: utcDayStart(new Date()) };
     if (!input.status) filter.status = { $ne: 'done' };
@@ -369,9 +373,11 @@ export async function listMyWork(workspaceId: string, userId: string, now = new 
 }
 
 export async function searchWorkspaceIssues(workspaceId: string, q: string) {
+  const pattern = { $regex: escapeRegex(q), $options: 'i' };
+  const commented = await Comment.distinct('issue', { workspace: workspaceId, body: pattern });
   const titleMatches = await Issue.find({
     workspace: workspaceId,
-    title: { $regex: escapeRegex(q), $options: 'i' },
+    $or: [{ title: pattern }, { description: pattern }, { _id: { $in: commented } }],
   })
     .sort({ updatedAt: -1 })
     .limit(8)

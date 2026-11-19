@@ -72,7 +72,7 @@ Work:
 - Issues with status, priority, labels, assignees, due dates, comments, and history
 - Rename or recolor a label. Issues and templates keep it, and the board shows the new name and color
 - A board you can drag between columns, plus a list view
-- Filters, text search, and pagination. The board can also filter by label, by who is assigned, by issues with nobody assigned, or by who reported the issue, and sort by updated, newest, due date, or priority. A saved view keeps that choice
+- Filters, text search, and pagination. The text matches a title, a description, or a comment. The board can also filter by label, by who is assigned, by issues with nobody assigned, or by who reported the issue, and sort by updated, newest, due date, or priority. A saved view keeps that choice
 - Export the current project view as CSV. The file uses the filters on the board, up to 1,000 issues, in the same order as the list
 - Bulk edit on the list. Select issues on the page and set their status, priority, assignee, due date, cycle, or milestone together. Choosing no assignee clears the people on those issues. Choosing no due date clears the date. Choosing no cycle or no milestone removes that link. Each issue keeps its own history, and an archived project stays closed
 - Saved project views, private or shared. A view assigned to “me” follows whoever opens it
@@ -97,7 +97,7 @@ Work:
 - Issue templates. A project can keep a starting title, description, priority, estimate, labels, and checklist. A new issue can begin from one, and the author or an admin can delete it
 - Due reminders. Assignees get one inbox alert on the day an open issue is due, and one more after that day passes. Changing the date or reopening the issue allows a new alert
 - Inbox preferences. Each person can turn off assignments, comments, mentions, status changes, blockers, or due reminders. The choice stays with that person. Alerts already in the inbox stay there
-- A command menu, opened with Ctrl K or ⌘K, that jumps to a page, a project, or an issue key
+- A command menu, opened with Ctrl K or ⌘K, that jumps to a page, a project, or an issue. It finds an issue from its description or a comment, and it can start a new issue in a project. The issue page can copy its own link
 - Favorites. Pin up to 12 projects and issues in a workspace. They stay in the sidebar for that person only
 - Recent issues. Opening an issue keeps it in the sidebar and the command menu for that person, newest first, up to eight. Opening it again moves it to the top
 
@@ -280,7 +280,7 @@ Authenticated routes expect the session cookie. Collection responses are paginat
 | GET | `/api/workspaces/:id/my-work` | Open issues assigned to the signed-in user |
 | GET, POST | `/api/workspaces/:id/recent` | Issues this person opened in the workspace, newest first, up to eight. Posting an issue id records the visit |
 | GET | `/api/workspaces/:id/workload` | Open issues in active projects, grouped by assignee. A shared issue counts for each person |
-| GET | `/api/workspaces/:id/search?q=` | Issues by title, or by key such as `API-12` |
+| GET | `/api/workspaces/:id/search?q=` | Issues by title, description, comment, or key such as `API-12` |
 | POST | `/api/workspaces/:id/issue-keys` | Resolve up to 40 issue keys in that workspace. Unknown keys are omitted |
 | GET, POST, DELETE | `/api/workspaces/:id/labels` | Workspace labels. Deleting one requires an admin |
 | GET | `/api/workspaces/:id/activity` | Workspace history. `project` limits it to one project in that workspace. `kind` is `issues`, `comments`, `blockers`, `cycles`, `milestones`, or `members` |
@@ -307,7 +307,7 @@ Socket.IO authenticates with the same cookie. Clients emit `workspace:join` with
 
 ## Tests
 
-Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, snoozing an issue, unassigned issues, blockers, watchers, checklists, due reminders, cycles, ending a cycle, editing the active cycle, a point budget on a cycle, active cycles, milestones, editing a milestone, renaming a project, recoloring a project, naming a project lead, filtering by reporter, milestone point totals, filtering workspace activity by project and by kind, quiet issues, issues coming due, blocked issues, issues with no estimate, workload by assignee, the workspace roadmap, estimates, moving an issue between projects, sub-issues, bulk status, priority, assignee, due date, cycle, and milestone edits, comment reactions, pinned comments, notifications, inbox preferences, exporting a project view, analytics, recently opened issues, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, issue keys, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
+Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, snoozing an issue, unassigned issues, blockers, watchers, checklists, due reminders, cycles, ending a cycle, editing the active cycle, a point budget on a cycle, active cycles, milestones, editing a milestone, renaming a project, recoloring a project, naming a project lead, filtering by reporter, milestone point totals, searching descriptions and comments, filtering workspace activity by project and by kind, quiet issues, issues coming due, blocked issues, issues with no estimate, workload by assignee, the workspace roadmap, estimates, moving an issue between projects, sub-issues, bulk status, priority, assignee, due date, cycle, and milestone edits, comment reactions, pinned comments, notifications, inbox preferences, exporting a project view, analytics, recently opened issues, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, issue keys, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
 
 ```bash
 npm test
@@ -370,6 +370,7 @@ COOKIE_SAMESITE=none
 - Analytics use aggregation pipelines. Day buckets are UTC.
 - List endpoints are paginated. The board requests up to 100 issues and says when the filter still has more.
 - A reporter filter matches the person who filed the issue. Finished issues stay in that list. A saved view can store `me`, which follows whoever opens it, or one member of the workspace.
+- Search matches a title, a description, or a comment in the workspace. The project text filter uses the same fields. A key such as `API-12` still opens that issue. The workspace search keeps the newest eight matches.
 - A project export uses the same filters as the issue list and keeps the same order. It includes at most 1,000 issues. A cell is quoted when it contains a comma, a quote, or a line break. A value that starts with `=`, `+`, `-`, or `@` is prefixed so a spreadsheet keeps it as text. An archived project can still be exported.
 
 ## License

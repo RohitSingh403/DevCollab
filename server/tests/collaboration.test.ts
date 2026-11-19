@@ -2729,4 +2729,35 @@ describe('workspaces, issues, and authorization', () => {
     const after = await owner.agent.get(`/api/workspaces/${workspace.id}/unestimated`);
     expect(after.body.issues.map((item: { title: string }) => item.title)).toEqual(['Write the empty states']);
   });
+
+  it('finds an issue from its description or a comment', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const outsider = await registerUser(authAgent(), 'Jonah Patel');
+    const workspace = await createWorkspace(owner.agent, 'Northwind');
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'API Platform', key: 'API' });
+    const projectId = project.body.project.id as string;
+    const session = await owner.agent.post(`/api/projects/${projectId}/issues`).send({
+      title: 'Replace the session store',
+      description: 'Signed cookies use HttpOnly',
+    });
+    await owner.agent.post(`/api/projects/${projectId}/issues`).send({ title: 'Write the empty states' });
+    const note = await owner.agent.post(`/api/issues/${session.body.issue.id}/comments`).send({ body: 'Force Secure once this is on HTTPS' });
+    expect(note.status).toBe(201);
+
+    const hidden = await outsider.agent.get(`/api/workspaces/${workspace.id}/search`).query({ q: 'HttpOnly' });
+    expect(hidden.status).toBe(404);
+
+    const byDescription = await owner.agent.get(`/api/workspaces/${workspace.id}/search`).query({ q: 'HttpOnly' });
+    expect(byDescription.status).toBe(200);
+    expect(byDescription.body.issues.map((item: { title: string }) => item.title)).toEqual(['Replace the session store']);
+
+    const byComment = await owner.agent.get(`/api/workspaces/${workspace.id}/search`).query({ q: 'Secure' });
+    expect(byComment.body.issues.map((item: { title: string }) => item.title)).toEqual(['Replace the session store']);
+
+    const board = await owner.agent.get(`/api/projects/${projectId}/issues`).query({ q: 'Secure' });
+    expect(board.body.issues.map((item: { title: string }) => item.title)).toEqual(['Replace the session store']);
+
+    const miss = await owner.agent.get(`/api/workspaces/${workspace.id}/search`).query({ q: 'zzzznotfound' });
+    expect(miss.body.issues).toEqual([]);
+  });
 });

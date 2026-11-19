@@ -1,6 +1,6 @@
 export interface CommandItem {
   id: string;
-  group: 'Go to' | 'Projects' | 'Issues' | 'Recent';
+  group: 'Go to' | 'Create' | 'Projects' | 'Issues' | 'Recent';
   label: string;
   hint: string;
   to: string;
