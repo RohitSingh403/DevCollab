@@ -95,6 +95,7 @@ Work:
 - Related issues. Link two issues in the same workspace without making one a blocker or a sub-issue. The link shows on both, and deleting either issue removes it
 - Issue templates. A project can keep a starting title, description, priority, estimate, labels, and checklist. A new issue can begin from one, and the author or an admin can delete it
 - Due reminders. Assignees get one inbox alert on the day an open issue is due, and one more after that day passes. Changing the date or reopening the issue allows a new alert
+- Inbox preferences. Each person can turn off assignments, comments, mentions, status changes, blockers, or due reminders. The choice stays with that person. Alerts already in the inbox stay there
 - A command menu, opened with Ctrl K or ⌘K, that jumps to a page, a project, or an issue key
 - Favorites. Pin up to 12 projects and issues in a workspace. They stay in the sidebar for that person only
 - Recent issues. Opening an issue keeps it in the sidebar and the command menu for that person, newest first, up to eight. Opening it again moves it to the top
@@ -291,6 +292,7 @@ Authenticated routes expect the session cookie. Collection responses are paginat
 | GET, POST | `/api/projects/:id/milestones` | List milestones with done and total counts, or add one |
 | PATCH, DELETE | `/api/projects/:id/milestones/:milestoneId` | Rename a milestone, change its date, or remove it. Removing it clears the issues that used it |
 | GET | `/api/notifications` | Inbox |
+| GET, PATCH | `/api/notifications/preferences` | Your inbox choices. Every kind starts on. A patch turns one or more kinds on or off |
 | POST | `/api/notifications/read-all` | Mark the inbox read |
 | PATCH | `/api/notifications/:id/read` | Mark one notification read |
 | GET | `/api/health` | Process and database status |
@@ -303,7 +305,7 @@ Socket.IO authenticates with the same cookie. Clients emit `workspace:join` with
 
 ## Tests
 
-Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, snoozing an issue, unassigned issues, blockers, watchers, checklists, due reminders, cycles, ending a cycle, editing the active cycle, a point budget on a cycle, active cycles, milestones, editing a milestone, renaming a project, filtering workspace activity by project and by kind, quiet issues, issues coming due, blocked issues, issues with no estimate, workload by assignee, the workspace roadmap, estimates, moving an issue between projects, sub-issues, bulk status, priority, assignee, due date, cycle, and milestone edits, comment reactions, pinned comments, notifications, analytics, recently opened issues, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, issue keys, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
+Server tests cover registration, cookie sessions, duplicate emails, role boundaries, invite links, issue numbers, filters, pagination, comments, mentions, saved views, My work, snoozing an issue, unassigned issues, blockers, watchers, checklists, due reminders, cycles, ending a cycle, editing the active cycle, a point budget on a cycle, active cycles, milestones, editing a milestone, renaming a project, filtering workspace activity by project and by kind, quiet issues, issues coming due, blocked issues, issues with no estimate, workload by assignee, the workspace roadmap, estimates, moving an issue between projects, sub-issues, bulk status, priority, assignee, due date, cycle, and milestone edits, comment reactions, pinned comments, notifications, inbox preferences, analytics, recently opened issues, and a Socket.IO broadcast. Client tests cover formatting, mentions, the command menu, comment markdown, issue keys, checklist progress, saved-view filters, and the login form. The server boots MongoDB in memory, so the suite does not need a local database.
 
 ```bash
 npm test
@@ -360,7 +362,8 @@ COOKIE_SAMESITE=none
 - A bulk assignee replaces the people on each selected issue. Sending null removes them. Status and priority are unchanged unless they are sent too. A bulk due date sets the same day on each selected issue, or clears it when the date is null. A date that is already set is left as it is. A bulk cycle or milestone must belong to each issue's project. Sending null removes that link. A cycle or milestone that is already set is left as it is.
 - Moving an issue gives it the next number in the destination project. The old number is not reused. Comments move with it. A cycle does not, because a cycle belongs to one project.
 - A sub-issue has one parent in the same workspace. Nesting stops at eight levels. Deleting a parent leaves its sub-issues in place, without a parent. The count on a card is its direct children.
-- Due reminders are stored on the issue as the date and kind already sent, so the hourly check does not repeat them.
+- Due reminders are stored on the issue as the date and kind already sent, so the hourly check does not repeat them. Turning reminders off still marks that day as sent, so turning them back on does not replay it.
+- Inbox preferences belong to one person. Assignments, comments, mentions, status changes, blockers, and due reminders each start on. Turning one off stops new alerts of that kind. Alerts already in the inbox stay there. Another member keeps their own choices.
 - Comment markdown is not stored as HTML. The client parses a fixed subset and renders React elements.
 - Analytics use aggregation pipelines. Day buckets are UTC.
 - List endpoints are paginated. The board requests up to 100 issues and says when the filter still has more.

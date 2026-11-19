@@ -4,10 +4,28 @@ import { asyncHandler } from '../asyncHandler';
 import { ApiError } from '../errors';
 import { requireAuth } from '../middleware/auth';
 import { listNotifications, markAllNotificationsRead, markNotificationRead } from '../services/feed';
+import { getNotificationPreferences, updateNotificationPreferences } from '../services/notifications';
+import { updateNotificationPreferencesSchema } from '../schemas';
+import { parseBody } from '../validate';
 
 export const notificationRouter = Router();
 
 notificationRouter.use(requireAuth);
+
+notificationRouter.get(
+  '/preferences',
+  asyncHandler(async (req, res) => {
+    res.json({ preferences: await getNotificationPreferences(req.authUser!.id) });
+  }),
+);
+
+notificationRouter.patch(
+  '/preferences',
+  asyncHandler(async (req, res) => {
+    const input = parseBody<ReturnType<typeof updateNotificationPreferencesSchema.parse>>(updateNotificationPreferencesSchema, req.body);
+    res.json({ preferences: await updateNotificationPreferences(req.authUser!.id, input) });
+  }),
+);
 
 notificationRouter.get(
   '/',

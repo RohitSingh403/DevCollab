@@ -705,6 +705,88 @@ describe('workspaces, issues, and authorization', () => {
     expect(await scanDueReminders(new Date())).toBe(0);
   });
 
+  it('keeps muted inbox kinds from arriving', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const teammate = await registerUser(authAgent(), 'Jonah Patel');
+    const anonymous = authAgent();
+    const workspace = await createWorkspace(owner.agent, 'Inbox');
+    await owner.agent.post(`/api/workspaces/${workspace.id}/invites`).send({ email: teammate.email, role: 'member' });
+    const project = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'API Platform', key: 'API' });
+    const created = await owner.agent.post(`/api/projects/${project.body.project.id}/issues`).send({
+      title: 'Rotate the signing key',
+      assigneeIds: [teammate.user.id],
+    });
+    const issueId = created.body.issue.id as string;
+    const blocker = await owner.agent.post(`/api/projects/${project.body.project.id}/issues`).send({ title: 'Ship the notes' });
+
+    const hidden = await anonymous.get('/api/notifications/preferences');
+    expect(hidden.status).toBe(401);
+    const empty = await teammate.agent.patch('/api/notifications/preferences').send({});
+    expect(empty.status).toBe(400);
+
+    const defaults = await teammate.agent.get('/api/notifications/preferences');
+    expect(defaults.status).toBe(200);
+    expect(defaults.body.preferences).toEqual({
+      assignments: true,
+      comments: true,
+      mentions: true,
+      status: true,
+      blockers: true,
+      reminders: true,
+    });
+
+    const muteComments = await teammate.agent.patch('/api/notifications/preferences').send({ comments: false });
+    expect(muteComments.status).toBe(200);
+    expect(muteComments.body.preferences.comments).toBe(false);
+    expect(muteComments.body.preferences.mentions).toBe(true);
+
+    await owner.agent.post(`/api/issues/${issueId}/comments`).send({ body: 'A quiet note.' });
+    const afterComment = await teammate.agent.get('/api/notifications');
+    const commentMessages = (afterComment.body.notifications as { message: string }[]).map((item) => item.message);
+    expect(commentMessages.some((message) => message.includes('commented on API-1'))).toBe(false);
+
+    await owner.agent.post(`/api/issues/${issueId}/comments`).send({ body: 'Please look, @Jonah Patel.' });
+    const mentioned = await teammate.agent.get('/api/notifications');
+    expect(mentioned.body.notifications.filter((item: { message: string }) => item.message.includes('mentioned you on API-1'))).toHaveLength(1);
+
+    await teammate.agent.patch('/api/notifications/preferences').send({ mentions: false });
+    await owner.agent.post(`/api/issues/${issueId}/comments`).send({ body: 'Once more, @Jonah Patel.' });
+    const stillOne = await teammate.agent.get('/api/notifications');
+    expect(stillOne.body.notifications.filter((item: { message: string }) => item.message.includes('mentioned you on API-1'))).toHaveLength(1);
+
+    await teammate.agent.patch('/api/notifications/preferences').send({ status: false });
+    await owner.agent.patch(`/api/issues/${issueId}`).send({ status: 'in_review' });
+    const afterStatus = await teammate.agent.get('/api/notifications');
+    expect(afterStatus.body.notifications.some((item: { message: string }) => item.message.includes('moved API-1'))).toBe(false);
+
+    await teammate.agent.patch('/api/notifications/preferences').send({ blockers: false });
+    await owner.agent.post(`/api/issues/${issueId}/blockers`).send({ blockerId: blocker.body.issue.id });
+    const afterBlock = await teammate.agent.get('/api/notifications');
+    expect(afterBlock.body.notifications.some((item: { message: string }) => item.message.includes('blocked by'))).toBe(false);
+
+    await teammate.agent.patch('/api/notifications/preferences').send({ reminders: false });
+    await owner.agent.patch(`/api/issues/${issueId}`).send({ dueDate: dayKey(new Date()) });
+    expect(await scanDueReminders(new Date())).toBe(1);
+    const afterDue = await teammate.agent.get('/api/notifications');
+    expect(afterDue.body.notifications.some((item: { message: string }) => item.message.includes('due today'))).toBe(false);
+
+    await teammate.agent.patch('/api/notifications/preferences').send({ assignments: false });
+    await owner.agent.post(`/api/projects/${project.body.project.id}/issues`).send({
+      title: 'Follow the cookie',
+      assigneeIds: [teammate.user.id],
+    });
+    const afterAssign = await teammate.agent.get('/api/notifications');
+    const assigned = (afterAssign.body.notifications as { message: string }[]).filter((item) => item.message.includes('assigned you'));
+    expect(assigned).toHaveLength(1);
+    expect(assigned[0].message).toContain('API-1');
+
+    const restore = await teammate.agent.patch('/api/notifications/preferences').send({ comments: true });
+    expect(restore.body.preferences).toMatchObject({ comments: true, mentions: false, reminders: false });
+    await owner.agent.post(`/api/issues/${issueId}/comments`).send({ body: 'Comments are back.' });
+    const restored = await teammate.agent.get('/api/notifications');
+    expect(restored.body.notifications.some((item: { message: string }) => item.message.includes('commented on API-1'))).toBe(true);
+  });
+
   it('keeps one active cycle per project and can filter the board to it', async () => {
     const owner = await registerUser(authAgent(), 'Maya Chen');
     const outsider = await registerUser(authAgent(), 'Outsider');

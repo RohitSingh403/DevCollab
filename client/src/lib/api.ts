@@ -25,6 +25,7 @@ import type {
   Label,
   Member,
   Notification,
+  NotificationPreferences,
   Priority,
   Project,
   SavedView,
@@ -305,6 +306,13 @@ export const api = {
     request<ActivityList>(`${path}?page=${page}&limit=20${projectId ? `&project=${projectId}` : ''}${kind ? `&kind=${kind}` : ''}`),
   analytics: (path: string) => request<{ analytics: Analytics }>(path).then((data) => data.analytics),
   notifications: () => request<{ notifications: Notification[]; unread: number }>('/api/notifications'),
+  notificationPreferences: () =>
+    request<{ preferences: NotificationPreferences }>('/api/notifications/preferences').then((data) => data.preferences),
+  updateNotificationPreferences: (input: Partial<NotificationPreferences>) =>
+    request<{ preferences: NotificationPreferences }>('/api/notifications/preferences', {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    }).then((data) => data.preferences),
   markRead: (id: string) => request<void>(`/api/notifications/${id}/read`, { method: 'PATCH' }),
   markAllRead: () => request<void>('/api/notifications/read-all', { method: 'POST' }),
 };
