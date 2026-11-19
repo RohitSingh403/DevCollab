@@ -330,7 +330,10 @@ export function OverviewPage() {
             {(projects.data ?? []).filter((project) => !project.archived).map((project) => (
               <Link key={project.id} to={`/w/${workspaceId}/projects/${project.id}`} className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-brand-soft">
                 <span className="min-w-0">
-                  <span className="rounded bg-brand-soft px-1.5 py-0.5 font-mono text-[11px] text-brand">{project.key}</span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: project.color }} aria-hidden="true" />
+                    <span className="rounded bg-brand-soft px-1.5 py-0.5 font-mono text-[11px] text-brand">{project.key}</span>
+                  </span>
                   <span className="mt-1 block truncate text-sm font-medium">{project.name}</span>
                 </span>
                 <span className="shrink-0 text-sm text-muted">{project.openIssueCount} open</span>

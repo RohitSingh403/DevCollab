@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { PROJECT_COLORS, colorForKey } from '../constants';
 import { ApiError, isDuplicateKey } from '../errors';
 import { Comment } from '../models/Comment';
 import { Cycle } from '../models/Cycle';
@@ -15,6 +16,10 @@ import { clearIssueSnoozes } from './snooze';
 import { clearBlockerRefs } from './blockers';
 import { clearRelatedRefs } from './related';
 
+function storedColor(key: string, color?: string | null) {
+  return color && (PROJECT_COLORS as readonly string[]).includes(color) ? color : colorForKey(key);
+}
+
 function presentProject(
   project: {
     _id: unknown;
@@ -22,6 +27,7 @@ function presentProject(
     name: string;
     key: string;
     description?: string;
+    color?: string | null;
     archivedAt?: Date | null;
     createdAt: Date;
     updatedAt: Date;
@@ -34,6 +40,7 @@ function presentProject(
     name: project.name,
     key: project.key,
     description: project.description ?? '',
+    color: storedColor(project.key, project.color),
     archived: Boolean(project.archivedAt),
     archivedAt: project.archivedAt ? project.archivedAt.toISOString() : null,
     issueCount: tally.total,
@@ -67,7 +74,7 @@ export async function listProjects(workspaceId: string) {
 export async function createProject(
   workspaceId: string,
   actor: { id: string; name: string },
-  input: { name: string; key: string; description: string },
+  input: { name: string; key: string; description: string; color?: string },
   rt?: Realtime,
 ) {
   try {
@@ -76,6 +83,7 @@ export async function createProject(
       name: input.name,
       key: input.key,
       description: input.description,
+      color: storedColor(input.key, input.color),
       createdBy: actor.id,
     });
     await recordActivity(
@@ -108,13 +116,15 @@ export async function getProject(projectId: string) {
 export async function updateProject(
   projectId: string,
   actor: { id: string; name: string },
-  input: { name?: string; description?: string; archived?: boolean },
+  input: { name?: string; description?: string; archived?: boolean; color?: string },
   rt?: Realtime,
 ) {
   const project = await Project.findById(projectId);
   if (!project) throw new ApiError(404, 'Project not found', 'not_found');
   const nameChanged = input.name !== undefined && input.name !== project.name;
   const descriptionChanged = input.description !== undefined && input.description !== (project.description ?? '');
+  const nextColor = input.color !== undefined ? input.color : storedColor(project.key, project.color);
+  const colorChanged = nextColor !== storedColor(project.key, project.color);
   let action: 'updated' | 'archived' | 'restored' = 'updated';
   if (input.archived === true && !project.archivedAt) {
     project.archivedAt = new Date();
@@ -123,15 +133,18 @@ export async function updateProject(
     project.archivedAt = null;
     action = 'restored';
   }
-  if (!nameChanged && !descriptionChanged && action === 'updated') return getProject(projectId);
+  if (!nameChanged && !descriptionChanged && !colorChanged && action === 'updated') return getProject(projectId);
   if (nameChanged && input.name) project.name = input.name;
   if (descriptionChanged) project.description = input.description ?? '';
+  if (colorChanged) project.color = nextColor;
   await project.save();
   const message =
     action === 'updated'
       ? nameChanged
         ? `${actor.name} renamed ${project.key} to ${project.name}`
-        : `${actor.name} updated the description of ${project.key}`
+        : descriptionChanged
+          ? `${actor.name} updated the description of ${project.key}`
+          : `${actor.name} recolored ${project.key}`
       : `${actor.name} ${action} project ${project.key}`;
   await recordActivity(
     {

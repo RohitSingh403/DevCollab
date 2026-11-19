@@ -2218,6 +2218,44 @@ describe('workspaces, issues, and authorization', () => {
     expect(renames).toHaveLength(1);
   });
 
+  it('gives a project a color and keeps that color on its favorite', async () => {
+    const owner = await registerUser(authAgent(), 'Maya Chen');
+    const member = await registerUser(authAgent(), 'Jonah Patel');
+    const outsider = await registerUser(authAgent(), 'Priya Nair');
+    const workspace = await createWorkspace(owner.agent, 'Northwind');
+    await owner.agent.post(`/api/workspaces/${workspace.id}/invites`).send({ email: member.email, role: 'member' });
+    const api = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'API Platform', key: 'API' });
+    const web = await owner.agent.post(`/api/workspaces/${workspace.id}/projects`).send({ name: 'Web Client', key: 'WEB', color: '#c4320a' });
+    expect(api.body.project.color).toBe('#175cd3');
+    expect(web.body.project.color).toBe('#c4320a');
+    const projectId = api.body.project.id as string;
+    await owner.agent.post(`/api/workspaces/${workspace.id}/favorites`).send({ kind: 'project', targetId: projectId });
+
+    const hidden = await outsider.agent.patch(`/api/projects/${projectId}`).send({ color: '#0e7c66' });
+    expect(hidden.status).toBe(404);
+    const denied = await member.agent.patch(`/api/projects/${projectId}`).send({ color: '#0e7c66' });
+    expect(denied.status).toBe(403);
+    const invalid = await owner.agent.patch(`/api/projects/${projectId}`).send({ color: '#ffffff' });
+    expect(invalid.status).toBe(400);
+
+    const recolored = await owner.agent.patch(`/api/projects/${projectId}`).send({ color: '#0e7c66' });
+    expect(recolored.status).toBe(200);
+    expect(recolored.body.project.color).toBe('#0e7c66');
+    const again = await owner.agent.patch(`/api/projects/${projectId}`).send({ color: '#0e7c66' });
+    expect(again.status).toBe(200);
+    const activity = await owner.agent.get(`/api/projects/${projectId}/activity`);
+    const notes = activity.body.activities.filter((item: { message: string }) => item.message.includes('recolored API'));
+    expect(notes).toHaveLength(1);
+
+    const listed = await owner.agent.get(`/api/workspaces/${workspace.id}/projects`);
+    expect(listed.body.projects.find((item: { id: string }) => item.id === projectId).color).toBe('#0e7c66');
+    const favorites = await owner.agent.get(`/api/workspaces/${workspace.id}/favorites`);
+    expect(favorites.body.favorites.find((item: { kind: string }) => item.kind === 'project')).toMatchObject({
+      hint: 'API',
+      color: '#0e7c66',
+    });
+  });
+
   it('limits workspace activity to one project and keeps issue links', async () => {
     const owner = await registerUser(authAgent(), 'Maya Chen');
     const outsider = await registerUser(authAgent(), 'Jonah Patel');

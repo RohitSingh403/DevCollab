@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ACTIVITY_KINDS, ESTIMATES, INVITE_ROLES, PRIORITIES, REACTIONS, ROLES, STATUSES } from './constants';
+import { ACTIVITY_KINDS, ESTIMATES, INVITE_ROLES, PRIORITIES, PROJECT_COLORS, REACTIONS, ROLES, STATUSES } from './constants';
 
 const objectId = z.string().regex(/^[a-f\d]{24}$/i, 'Expected an id');
 
@@ -88,6 +88,7 @@ export const createProjectSchema = z
       .toUpperCase()
       .regex(/^[A-Z][A-Z0-9]{1,5}$/, 'Key must be 2–6 letters or digits and start with a letter'),
     description: z.string().trim().max(500).optional().default(''),
+    color: z.enum(PROJECT_COLORS).optional(),
   })
   .strict();
 
@@ -96,6 +97,7 @@ export const updateProjectSchema = z
     name: z.string().trim().min(2).max(80).optional(),
     description: z.string().trim().max(500).optional(),
     archived: z.boolean().optional(),
+    color: z.enum(PROJECT_COLORS).optional(),
   })
   .strict();
 

@@ -112,6 +112,7 @@ export interface Project {
   name: string;
   key: string;
   description: string;
+  color: string;
   archived: boolean;
   archivedAt: string | null;
   issueCount: number;
@@ -126,6 +127,7 @@ export interface Favorite {
   targetId: string;
   label: string;
   hint: string;
+  color?: string;
 }
 
 export interface RecentIssue {

@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { CycleBar } from '../components/CycleBar';
 import { Milestones } from '../components/Milestones';
 import { FavoriteButton } from '../components/FavoriteButton';
+import { ProjectColorPicker, ProjectSwatch } from '../components/ProjectColor';
 import { IssueBoard } from '../components/IssueBoard';
 import { IssueForm } from '../components/IssueForm';
 import { LabelsDialog } from '../components/LabelsDialog';
@@ -155,7 +156,7 @@ export function ProjectPage() {
   }
 
   const editDetails = useMutation({
-    mutationFn: (input: { name: string; description: string }) => api.updateProject(projectId, input),
+    mutationFn: (input: { name: string; description: string; color: string }) => api.updateProject(projectId, input),
     onSuccess: async () => {
       setEditingProject(false);
       await queryClient.invalidateQueries({ queryKey: ['project', projectId] });
@@ -330,7 +331,10 @@ export function ProjectPage() {
             {project.data?.key ? (
               <>
                 <span aria-hidden="true">/</span>
-                <span className="font-mono text-xs text-ink">{project.data.key}</span>
+                <span className="inline-flex items-center gap-1.5 font-mono text-xs text-ink">
+                  <ProjectSwatch color={project.data.color} />
+                  {project.data.key}
+                </span>
               </>
             ) : null}
           </span>
@@ -566,6 +570,7 @@ export function ProjectPage() {
           projectKey={project.data.key}
           name={project.data.name}
           description={project.data.description}
+          color={project.data.color}
           onClose={() => setEditingProject(false)}
           onSave={(input) => editDetails.mutate(input)}
         />
@@ -851,6 +856,7 @@ function EditProjectModal({
   projectKey,
   name,
   description,
+  color,
   onClose,
   onSave,
 }: {
@@ -859,16 +865,19 @@ function EditProjectModal({
   projectKey: string;
   name: string;
   description: string;
+  color: string;
   onClose: () => void;
-  onSave: (input: { name: string; description: string }) => void;
+  onSave: (input: { name: string; description: string; color: string }) => void;
 }) {
   const [nextName, setNextName] = useState(name);
   const [nextDescription, setNextDescription] = useState(description);
+  const [nextColor, setNextColor] = useState(color);
   useEffect(() => {
     if (!open) return;
     setNextName(name);
     setNextDescription(description);
-  }, [open, name, description]);
+    setNextColor(color);
+  }, [open, name, description, color]);
   const ready = nextName.trim().length >= 2;
   return (
     <Modal open={open} title="Edit project" onClose={onClose}>
@@ -877,7 +886,7 @@ function EditProjectModal({
         onSubmit={(event) => {
           event.preventDefault();
           if (!ready) return;
-          onSave({ name: nextName.trim(), description: nextDescription.trim() });
+          onSave({ name: nextName.trim(), description: nextDescription.trim(), color: nextColor });
         }}
       >
         <label className="block text-sm">
@@ -888,6 +897,12 @@ function EditProjectModal({
           <span className="text-muted">Description</span>
           <textarea className="field mt-1 min-h-24" aria-label="Project description" value={nextDescription} maxLength={500} onChange={(event) => setNextDescription(event.target.value)} />
         </label>
+        <div>
+          <span className="text-sm text-muted">Color</span>
+          <div className="mt-2">
+            <ProjectColorPicker value={nextColor} onChange={setNextColor} />
+          </div>
+        </div>
         <p className="text-[12px] text-muted">The key stays {projectKey}. Issue numbers do not change.</p>
         <div className="flex justify-end gap-2">
           <button className="btn-ghost" type="button" onClick={onClose}>
