@@ -312,6 +312,15 @@ export interface Notification {
   workspaceId: string;
 }
 
+export interface NotificationPreferences {
+  assignments: boolean;
+  comments: boolean;
+  mentions: boolean;
+  status: boolean;
+  blockers: boolean;
+  reminders: boolean;
+}
+
 export interface Member {
   id: string;
   role: Role;

@@ -10,6 +10,20 @@ const passwordRule = z
   .regex(/[A-Za-z]/, 'Password must include a letter')
   .regex(/[0-9]/, 'Password must include a number');
 
+export const updateNotificationPreferencesSchema = z
+  .object({
+    assignments: z.boolean().optional(),
+    comments: z.boolean().optional(),
+    mentions: z.boolean().optional(),
+    status: z.boolean().optional(),
+    blockers: z.boolean().optional(),
+    reminders: z.boolean().optional(),
+  })
+  .strict()
+  .refine((value) => Object.values(value).some((item) => item !== undefined), {
+    message: 'Choose a notification to change',
+  });
+
 export const registerSchema = z
   .object({
     name: z.string().trim().min(2).max(80),

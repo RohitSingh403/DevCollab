@@ -1,10 +1,19 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Avatar, PageHeader, useDocumentTitle } from '../components/ui';
 import { api, errorMessage } from '../lib/api';
 import { timeAgo } from '../lib/format';
-import type { Activity } from '../lib/types';
+import type { Activity, NotificationPreferences } from '../lib/types';
+
+const INBOX_CHOICES: { key: keyof NotificationPreferences; label: string; detail: string }[] = [
+  { key: 'assignments', label: 'Assignments', detail: 'When someone assigns you an issue' },
+  { key: 'comments', label: 'Comments', detail: 'Comments on issues you follow or are assigned to' },
+  { key: 'mentions', label: 'Mentions', detail: 'When a comment names you' },
+  { key: 'status', label: 'Status changes', detail: 'When an issue you follow moves to another status' },
+  { key: 'blockers', label: 'Blockers', detail: 'When an issue you follow is blocked or unblocked' },
+  { key: 'reminders', label: 'Due reminders', detail: 'The day an issue is due, and again after that day passes' },
+];
 
 const ACTIVITY_KINDS = [
   { id: 'issues', label: 'Issues', noun: 'issue changes' },
@@ -125,16 +134,65 @@ export function ActivityPage() {
 }
 
 export function NotificationsPage() {
+  const queryClient = useQueryClient();
   const notifications = useQuery({ queryKey: ['notifications'], queryFn: api.notifications });
+  const [prefsOpen, setPrefsOpen] = useState(false);
+  const preferences = useQuery({
+    queryKey: ['notification-preferences'],
+    queryFn: api.notificationPreferences,
+    enabled: prefsOpen,
+  });
+  const [prefError, setPrefError] = useState('');
+  const savePreference = useMutation({
+    mutationFn: (input: Partial<NotificationPreferences>) => api.updateNotificationPreferences(input),
+    onSuccess: (next) => {
+      setPrefError('');
+      queryClient.setQueryData(['notification-preferences'], next);
+    },
+    onError: (reason) => setPrefError(errorMessage(reason)),
+  });
   useDocumentTitle('Notifications');
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <div className="flex items-center justify-between gap-3">
         <h1 className="page-title">Notifications</h1>
-        <button className="btn-ghost" type="button" onClick={() => api.markAllRead().then(() => notifications.refetch())}>
-          Mark all read
-        </button>
+        <div className="flex items-center gap-2">
+          <button className="btn-ghost" type="button" aria-expanded={prefsOpen} onClick={() => setPrefsOpen((open) => !open)}>
+            Preferences
+          </button>
+          <button className="btn-ghost" type="button" onClick={() => api.markAllRead().then(() => notifications.refetch())}>
+            Mark all read
+          </button>
+        </div>
       </div>
+      {prefsOpen ? (
+        <section className="panel px-4 py-3">
+          <h2 className="text-sm font-semibold">Inbox preferences</h2>
+          <p className="mt-1 text-[12px] text-muted">These choices are yours. Alerts already in the inbox stay here.</p>
+          {preferences.isPending ? <p className="mt-3 text-sm text-muted">Loading preferences…</p> : null}
+          {preferences.data ? (
+            <ul className="mt-3 divide-y divide-line">
+              {INBOX_CHOICES.map((choice) => (
+                <li key={choice.key} className="flex items-start justify-between gap-4 py-3">
+                  <span>
+                    <span className="block text-sm font-medium">{choice.label}</span>
+                    <span className="mt-0.5 block text-[12px] text-muted">{choice.detail}</span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    aria-label={choice.label}
+                    checked={preferences.data[choice.key]}
+                    disabled={savePreference.isPending}
+                    onChange={() => savePreference.mutate({ [choice.key]: !preferences.data[choice.key] })}
+                  />
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {prefError ? <p className="mt-2 text-sm text-danger" role="alert">{prefError}</p> : null}
+        </section>
+      ) : null}
       <ul className="panel divide-y divide-line">
         {(notifications.data?.notifications ?? []).map((item) => (
           <li key={item.id} className={`px-4 py-3 ${item.read ? 'opacity-70' : ''}`}>
