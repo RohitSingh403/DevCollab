@@ -60,6 +60,7 @@ export function IssuePage() {
       queryClient.setQueryData(['issue', issueId], next);
       void queryClient.invalidateQueries({ queryKey: ['issues'] });
       void queryClient.invalidateQueries({ queryKey: ['milestones'] });
+      void queryClient.invalidateQueries({ queryKey: ['roadmap'] });
       void queryClient.invalidateQueries({ queryKey: ['projects'] });
       void queryClient.invalidateQueries({ queryKey: ['cycles'] });
       void queryClient.invalidateQueries({ queryKey: ['active-cycles'] });

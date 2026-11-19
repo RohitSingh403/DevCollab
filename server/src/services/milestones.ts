@@ -20,9 +20,24 @@ async function nameTaken(projectId: string, name: string, exceptId?: string) {
   return Boolean(existing && String(existing._id) !== exceptId);
 }
 
+type MilestoneTally = { total: number; done: number; points: number; pointsDone: number };
+
+function emptyTally(): MilestoneTally {
+  return { total: 0, done: 0, points: 0, pointsDone: 0 };
+}
+
+function addRow(current: MilestoneTally, row: { _id: { status: string }; count: number; points: number }) {
+  current.total += row.count;
+  current.points += row.points;
+  if (row._id.status === 'done') {
+    current.done += row.count;
+    current.pointsDone += row.points;
+  }
+}
+
 function present(
   milestone: { _id: unknown; name: string; targetDate?: Date | null; createdBy: unknown },
-  counts: { total: number; done: number },
+  counts: MilestoneTally,
   actor: { id: string; role: Role },
 ) {
   return {
@@ -31,21 +46,22 @@ function present(
     targetDate: milestone.targetDate ? dayKey(milestone.targetDate) : null,
     total: counts.total,
     done: counts.done,
+    points: counts.points,
+    pointsDone: counts.pointsDone,
     canDelete: String(milestone.createdBy) === actor.id || roleRank(actor.role) >= roleRank('admin'),
   };
 }
 
 async function countsFor(projectId: string) {
-  const rows = await Issue.aggregate<{ _id: { milestone: unknown; status: string }; count: number }>([
+  const rows = await Issue.aggregate<{ _id: { milestone: unknown; status: string }; count: number; points: number }>([
     { $match: { project: new mongoose.Types.ObjectId(projectId), milestone: { $ne: null } } },
-    { $group: { _id: { milestone: '$milestone', status: '$status' }, count: { $sum: 1 } } },
+    { $group: { _id: { milestone: '$milestone', status: '$status' }, count: { $sum: 1 }, points: { $sum: { $ifNull: ['$estimate', 0] } } } },
   ]);
-  const byId = new Map<string, { total: number; done: number }>();
+  const byId = new Map<string, MilestoneTally>();
   for (const row of rows) {
     const id = String(row._id.milestone);
-    const current = byId.get(id) ?? { total: 0, done: 0 };
-    current.total += row.count;
-    if (row._id.status === 'done') current.done += row.count;
+    const current = byId.get(id) ?? emptyTally();
+    addRow(current, row);
     byId.set(id, current);
   }
   return byId;
@@ -54,7 +70,7 @@ async function countsFor(projectId: string) {
 export async function listMilestones(projectId: string, actor: { id: string; role: Role }) {
   const milestones = await Milestone.find({ project: projectId }).sort({ targetDate: 1, name: 1 });
   const counts = await countsFor(projectId);
-  return milestones.map((milestone) => present(milestone, counts.get(String(milestone._id)) ?? { total: 0, done: 0 }, actor));
+  return milestones.map((milestone) => present(milestone, counts.get(String(milestone._id)) ?? emptyTally(), actor));
 }
 
 export type RoadmapState = 'overdue' | 'upcoming' | 'undated' | 'complete';
@@ -63,27 +79,26 @@ export async function listRoadmap(workspaceId: string) {
   const archived = await archivedProjectIds(workspaceId);
   const milestones = await Milestone.find({ workspace: workspaceId, project: { $nin: archived } }).populate('project', 'name key');
   if (!milestones.length) return [];
-  const rows = await Issue.aggregate<{ _id: { milestone: unknown; status: string }; count: number }>([
+  const rows = await Issue.aggregate<{ _id: { milestone: unknown; status: string }; count: number; points: number }>([
     {
       $match: {
         workspace: new mongoose.Types.ObjectId(workspaceId),
         milestone: { $in: milestones.map((milestone) => milestone._id) },
       },
     },
-    { $group: { _id: { milestone: '$milestone', status: '$status' }, count: { $sum: 1 } } },
+    { $group: { _id: { milestone: '$milestone', status: '$status' }, count: { $sum: 1 }, points: { $sum: { $ifNull: ['$estimate', 0] } } } },
   ]);
-  const counts = new Map<string, { total: number; done: number }>();
+  const counts = new Map<string, MilestoneTally>();
   for (const row of rows) {
     const id = String(row._id.milestone);
-    const current = counts.get(id) ?? { total: 0, done: 0 };
-    current.total += row.count;
-    if (row._id.status === 'done') current.done += row.count;
+    const current = counts.get(id) ?? emptyTally();
+    addRow(current, row);
     counts.set(id, current);
   }
   const today = dayKey(new Date());
   const items = milestones.map((milestone) => {
     const project = milestone.project as { _id?: unknown; name?: string; key?: string };
-    const tally = counts.get(String(milestone._id)) ?? { total: 0, done: 0 };
+    const tally = counts.get(String(milestone._id)) ?? emptyTally();
     const targetDate = milestone.targetDate ? dayKey(milestone.targetDate) : null;
     const complete = tally.total > 0 && tally.done === tally.total;
     const state: RoadmapState = complete ? 'complete' : !targetDate ? 'undated' : targetDate < today ? 'overdue' : 'upcoming';
@@ -93,6 +108,8 @@ export async function listRoadmap(workspaceId: string) {
       targetDate,
       total: tally.total,
       done: tally.done,
+      points: tally.points,
+      pointsDone: tally.pointsDone,
       state,
       project: { id: String(project._id ?? milestone.project), name: project.name ?? '', key: project.key ?? '' },
     };
@@ -146,7 +163,7 @@ export async function createMilestone(
     rt,
   );
   rt?.toWorkspace(String(project.workspace), 'milestone:changed', { projectId: String(project._id) });
-  return present(milestone, { total: 0, done: 0 }, input.actor);
+  return present(milestone, emptyTally(), input.actor);
 }
 
 export async function updateMilestone(
@@ -181,7 +198,7 @@ export async function updateMilestone(
   }
   if (!changed) {
     const counts = await countsFor(projectId);
-    return present(milestone, counts.get(String(milestone._id)) ?? { total: 0, done: 0 }, actor);
+    return present(milestone, counts.get(String(milestone._id)) ?? emptyTally(), actor);
   }
   await milestone.save();
   await recordActivity(
@@ -196,7 +213,7 @@ export async function updateMilestone(
   );
   rt?.toWorkspace(String(project.workspace), 'milestone:changed', { projectId: String(project._id) });
   const counts = await countsFor(projectId);
-  return present(milestone, counts.get(String(milestone._id)) ?? { total: 0, done: 0 }, actor);
+  return present(milestone, counts.get(String(milestone._id)) ?? emptyTally(), actor);
 }
 
 export async function deleteMilestone(
