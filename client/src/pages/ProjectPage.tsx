@@ -69,6 +69,13 @@ export function ProjectPage() {
   const cycles = useQuery({ queryKey: ['cycles', projectId], queryFn: () => api.cycles(projectId) });
   const milestones = useQuery({ queryKey: ['milestones', projectId], queryFn: () => api.milestones(projectId) });
   const [creating, setCreating] = useState(false);
+  useEffect(() => {
+    if (params.get('new') !== '1') return;
+    setCreating(true);
+    const next = new URLSearchParams(params);
+    next.delete('new');
+    setParams(next, { replace: true });
+  }, [params, setParams]);
   const [exporting, setExporting] = useState(false);
   const [editingProject, setEditingProject] = useState(false);
   const [labelsOpen, setLabelsOpen] = useState(false);

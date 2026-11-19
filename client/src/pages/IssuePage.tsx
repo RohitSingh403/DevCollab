@@ -141,6 +141,31 @@ export function IssuePage() {
         <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
           <TitleEditor title={current.title} onSave={(title) => save.mutate({ title })} />
           <div className="flex shrink-0 gap-2">
+            <button
+              className="btn-ghost"
+              type="button"
+              aria-label="Copy link"
+              onClick={() => {
+                const url = window.location.href;
+                const copied = () => pushToast('Link copied');
+                const fallback = () => {
+                  const area = document.createElement('textarea');
+                  area.value = url;
+                  document.body.appendChild(area);
+                  area.select();
+                  document.execCommand('copy');
+                  area.remove();
+                  copied();
+                };
+                if (navigator.clipboard?.writeText) {
+                  void navigator.clipboard.writeText(url).then(copied, fallback);
+                  return;
+                }
+                fallback();
+              }}
+            >
+              Copy link
+            </button>
             <button className="btn-ghost" type="button" disabled={duplicate.isPending} onClick={() => duplicate.mutate()}>
               Duplicate
             </button>
